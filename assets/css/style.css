@@ -1,0 +1,212 @@
+/* Gaziantepli Gıda – kurumsal renkler logodan alınmıştır */
+:root {
+  --sage: #AFC4C0;        /* logo zemini */
+  --sage-soft: #F2F6F5;
+  --sage-line: #DDE6E4;
+  --teal: #4F6B66;        /* vurgu */
+  --ink: #2F3A38;         /* ana metin */
+  --muted: #4F5C5A;
+  --white: #FFFFFF;
+  --radius: 4px;
+  --container: 1160px;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; scroll-padding-top: 80px; }
+
+body {
+  margin: 0;
+  font-family: 'Jost', system-ui, sans-serif;
+  font-size: 17px;
+  line-height: 1.7;
+  color: var(--ink);
+  background: var(--white);
+  -webkit-font-smoothing: antialiased;
+}
+
+img { max-width: 100%; height: auto; display: block; }
+a { color: var(--teal); }
+h1, h2, h3 { line-height: 1.2; margin: 0 0 16px; font-weight: 400; }
+h2 { font-size: clamp(28px, 4vw, 40px); font-weight: 300; letter-spacing: 0.01em; }
+h3 { font-size: 20px; font-weight: 500; }
+p { margin: 0 0 16px; }
+
+.container { max-width: var(--container); margin: 0 auto; padding: 0 24px; }
+
+.skip-link {
+  position: absolute; left: -999px; top: 8px;
+  background: var(--ink); color: var(--white); padding: 8px 16px; z-index: 100;
+}
+.skip-link:focus { left: 8px; }
+
+.eyebrow {
+  font-size: 12px; font-weight: 600; letter-spacing: 0.2em;
+  color: var(--teal); margin-bottom: 12px;
+}
+.eyebrow-light { color: var(--sage); }
+
+.placeholder { color: #8A6D3B; font-style: italic; }
+
+/* Buttons */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 48px; padding: 0 28px;
+  font: inherit; font-size: 14px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase;
+  text-decoration: none; border-radius: var(--radius); border: 1.5px solid transparent;
+  transition: background .2s, color .2s, border-color .2s;
+}
+.btn-dark { background: var(--ink); color: var(--white); }
+.btn-dark:hover { background: var(--teal); }
+.btn-line { border-color: var(--ink); color: var(--ink); }
+.btn-line:hover { background: var(--ink); color: var(--white); }
+.btn-light { background: var(--sage); color: var(--ink); }
+.btn-light:hover { background: var(--white); }
+
+/* Header */
+.site-header {
+  position: sticky; top: 0; z-index: 50;
+  background: rgba(255,255,255,.96); backdrop-filter: blur(6px);
+  border-bottom: 1px solid var(--sage-line);
+}
+.header-inner { display: flex; align-items: center; justify-content: space-between; min-height: 72px; gap: 16px; }
+.brand { text-decoration: none; color: var(--ink); display: flex; flex-direction: column; line-height: 1.2; }
+.brand-name { font-size: 18px; font-weight: 500; letter-spacing: 0.12em; }
+.brand-sub { font-size: 11px; letter-spacing: 0.08em; color: var(--muted); }
+
+.main-nav { display: flex; align-items: center; gap: 28px; }
+.main-nav a { color: var(--ink); text-decoration: none; font-size: 15px; letter-spacing: 0.04em; }
+.main-nav a:hover { color: var(--teal); }
+.main-nav .nav-cta { border: 1.5px solid var(--ink); padding: 8px 18px; border-radius: var(--radius); }
+.main-nav .nav-cta:hover { background: var(--ink); color: var(--white); }
+
+.nav-toggle {
+  display: none; width: 44px; height: 44px; padding: 10px;
+  background: none; border: 0; cursor: pointer; flex-direction: column; justify-content: space-between;
+}
+.nav-toggle span { display: block; height: 2px; background: var(--ink); transition: transform .2s, opacity .2s; }
+
+/* Hero – logo zeminiyle aynı renk */
+.hero { background: var(--sage); }
+.hero-inner {
+  display: grid; grid-template-columns: 1.1fr 0.9fr; align-items: center; gap: 32px;
+  padding-top: 56px; padding-bottom: 56px;
+}
+.hero h1 { font-size: clamp(38px, 6vw, 64px); font-weight: 300; letter-spacing: 0.01em; }
+.hero .eyebrow { color: var(--ink); }
+.lead { font-size: 19px; max-width: 520px; }
+.hero-actions { display: flex; flex-wrap: wrap; gap: 12px; margin: 28px 0; }
+.hero-badge { font-size: 15px; border-top: 1px solid rgba(47,58,56,.35); padding-top: 16px; max-width: 420px; }
+.hero-badge strong { font-weight: 600; }
+.hero-logo img { width: 100%; max-width: 460px; margin-left: auto; }
+
+/* Sections */
+.section { padding: 96px 0; }
+.section-tint { background: var(--sage-soft); }
+.section-dark { background: var(--ink); color: var(--white); }
+.section-head { max-width: 640px; margin-bottom: 48px; }
+
+/* About */
+.about { display: grid; grid-template-columns: 0.8fr 1.2fr; gap: 48px; align-items: center; }
+.about-year {
+  font-size: clamp(80px, 14vw, 168px); font-weight: 300; line-height: 1;
+  color: var(--sage); letter-spacing: 0.04em;
+}
+.about-text p { color: var(--muted); }
+
+/* Products */
+.product-feature {
+  display: grid; grid-template-columns: 1fr 1.4fr; gap: 32px; align-items: center;
+  background: var(--white); padding: 40px; border-radius: var(--radius);
+  border: 1px solid var(--sage-line); margin-bottom: 24px;
+}
+.product-feature h3 { font-size: 28px; font-weight: 400; }
+.product-feature p { color: var(--muted); margin: 0; }
+.tag-list { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 10px; }
+.tag-list li {
+  background: var(--sage-soft); border: 1px solid var(--sage-line);
+  padding: 8px 16px; border-radius: 999px; font-size: 15px;
+}
+
+.product-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; }
+.product-card {
+  background: var(--white); padding: 28px 24px; border-radius: var(--radius);
+  border-top: 3px solid var(--sage);
+}
+.product-card p { color: var(--muted); font-size: 15px; margin: 0; }
+
+.brands { margin-top: 56px; }
+.brand-list { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 12px; }
+.brand-list li {
+  min-width: 160px; padding: 18px 24px; text-align: center;
+  background: var(--white); border: 1px solid var(--sage-line); border-radius: var(--radius);
+  font-weight: 500; letter-spacing: 0.06em;
+}
+
+/* Dealer */
+.dealer { max-width: 760px; text-align: center; }
+.dealer p { color: #D5DFDD; font-size: 18px; margin-bottom: 32px; }
+
+/* Customers */
+.customer-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.customer {
+  border: 1px solid var(--sage-line); border-radius: var(--radius);
+  padding: 32px 24px; text-align: center;
+}
+.customer svg {
+  width: 44px; height: 44px; margin: 0 auto 16px;
+  fill: none; stroke: var(--teal); stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round;
+}
+.customer h3 { margin: 0; font-size: 18px; }
+
+/* Contact */
+.contact { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: start; }
+.contact > div > p { color: var(--muted); }
+.contact-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 24px; }
+.contact-list { margin: 0; display: grid; gap: 0; background: var(--white); border-radius: var(--radius); border: 1px solid var(--sage-line); }
+.contact-list > div { padding: 20px 28px; border-bottom: 1px solid var(--sage-line); }
+.contact-list > div:last-child { border-bottom: 0; }
+.contact-list dt { font-size: 12px; font-weight: 600; letter-spacing: 0.16em; color: var(--teal); text-transform: uppercase; }
+.contact-list dd { margin: 4px 0 0; font-size: 17px; }
+
+/* Footer */
+.site-footer { background: var(--sage); padding: 20px 0; font-size: 12px; letter-spacing: 0.08em; }
+.footer-inner { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 24px; }
+
+/* Responsive */
+@media (max-width: 1000px) {
+  .product-grid { grid-template-columns: repeat(3, 1fr); }
+  .customer-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 820px) {
+  .nav-toggle { display: flex; }
+  .main-nav {
+    position: absolute; top: 100%; left: 0; right: 0;
+    flex-direction: column; align-items: stretch; gap: 0;
+    background: var(--white); border-bottom: 1px solid var(--sage-line);
+    display: none;
+  }
+  .main-nav.open { display: flex; }
+  .main-nav a { padding: 14px 24px; border-top: 1px solid var(--sage-line); }
+  .main-nav .nav-cta { border: 0; border-top: 1px solid var(--sage-line); border-radius: 0; }
+  .nav-toggle[aria-expanded="true"] span:nth-child(1) { transform: translateY(11px) rotate(45deg); }
+  .nav-toggle[aria-expanded="true"] span:nth-child(2) { opacity: 0; }
+  .nav-toggle[aria-expanded="true"] span:nth-child(3) { transform: translateY(-11px) rotate(-45deg); }
+
+  .hero-inner, .about, .product-feature, .contact { grid-template-columns: 1fr; }
+  .hero-logo { order: -1; }
+  .hero-logo img { max-width: 260px; margin: 0 auto; }
+  .about { gap: 8px; }
+  .section { padding: 64px 0; }
+  .product-feature { padding: 28px 24px; }
+}
+
+@media (max-width: 560px) {
+  body { font-size: 16px; }
+  .container { padding: 0 16px; }
+  .product-grid { grid-template-columns: 1fr 1fr; }
+  .customer-grid { grid-template-columns: 1fr 1fr; }
+  .brand-name { font-size: 15px; }
+  .btn { width: 100%; }
+}

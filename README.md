@@ -14,9 +14,6 @@ Herhangi bir kurulum gerektirmez; `index.html` dosyasını tarayıcıda açmanı
 
 Sayfada sarı-kahverengi italik görünen `[...]` alanları yer tutucudur:
 
-- Telefon numarası (ayrıca `tel:` ve `wa.me` bağlantılarındaki `90XXXXXXXXXX`)
-- E-posta adresi
-- Adresin ilçe / il kısmı
 - Çalışma saatleri
 - Çalışılan marka isimleri
 

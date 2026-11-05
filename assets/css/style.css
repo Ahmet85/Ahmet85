@@ -210,3 +210,15 @@ p { margin: 0 0 16px; }
   .brand-name { font-size: 15px; }
   .btn { width: 100%; }
 }
+
+/* WhatsApp sabit düğme */
+.wa-float {
+  position: fixed; right: 20px; bottom: 20px; z-index: 60;
+  width: 56px; height: 56px; border-radius: 50%;
+  background: #1F7A4D; display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 14px rgba(0,0,0,.2);
+}
+.wa-float svg { width: 30px; height: 30px; fill: #fff; }
+.wa-float:hover { background: #17603C; }
+.contact-list dd a { color: var(--ink); }
+.contact-list dd a:hover { color: var(--teal); }

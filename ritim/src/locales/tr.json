@@ -504,5 +504,16 @@
   "pin.open": "Aç",
   "pin.wrong": "PIN uymadı. Tekrar dener misin?",
   "pin.other": "Başka profile geç",
-  "pin.note": "PIN aynı cihazı paylaşanlar için basit bir kilittir; verileri şifrelemez."
+  "pin.note": "PIN aynı cihazı paylaşanlar için basit bir kilittir; verileri şifrelemez.",
+  "import.title": "Program ekle",
+  "import.summary": "{blocks} rutin blok, {categories} kategori, haftanın {days} günü.",
+  "import.note": "Bu program yeni bir profil olarak eklenir; mevcut profillerine ve verilerine dokunulmaz. Eklendikten sonra her bloğu düzenleyebilirsin.",
+  "import.add": "Yeni profil olarak ekle",
+  "import.invalid": "Bu bağlantı bir Ritim programı içermiyor ya da eksik kopyalanmış. Tamamını kopyaladığından emin olur musun?",
+  "import.done": "Program eklendi. Hoş geldin!",
+  "import.sectionTitle": "Bağlantıyla program ekle",
+  "import.sectionBody": "Sana gönderilen bir program bağlantısını buraya yapıştır. Ana ekrana eklenmiş Ritim'de bağlantıyı açmak yerine bu yolu kullan.",
+  "import.pasteLabel": "Bağlantı",
+  "import.check": "Programı göster",
+  "history.importProgram": "Program eklendi"
 }

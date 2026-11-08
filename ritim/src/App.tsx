@@ -8,6 +8,7 @@ import { AlarmHost } from './ui/alarm/AlarmHost';
 import { Report } from './ui/Report';
 import { useApplyAppearance } from './ui/appearance';
 import { LockScreen } from './ui/LockScreen';
+import { ImportHost } from './ui/ImportHost';
 import { isUnlocked } from './ui/pin';
 import { uiSound } from './ui/alarm/sound';
 import { MotionConfig } from 'motion/react';
@@ -109,6 +110,7 @@ function WithIntl() {
       <MotionConfig reducedMotion={look.reduceMotion ? 'always' : 'user'}>
         <CelebrateHost>
           <Shell />
+          <ImportHost />
           {profile && (!profile.pinHash || isUnlocked(profile.id)) && <AlarmHost key={profile.id} />}
         </CelebrateHost>
       </MotionConfig>

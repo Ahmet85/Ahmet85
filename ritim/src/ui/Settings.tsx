@@ -15,6 +15,7 @@ import { startOfWeek } from '../domain/time';
 import { PrintWeek } from './PrintWeek';
 import { hashPin, markUnlocked } from './pin';
 import { uiSound } from './alarm/sound';
+import { requestImport } from './ImportHost';
 import { useSheets } from './sheets/SheetHost';
 import { alarmPrefs, type AlarmPrefs } from '../domain/types';
 import { buildIcs } from '../domain/ics';
@@ -216,6 +217,8 @@ export function Settings() {
           </button>
         )}
       </Section>
+
+      <ImportByLink />
 
       <Section title={t('settings.developer')}>
         <p className="muted small">{t('settings.loadSampleBody')}</p>
@@ -730,5 +733,22 @@ function PinControl() {
     <button className="btn ghost" onClick={() => setEditing(true)}>
       <Icon name="lock" size={18} /> {t('pin.set')}
     </button>
+  );
+}
+
+function ImportByLink() {
+  const { t } = useT();
+  const [text, setText] = useState('');
+  return (
+    <Section title={t('import.sectionTitle')}>
+      <p className="muted small">{t('import.sectionBody')}</p>
+      <label className="field">
+        <span>{t('import.pasteLabel')}</span>
+        <textarea rows={2} value={text} onChange={(e) => setText(e.target.value)} placeholder="https://…#import=…" />
+      </label>
+      <button className="btn" disabled={!text.trim()} onClick={() => requestImport(text)}>
+        <Icon name="upload" size={18} /> {t('import.check')}
+      </button>
+    </Section>
   );
 }

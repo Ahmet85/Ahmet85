@@ -3,7 +3,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { RitimDB, uid } from '../db/db';
 import { Repo, type ProfileData } from '../db/repo';
 import type { Category, Profile, ProfileSettings } from '../domain/types';
-import { deviceDefaults, nowLocal } from '../domain/time';
+import { deviceDefaults, nowLocal, startOfWeek } from '../domain/time';
+import { materialize, type ProgramPackage } from '../domain/profilePackage';
 import { buildSampleProfile } from '../sample/ahmetProfile';
 
 export const db = new RitimDB();
@@ -33,6 +34,7 @@ interface Store {
   switchProfile: (id: string) => Promise<void>;
   createProfile: (name: string, categories: Omit<Category, 'id' | 'profileId'>[]) => Promise<void>;
   loadSample: () => Promise<void>;
+  importProgram: (pkg: ProgramPackage) => Promise<void>;
   reload: () => Promise<void>;
   dismissToast: () => void;
   /** Yalnızca bilgi notu göster (Geri al olmadan). */
@@ -121,12 +123,29 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     showToast('settings.sampleLoaded', true);
   };
 
+  /** Bağlantıyla gelen programı YENİ profil olarak ekler (tek işlem, geri alınabilir). */
+  const importProgram = async (pkg: ProgramPackage) => {
+    const id = uid();
+    const today = nowLocal(defaults.timeZone).date;
+    const rows = materialize(pkg, { profileId: id, uid, settings: { ...defaults }, startDate: startOfWeek(today, defaults.weekStart) });
+    await repo.bulkInsert(id, 'history.importProgram', [
+      { table: 'profiles', rows: [rows.profile] },
+      { table: 'categories', rows: rows.categories },
+      { table: 'projects', rows: rows.projects },
+      { table: 'routines', rows: rows.routines },
+    ]);
+    await db.meta.put({ key: 'activeProfileId', value: id });
+    setUndoScope('profile');
+    await reload(id);
+    showToast('import.done', true);
+  };
+
   const profile = profiles.find((p) => p.id === activeId) ?? null;
 
   return (
     <Ctx.Provider
       value={{
-        ready, profiles, profile, data, toast, defaults, run, undo, switchProfile, createProfile, loadSample,
+        ready, profiles, profile, data, toast, defaults, run, undo, switchProfile, createProfile, loadSample, importProgram,
         reload: () => reload(),
         dismissToast: () => setToast(null),
         notify: (key: string) => showToast(key, false),

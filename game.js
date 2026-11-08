@@ -52,7 +52,6 @@ const TIERS = [null,
   { name: 'Alacakaranlık Bölgesi', pitch: 0.8, lp: 4200, echo: 0.32, delay: 0.27 },
   { name: 'Karanlık Derinlikler', pitch: 0.6, lp: 1800, echo: 0.5, delay: 0.42 },
 ];
-const tierOf = d => d < 150 ? 1 : d < 400 ? 2 : 3;
 const Sound = {
   ctx: null, muted: store.get('okto_muted', false), tier: 1, buses: [],
   init() {
@@ -137,6 +136,11 @@ const Sound = {
   bossWarn() { for (let i = 0; i < 3; i++) { this.tone(110, 0.5, 'sawtooth', 0.1, -30, i * 0.55); this.tone(55, 0.5, 'sine', 0.2, 0, i * 0.55); } },
   bossHit() { this.tone(160, 0.3, 'square', 0.12, -90); this.noise(0.3, 0.2, 900); },
   bossDown() { [392, 494, 587, 784, 988].forEach((f, i) => this.tone(f, 0.3, 'triangle', 0.12, 0, i * 0.1, true)); this.noise(1.2, 0.25, 2000); },
+  vortex() { // girdaba dalış: alçalan uğultu + kabarcıklar + çıkışta parlama
+    this.filtered(1.6, 0.12, 'lowpass', 900, 1, 0, 0.6); this.tone(420, 1.5, 'sine', 0.12, -340, 0, true);
+    for (let i = 0; i < 24; i++) this.blip(rand(0.1, 1.5), 0.05);
+    [523, 784, 1047].forEach((f, i) => this.tone(f, 0.5, 'triangle', 0.08, 0, 1.6 + i * 0.08, true));
+  },
   mission() { [880, 1175].forEach((f, i) => this.tone(f, 0.18, 'sine', 0.1, 0, i * 0.09, true)); },
   coin() { [988, 1319].forEach((f, i) => this.tone(f, 0.12, 'square', 0.06, 0, i * 0.07, true)); },
   over() { [440, 370, 311, 262].forEach((f, i) => this.tone(f, 0.25, 'triangle', 0.12, 0, i * 0.16)); },
@@ -152,7 +156,7 @@ const MISSION_POOL = [
   { id: 'bomb_day', text: n => `${n} ışık bombası patlat`, n: [1, 2], reward: [30, 50], kind: 'sum' },
   { id: 'fish_day', text: n => `${n} balık ye`, n: [3, 6], reward: [20, 30], kind: 'sum' },
   { id: 'combo_run', text: n => `x${n} komboya ulaş`, n: [3, 4], reward: [30, 50], kind: 'max' },
-  { id: 'boss_day', text: () => 'Dev kalamarı yen', n: [1], reward: [80], kind: 'sum' },
+  { id: 'boss_day', text: () => 'Bir bölüm sonu canavarını yen', n: [1], reward: [60], kind: 'sum' },
   { id: 'runs_day', text: n => `${n} dalış yap`, n: [3, 5], reward: [15, 25], kind: 'sum' },
 ];
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`; };
@@ -198,10 +202,11 @@ const Missions = {
 };
 
 // ---------- Oyun durumu ----------
-let state = 'menu';           // menu | play | pause | over
+let state = 'menu';           // menu | play | pause | clear | transition | over
 let player, entities, particles, floaters, inkClouds, rings, banners, slams, shots;
 let depth, score, pearls, lives, combo, comboTimer, spawnTimer, inkCharge, shieldTime, invuln, time, shake, flash, winkT;
-let tier, boss, bossNext, bossesBeaten, bonusPearls, breathT, blipT;
+let tier, boss, bossesBeaten, bonusPearls, breathT, blipT, banked;
+let levelN = 1, phase = 'dive', levelHits = 0, levelPearls = 0;
 const snow = Array.from({ length: 70 }, () => ({ x: Math.random(), y: Math.random(), r: Math.random() * 1.8 + 0.4, s: Math.random() * 0.5 + 0.3 }));
 const bgBubbles = [];
 const keys = {};
@@ -215,7 +220,8 @@ function reset() {
   entities = []; particles = []; floaters = []; inkClouds = []; rings = []; banners = []; slams = []; shots = [];
   depth = 0; score = 0; pearls = 0; lives = 3; combo = 0; comboTimer = 0; bonusPearls = 0;
   spawnTimer = 0.5; inkCharge = 0.5; shieldTime = 0; invuln = 1.5; time = 0; shake = 0; flash = 0; winkT = 0;
-  tier = 1; Sound.tier = 1; boss = null; bossNext = 250; bossesBeaten = 0; breathT = 1.2; blipT = 0;
+  tier = 1; Sound.tier = 1; boss = null; bossesBeaten = 0; breathT = 1.2; blipT = 0; banked = false;
+  levelN = 1; phase = 'dive'; levelHits = 0; levelPearls = 0; trans = null;
 }
 
 // ---------- Girdi ----------
@@ -253,7 +259,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden && sta
 document.addEventListener('contextmenu', e => e.preventDefault());
 
 // ---------- Arayüz ----------
-const ui = { menu: $('menu'), over: $('over'), pause: $('pauseMenu'), ink: $('inkBtn'), pauseBtn: $('pauseBtn'), mute: $('muteBtn'), shop: $('shop'), missions: $('missions'), help: $('help') };
+const ui = { menu: $('menu'), over: $('over'), pause: $('pauseMenu'), ink: $('inkBtn'), pauseBtn: $('pauseBtn'), mute: $('muteBtn'), shop: $('shop'), missions: $('missions'), help: $('help'), clear: $('clear') };
 const inkCtx = $('inkCanvas').getContext('2d');
 function show(el, v) { el.classList.toggle('hidden', !v); }
 const anyPanelOpen = () => [ui.shop, ui.missions, ui.help].some(p => !p.classList.contains('hidden'));
@@ -270,7 +276,11 @@ function menuMusic() {
 }
 document.addEventListener('pointerdown', e => { if (state === 'menu' && !Sound.muted && e.target.id !== 'musicBtn') menuMusic(); }, true);
 document.addEventListener('keydown', () => { if (state === 'menu' && !Sound.muted) menuMusic(); }, true);
+function startLevel() { const D = Profile.data; return clamp(D.startLevel || 1, 1, D.checkpoint || 1); }
 function refreshMenu() {
+  const lp = $('levelPick'), cp = Profile.data.checkpoint || 1, sl = startLevel();
+  lp.classList.toggle('hidden', cp < 2);
+  lp.innerHTML = sl > 1 ? `▶ Bölüm ${ablative(sl)} başla <small>(değiştir)</small>` : `▶ Baştan başla <small>(değiştir)</small>`;
   $('menuBest').textContent = `⚪ ${Profile.data.wallet} inci` + (Profile.data.best > 0 ? `   🏆 ${Profile.data.best}` : '');
   $('missionBadge').classList.toggle('hidden', !Missions.claimable());
 }
@@ -280,14 +290,17 @@ function layoutMenuButtons() { // mağaza ve görev düğmeleri oyna düğmesini
     const el = $(id); if (!el) continue;
     el.style.left = (W / 2 + sx * dx - 30) + 'px'; el.style.top = (y - 30) + 'px';
   }
+  const lp = $('levelPick'); if (lp) lp.style.top = (y - 32 * u - 50) + 'px';
 }
 function hitPlay(x, y) { const r = window.OktoTitle && OktoTitle.playRect; return r && x >= r.x - 10 && x <= r.x + r.w + 10 && y >= r.y - 10 && y <= r.y + r.h + 16; }
 
 $('helpBtn').onclick = () => show(ui.help, true);
 $('helpClose').onclick = () => show(ui.help, false);
-$('againBtn').onclick = () => startGame();
+$('againBtn').onclick = () => startGame(levelN);
+$('clearNext').onclick = () => startTransition();
+$('levelPick').onclick = () => { const D = Profile.data, cp = D.checkpoint || 1; D.startLevel = startLevel() >= cp ? 1 : startLevel() + 1; Profile.save(); refreshMenu(); };
 $('homeBtn').onclick = () => toMenu();
-$('quitBtn').onclick = () => toMenu();
+$('quitBtn').onclick = () => { bankRun(); toMenu(); };
 $('resumeBtn').onclick = () => togglePause();
 ui.pauseBtn.onclick = () => togglePause();
 ui.mute.onclick = () => { Sound.muted = !Sound.muted; store.set('okto_muted', Sound.muted); window.OktoMusic && OktoMusic.setMuted(Sound.muted); refreshMute(); };
@@ -300,10 +313,14 @@ $('musicBtn').onclick = e => {
 };
 ui.ink.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); Sound.init(); useInk(); });
 
-function startGame() {
+function startGame(n = startLevel()) {
   Sound.init(); reset(); state = 'play'; Missions.ensure();
+  levelN = n; const L = levelInfo(n);
+  depth = L.start; tier = L.tier; Sound.tier = L.tier; inkCharge = n > 1 ? 1 : 0.5;
+  banner(`BÖLÜM ${n}`, L.name, '#ffe066', 2.6);
+  if (n > 1) toast(L.news);
   window.OktoMusic && OktoMusic.stop(0.8);
-  for (const p of [ui.menu, ui.over, ui.pause, ui.shop, ui.missions, ui.help]) show(p, false);
+  for (const p of [ui.menu, ui.over, ui.pause, ui.shop, ui.missions, ui.help, ui.clear]) show(p, false);
   show(ui.ink, true); show(ui.pauseBtn, true); show(ui.mute, true);
 }
 function toMenu() {
@@ -317,13 +334,21 @@ function togglePause() {
   if (state === 'play') { state = 'pause'; show(ui.pause, true); }
   else if (state === 'pause') { state = 'play'; show(ui.pause, false); last = performance.now(); }
 }
-function gameOver() {
-  state = 'over'; Sound.over(); vibrate([80, 60, 160]); drag.active = false;
+function bankRun() { // dalıştan kazanılan incileri cüzdana bir kez ekle
+  if (banked || !player) return 0;
+  banked = true;
   const D = Profile.data, earned = pearls + bonusPearls;
-  const isBest = score > D.best;
-  if (isBest) D.best = score;
+  if (score > D.best) D.best = score;
   D.wallet += earned; Profile.save();
   Missions.track('runs_day', 1);
+  return earned;
+}
+function gameOver() {
+  state = 'over'; Sound.over(); vibrate([80, 60, 160]); drag.active = false;
+  const D = Profile.data, isBest = score > D.best;
+  const earned = bankRun();
+  $('againBtn').textContent = levelN > 1 ? `Bölüm ${ablative(levelN)} devam` : 'Tekrar Dal';
+  $('oLevel').textContent = `Bölüm ${levelN} · ${levelInfo(levelN).name}`;
   $('oScore').textContent = score; $('oDepth').textContent = Math.floor(depth); $('oPearls').textContent = pearls;
   $('oEarned').textContent = `+${earned} inci kazandın` + (bonusPearls ? ` (${bonusPearls} kalamar ödülü)` : '') + ` · cüzdan: ⚪ ${D.wallet}`;
   $('oBest').textContent = `🏆 En iyi puan: ${D.best}`;
@@ -337,14 +362,15 @@ function banner(text, sub = '', color = '#ffe066', dur = 2.4) { banners.push({ t
 function toast(text) { banners.push({ text, sub: '', color: '#b8ffb0', life: 2.2, dur: 2.2, small: true }); }
 
 // ---------- Varlıklar ----------
-const ENEMIES = new Set(['jelly', 'urchin', 'puffer', 'shark', 'angler', 'blob']);
+const ENEMIES = new Set(['jelly', 'urchin', 'puffer', 'shark', 'angler', 'blob', 'spike']);
 function spawn() {
   const d = depth;
-  const table = boss ? [
-    ['pearl', 30], ['star', 6], ['glow', boss.phase === 'fight' ? 5 : 0], ['heart', lives < 3 ? 3 : 0], ['shield', 2],
+  const calm = boss || phase !== 'dive' || levelInfo(levelN).end - d < 14;
+  const table = calm ? [
+    ['pearl', 30], ['star', boss ? 6 : 1], ['glow', boss && boss.phase === 'fight' ? 5 : 0], ['heart', lives < 3 ? 3 : 0], ['shield', boss ? 2 : 0],
   ] : [
     ['pearl', 38], ['pearlRow', 10], ['fish', 14], ['jelly', 18 + d * 0.02], ['urchin', 9],
-    ['puffer', d > 40 ? 12 : 0], ['shark', d > 120 ? 5 + d * 0.006 : 0], ['angler', d > 250 ? 6 : 0],
+    ['puffer', d > 40 ? 12 : 0], ['shark', d > 150 ? 5 + d * 0.006 : 0], ['angler', d > 400 ? 6 : 0],
     ['shield', 2.2], ['star', 3], ['heart', lives < 3 ? 1.6 : 0], ['glow', d > 30 ? 1.3 : 0],
   ];
   const total = table.reduce((s, t) => s + t[1], 0);
@@ -402,7 +428,7 @@ function useInk() {
   let stunned = 0;
   for (const e of entities) {
     if (ENEMIES.has(e.type) && !e.stunned && Math.hypot(e.x - player.x, e.y - player.y) < R + e.r) {
-      if (e.type === 'blob') { e.dead = true; burst(e.x, e.y, '#6b3fa0', 8, 90); continue; }
+      if (e.type === 'blob' || e.type === 'spike') { e.dead = true; burst(e.x, e.y, '#6b3fa0', 8, 90); continue; }
       e.stunned = true; stunned++;
       if (e.type === 'shark') { e.warn = 0; e.sp *= 0.35; }
     }
@@ -437,7 +463,7 @@ function lightBomb(x, y) {
 function hurt() {
   if (invuln > 0) return;
   if (shieldTime > 0) { shieldTime = 0; invuln = 1; burst(player.x, player.y, '#9ee8ff', 22, 200); Sound.tone(500, 0.2, 'triangle', 0.12, -300); addFloater(player.x, player.y - 40 * S, 'Kalkan!', '#9ee8ff'); return; }
-  lives--; invuln = 1.6; shake = 14; combo = 0;
+  lives--; levelHits++; invuln = 1.6; shake = 14; combo = 0;
   Sound.hit(); vibrate(120);
   burst(player.x, player.y, '#ff7eb6', 18, 180);
   if (lives <= 0) gameOver();
@@ -448,7 +474,7 @@ function collect(e) {
     case 'pearl': {
       combo = Math.min(combo + 1, 15); comboTimer = 1.6;
       const mult = 1 + Math.floor(combo / 3);
-      const p = 10 * mult; score += p; pearls++;
+      const p = 10 * mult; score += p; pearls++; levelPearls++;
       Sound.pearl(Math.min(combo, 8)); burst(e.x, e.y, '#fff7d6', 8, 90);
       addFloater(e.x, e.y, mult > 1 ? `+${p} x${mult}` : `+${p}`, mult > 1 ? '#ffe066' : '#fff');
       Missions.track('pearls_run', pearls); Missions.track('pearls_day', 1); Missions.track('combo_run', mult);
@@ -463,62 +489,134 @@ function collect(e) {
   }
 }
 
-// ---------- Dev kalamar ----------
-function startBoss() {
-  const level = bossesBeaten + 1;
-  boss = { x: W / 2, y: H + 160 * S, hp: 3 + level, maxHp: 3 + level, level, t: 0, phase: 'enter', attackT: 2.2, stun: 0, flashT: 0, r: 64 * S };
-  banner('⚠️ DEV KALAMAR!', 'Mürekkep topları ve ışık bombasıyla yen!', '#ff8a8a', 3);
+// ---------- Bölümler ----------
+const LEVELS = [
+  { name: 'Güneşli Sular', start: 0, end: 150, tier: 1, boss: 'puffer', news: '🪼 Denizanaları ve 🐡 balon balıklarına dikkat!' },
+  { name: 'Alacakaranlık Bölgesi', start: 150, end: 400, tier: 2, boss: 'jelly', news: '🦈 Köpekbalıkları geliyor: kırmızı ❗ uyarısına bak!' },
+  { name: 'Karanlık Derinlikler', start: 400, end: 700, tier: 3, boss: 'squid', news: '🏮 Fener balıkları seni takip ediyor!' },
+];
+const BOSS_NAMES = { puffer: 'DEV BALON BALIĞI', jelly: 'ELEKTRİKLİ DENİZANASI', squid: 'DEV KALAMAR' };
+function levelInfo(n) {
+  if (n <= LEVELS.length) return Object.assign({ n }, LEVELS[n - 1]);
+  const start = 700 + (n - 4) * 300;
+  return { n, name: `Sonsuz Derinlik ${n - 3}`, start, end: start + 300, tier: 3, boss: ['puffer', 'jelly', 'squid'][(n - 4) % 3], news: '💪 Canavarlar artık daha güçlü!' };
+}
+const pearlGoal = n => Math.min(15 + n * 8, 50);
+// Türkçe -den/-dan eki: "Bölüm 2'den", "Bölüm 3'ten"
+function ablative(n) {
+  const one = ['dan', 'den', 'den', 'ten', 'ten', 'ten', 'dan', 'den', 'den', 'dan'];
+  const ten = { 1: 'dan', 2: 'den', 3: 'dan', 4: 'tan', 5: 'den', 6: 'tan', 7: 'ten', 8: 'den', 9: 'dan' };
+  return `${n}'${n % 10 ? one[n % 10] : ten[Math.floor(n / 10) % 10] || 'den'}`;
+}
+
+// ---------- Bölüm sonu canavarları ----------
+function startBoss(kind) {
+  const lv = levelN, extra = Math.max(0, lv - 3);
+  const hp = { puffer: 3, jelly: 4, squid: 5 }[kind] + extra;
+  boss = { kind, x: W / 2, y: H + 170 * S, hp, maxHp: hp, lv, t: 0, phase: 'enter', attackT: 2.0, stun: 0, flashT: 0, r: { puffer: 54, jelly: 60, squid: 64 }[kind] * S, puff: 0, dash: null, puffT: 0 };
+  banner(`⚠️ ${BOSS_NAMES[kind]}!`, 'Mürekkep düğmesi ona mürekkep topu atar', '#ff8a8a', 3);
   Sound.bossWarn(); vibrate([100, 80, 100]); shake = 10;
-  for (const e of entities) if (ENEMIES.has(e.type) && e.y > H * 0.5) e.dead = true; // yer aç
+  for (const e of entities) if (ENEMIES.has(e.type)) e.dead = true; // sahneyi canavara bırak
 }
 function damageBoss(n) {
   if (!boss || boss.phase !== 'fight') return;
-  boss.hp -= n; boss.flashT = 0.3; boss.stun = 1.3; shake = 9;
+  boss.hp -= n; boss.flashT = 0.3; boss.stun = 1.2; boss.dash = null; boss.puffT = 0; shake = 9;
   Sound.bossHit(); vibrate(60);
-  burst(boss.x, boss.y - boss.r * 0.6, '#ff9ab0', 20, 220);
+  burst(boss.x, boss.y - boss.r * 0.6, boss.kind === 'puffer' ? '#ffe28a' : boss.kind === 'jelly' ? '#c7a8ff' : '#ff9ab0', 20, 220);
   addFloater(boss.x, boss.y - boss.r * 1.3, `-${n}`, '#ff8a8a');
   if (boss.hp <= 0) {
     boss.phase = 'dying'; boss.t = 0; slams.length = 0;
-    for (const e of entities) if (e.type === 'blob') e.dead = true;
-    const reward = 25 * boss.level;
-    bonusPearls += reward; score += 300 * boss.level; bossesBeaten++;
-    banner('🎉 DEV KALAMAR YENİLDİ!', `+${300 * boss.level} puan · +${reward} inci`, '#7dffb0', 3);
+    for (const e of entities) if (ENEMIES.has(e.type)) e.dead = true;
+    score += 300 * boss.lv; bossesBeaten++;
+    banner(`🎉 ${BOSS_NAMES[boss.kind]} YENİLDİ!`, `+${300 * boss.lv} puan`, '#7dffb0', 2.2);
     Sound.bossDown(); Missions.track('boss_day', 1);
-    for (let i = 0; i < 18; i++) entities.push({ type: 'pearl', x: clamp(boss.x + rand(-140, 140) * S, 20, W - 20), y: boss.y - boss.r + rand(-60, 160) * S, r: 8 * S, t: Math.random() * 9 });
+    for (let i = 0; i < 14; i++) entities.push({ type: 'pearl', x: clamp(boss.x + rand(-140, 140) * S, 20, W - 20), y: boss.y - boss.r + rand(-60, 160) * S, r: 8 * S, t: Math.random() * 9 });
   }
 }
+function bossContactR() { return boss.r * (boss.kind === 'puffer' ? 0.9 + boss.puff * 0.35 : 0.85); }
 function updateBoss(dt) {
   const b = boss; b.t += dt;
   if (b.flashT > 0) b.flashT -= dt;
-  const restY = H - 120 * S;
+  const restY = H - (b.kind === 'jelly' ? 150 : 130) * S;
   if (b.phase === 'enter') {
     b.y = lerp(b.y, restY, dt * 1.5);
     if (Math.abs(b.y - restY) < 4) { b.phase = 'fight'; b.t = 0; }
     return;
   }
   if (b.phase === 'dying') {
-    b.y += 120 * S * dt;
-    if (Math.random() < dt * 20) burst(b.x + rand(-60, 60) * S, b.y - rand(0, 80) * S, '#ffd1dc', 4, 120);
-    if (b.t > 2.2) { boss = null; bossNext = depth + 350; }
+    b.y += 120 * S * dt; b.puff = Math.max(0, b.puff - dt);
+    if (Math.random() < dt * 20) burst(b.x + rand(-60, 60) * S, b.y - rand(0, 80) * S, '#ffffff', 4, 120);
+    if (b.t > 2.4) { boss = null; levelClear(); }
     return;
   }
-  // savaş
-  if (b.stun > 0) { b.stun -= dt; return; }
-  b.x = W / 2 + Math.sin(b.t * 0.7) * W * 0.28;
-  b.y = restY + Math.sin(b.t * 1.7) * 8 * S;
-  b.attackT -= dt;
-  if (b.attackT <= 0) {
-    b.attackT = Math.max(1.3, 2.6 - b.level * 0.25) * rand(0.85, 1.15);
-    if (Math.random() < 0.5) { // mürekkep lekeleri
-      const n = 2 + Math.min(b.level, 3);
-      for (let i = 0; i < n; i++) {
-        const a = Math.atan2(player.y - b.y, player.x - b.x) + (i - (n - 1) / 2) * 0.28, sp = (150 + b.level * 15) * S;
-        entities.push({ type: 'blob', fixed: true, x: b.x, y: b.y - b.r * 0.8, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, r: 11 * S, t: Math.random() * 9 });
+  b.puff = Math.max(0, b.puff - dt * 1.5);
+  if (b.stun > 0) { b.stun -= dt; b.y = lerp(b.y, restY, dt * 3); return; }
+  const interval = Math.max(1.3, 2.8 - b.lv * 0.2) * rand(0.85, 1.15);
+
+  if (b.kind === 'puffer') {
+    // dikenli balon balığı: Okto'nun altına süzülür, şişip diken atar ya da yukarı hamle yapar
+    if (b.dash) {
+      const d = b.dash; d.t += dt;
+      if (d.stage === 'tele') { b.x += Math.sin(b.t * 60) * 2 * S; if (d.t > 0.65) { d.stage = 'up'; d.t = 0; } }
+      else if (d.stage === 'up') { b.y -= 560 * S * dt; b.puff = 1; if (b.y <= d.toY) { d.stage = 'down'; d.t = 0; } }
+      else { b.y = lerp(b.y, restY, dt * 2.5); if (Math.abs(b.y - restY) < 6) b.dash = null; }
+      return;
+    }
+    b.x = lerp(b.x, clamp(player.x, b.r, W - b.r), dt * 0.9);
+    b.y = restY + Math.sin(b.t * 2) * 6 * S;
+    if (b.puffT > 0) { // şişme uyarısı, sonra diken yağmuru
+      b.puffT -= dt; b.puff = 1 - b.puffT / 0.7;
+      if (b.puffT <= 0) {
+        const n = 8 + Math.min(b.lv, 4);
+        for (let i = 0; i < n; i++) {
+          const a = -Math.PI * (0.06 + 0.88 * i / (n - 1)), sp = (210 + b.lv * 15) * S;
+          entities.push({ type: 'spike', fixed: true, x: b.x + Math.cos(a) * b.r, y: b.y + Math.sin(a) * b.r, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, r: 7 * S, t: 0 });
+        }
+        Sound.tone(700, 0.18, 'square', 0.07, -400); Sound.noise(0.2, 0.15, 2500);
       }
-      Sound.tone(220, 0.2, 'sine', 0.1, 220);
-    } else { // dokunaç darbesi: önce uyarı sütunu
-      slams.push({ x: clamp(player.x + rand(-20, 20) * S, 30 * S, W - 30 * S), t: 0, warn: 1.0, w: 30 * S });
-      Sound.tone(300, 0.15, 'square', 0.06, 0, 0, true); Sound.tone(300, 0.15, 'square', 0.06, 0, 0.25, true);
+      return;
+    }
+    b.attackT -= dt;
+    if (b.attackT <= 0) {
+      b.attackT = interval;
+      if (Math.random() < 0.55) { b.puffT = 0.7; Sound.tone(200, 0.6, 'sine', 0.1, 300); }
+      else { b.dash = { stage: 'tele', t: 0, toY: Math.max(H * 0.32, player.y + 10 * S) }; Sound.tone(150, 0.5, 'sawtooth', 0.08, 120); }
+    }
+  } else if (b.kind === 'jelly') {
+    // elektrikli denizanası: uyarılı yıldırım sütunları ve yavru denizanaları
+    b.x = W / 2 + Math.sin(b.t * 0.55) * W * 0.26;
+    b.y = restY + Math.sin(b.t * 2.2) * 10 * S;
+    b.attackT -= dt;
+    if (b.attackT <= 0) {
+      b.attackT = interval;
+      if (Math.random() < 0.6) {
+        const n = 1 + Math.min(2, Math.floor(b.lv / 2) + 1), xs = [clamp(player.x, 30 * S, W - 30 * S)];
+        while (xs.length < n) { const x = rand(30 * S, W - 30 * S); if (xs.every(o => Math.abs(o - x) > 90 * S)) xs.push(x); }
+        for (const x of xs) slams.push({ kind: 'zap', x, t: 0, warn: 1.0, w: 24 * S });
+        Sound.tone(900, 0.12, 'square', 0.05, 0, 0, true); Sound.tone(900, 0.12, 'square', 0.05, 0, 0.3, true);
+      } else {
+        for (let i = 0; i < 3; i++) entities.push({ type: 'jelly', x: clamp(b.x + (i - 1) * 60 * S, 20, W - 20), y: b.y - b.r, r: 14 * S, t: Math.random() * 9, hue: rand(180, 220), rise: rand(60, 90) * S });
+        Sound.tone(500, 0.3, 'sine', 0.08, 400);
+      }
+    }
+  } else {
+    // dev kalamar: mürekkep lekeleri ve dokunaç darbesi
+    b.x = W / 2 + Math.sin(b.t * 0.7) * W * 0.28;
+    b.y = restY + Math.sin(b.t * 1.7) * 8 * S;
+    b.attackT -= dt;
+    if (b.attackT <= 0) {
+      b.attackT = interval;
+      if (Math.random() < 0.5) {
+        const n = 2 + Math.min(b.lv, 3);
+        for (let i = 0; i < n; i++) {
+          const a = Math.atan2(player.y - b.y, player.x - b.x) + (i - (n - 1) / 2) * 0.28, sp = (150 + b.lv * 12) * S;
+          entities.push({ type: 'blob', fixed: true, x: b.x, y: b.y - b.r * 0.8, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, r: 11 * S, t: Math.random() * 9 });
+        }
+        Sound.tone(220, 0.2, 'sine', 0.1, 220);
+      } else {
+        slams.push({ kind: 'tentacle', x: clamp(player.x + rand(-20, 20) * S, 30 * S, W - 30 * S), t: 0, warn: 1.0, w: 30 * S });
+        Sound.tone(300, 0.15, 'square', 0.06, 0, 0, true); Sound.tone(300, 0.15, 'square', 0.06, 0, 0.25, true);
+      }
     }
   }
 }
@@ -526,11 +624,11 @@ function updateSlams(dt) {
   for (const s of slams) {
     s.t += dt;
     if (s.cancel && s.t < s.warn) s.done = true;
-    const up = s.t - s.warn; // 0..0.3 yükselir, 0.3..0.9 durur, 0.9..1.2 iner
-    s.reach = up < 0 ? 0 : up < 0.3 ? up / 0.3 : up < 0.9 ? 1 : Math.max(0, 1 - (up - 0.9) / 0.3);
-    if (up > 1.2) s.done = true;
+    const up = s.t - s.warn;
+    if (s.kind === 'zap') { s.reach = up >= 0 && up < 0.55 ? 1 : 0; if (up >= 0 && !s.zapped) { s.zapped = true; Sound.noise(0.4, 0.2, 4000); Sound.tone(80, 0.4, 'sawtooth', 0.1); } if (up > 0.55) s.done = true; }
+    else { s.reach = up < 0 ? 0 : up < 0.3 ? up / 0.3 : up < 0.9 ? 1 : Math.max(0, 1 - (up - 0.9) / 0.3); if (up > 1.2) s.done = true; }
     if (s.reach > 0.3 && !s.cancel) {
-      const tipY = H - s.reach * H * 0.92;
+      const tipY = H - s.reach * H * (s.kind === 'zap' ? 1.05 : 0.92);
       if (Math.abs(player.x - s.x) < s.w + player.r * 0.6 && player.y > tipY) hurt();
     }
   }
@@ -548,20 +646,94 @@ function updateSlams(dt) {
   shots = shots.filter(s => s.life > 0);
 }
 
+// ---------- Bölüm sonu: özet kartı ve girdap geçişi ----------
+let trans = null;
+function levelClear() {
+  state = 'clear'; drag.active = false;
+  const n = levelN, goal = pearlGoal(n);
+  const stars = 1 + (levelHits <= 1 ? 1 : 0) + (levelPearls >= goal ? 1 : 0);
+  const reward = 10 + 5 * n + stars * 10;
+  bonusPearls += reward;
+  const D = Profile.data;
+  D.checkpoint = Math.max(D.checkpoint || 1, n + 1); D.startLevel = n + 1; Profile.save();
+  $('clTitle').textContent = `Bölüm ${n} Tamamlandı!`;
+  $('clName').textContent = levelInfo(n).name;
+  const st = $('clStars'); st.innerHTML = '';
+  for (let i = 0; i < 3; i++) { const sp = document.createElement('span'); sp.textContent = '★'; sp.className = i < stars ? 'on' : ''; sp.style.animationDelay = `${0.3 + i * 0.35}s`; st.append(sp); }
+  for (let i = 0; i < stars; i++) Sound.tone(880 * Math.pow(2, i * 4 / 12), 0.3, 'triangle', 0.1, 0, 0.6 + i * 0.35, true);
+  $('clStats').innerHTML = `<div>⚪ İnci: <b>${levelPearls}</b> / ${goal} ${levelPearls >= goal ? '✓' : ''}</div><div>💥 Aldığın hasar: <b>${levelHits}</b> ${levelHits <= 1 ? '✓' : ''}</div><div class="rw">Bölüm ödülü: +${reward} inci</div>`;
+  $('clNext').textContent = `Sıradaki: Bölüm ${n + 1} · ${levelInfo(n + 1).name}`;
+  show(ui.ink, false); show(ui.pauseBtn, false);
+  setTimeout(() => { if (state === 'clear') show(ui.clear, true); }, 400);
+}
+function startTransition() {
+  show(ui.clear, false);
+  state = 'transition';
+  trans = { t: 0, fx: player.x, fy: player.y, switched: false };
+  Sound.vortex();
+}
+function updateTransition(dt) {
+  const T = trans; T.t += dt; time += dt;
+  const cx = W / 2, cy = H * 0.5;
+  if (T.t < 1.5) { // girdaba çekilme: sarmal yol
+    const a = T.t / 1.5, e = a * a, ang = Math.atan2(T.fy - cy, T.fx - cx) + e * 4 * Math.PI, d = Math.hypot(T.fx - cx, T.fy - cy) * (1 - e);
+    player.x = cx + Math.cos(ang) * d; player.y = cy + Math.sin(ang) * d;
+    player.vx = -Math.sin(ang) * 300 * S; player.vy = Math.cos(ang) * 300 * S;
+    if (Math.random() < dt * 30) bgBubbles.push({ x: player.x, y: player.y, r: rand(2, 5) * S, vy: -rand(40, 90) * S, life: 1 });
+    for (const en of entities) { en.x = lerp(en.x, cx, dt * 2.5); en.y = lerp(en.y, cy, dt * 2.5); }
+  } else if (!T.switched) { // karanlıkta yeni bölüme geç
+    T.switched = true; levelN++;
+    const L = levelInfo(levelN);
+    depth = L.start; tier = L.tier; Sound.tier = L.tier;
+    entities = []; slams = []; shots = []; inkClouds = []; particles = [];
+    levelHits = 0; levelPearls = 0; inkCharge = 1; phase = 'dive';
+  } else { // girdaptan fırlayış
+    const a = clamp((T.t - 1.5) / 1.0, 0, 1), e = 1 - Math.pow(1 - a, 3);
+    player.x = cx; player.y = lerp(cy, H * 0.35, e); player.vx = 0; player.vy = -200 * S * (1 - a);
+    target.x = player.x; target.y = player.y;
+    if (a >= 1) {
+      state = 'play'; trans = null; invuln = 1.5;
+      const L = levelInfo(levelN);
+      banner(`BÖLÜM ${levelN}`, L.name, levelN === 2 ? '#9fd6ff' : '#c9b6ff', 3);
+      toast(L.news);
+      Sound.tierUp(Math.min(L.tier, 3));
+      show(ui.ink, true); show(ui.pauseBtn, true);
+    }
+  }
+}
+function drawTransition() {
+  const T = trans; if (!T) return;
+  const cx = W / 2, cy = H * 0.5, t = T.t;
+  const k = t < 1.5 ? t / 1.5 : Math.max(0, 1 - (t - 1.5) / 1.0); // girdap gücü
+  ctx.save();
+  // sarmal kollar
+  ctx.translate(cx, cy);
+  const R = Math.max(W, H) * 0.8;
+  for (let arm = 0; arm < 5; arm++) {
+    ctx.beginPath();
+    for (let i = 0; i <= 60; i++) { const s = i / 60, ang = arm * TAU / 5 + s * 5 - t * 7, r = s * R; ctx.lineTo(Math.cos(ang) * r, Math.sin(ang) * r); }
+    ctx.strokeStyle = `rgba(160,230,255,${0.35 * k})`; ctx.lineWidth = 18 * S * k; ctx.stroke();
+  }
+  const g = ctx.createRadialGradient(0, 0, 0, 0, 0, R * 0.7 * k + 1);
+  g.addColorStop(0, `rgba(0,5,20,${0.95 * k})`); g.addColorStop(0.5, `rgba(5,30,70,${0.5 * k})`); g.addColorStop(1, 'rgba(5,30,70,0)');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, R, 0, TAU); ctx.fill();
+  ctx.restore();
+  // geçiş anında ekranı kapatan karanlık
+  const cover = clamp(1 - Math.abs(t - 1.5) / 0.35, 0, 1);
+  if (cover > 0) { ctx.fillStyle = `rgba(0,4,15,${cover})`; ctx.fillRect(0, 0, W, H); }
+}
+
 // ---------- Güncelleme ----------
 function update(dt) {
   time += dt;
   let scroll = (70 + Math.min(depth, 900) * 0.18) * S; // piksel/sn
   if (boss) scroll *= 0.35;
-  depth += scroll * dt / (22 * S);
-
-  // kademe değişimi
-  const nt = tierOf(depth);
-  if (nt !== tier) {
-    tier = nt; Sound.tier = nt; Sound.tierUp(nt);
-    banner(`${nt}. KADEME`, TIERS[nt].name, nt === 2 ? '#9fd6ff' : '#b49cff', 2.8);
+  // bölüm ilerleyişi: sona gelince canavar çıkar, derinlik canavar yenilene kadar durur
+  const L = levelInfo(levelN);
+  if (phase === 'dive') {
+    depth = Math.min(depth + scroll * dt / (22 * S), L.end);
+    if (depth >= L.end) { phase = 'boss'; startBoss(L.boss); }
   }
-  if (!boss && depth >= bossNext) startBoss();
 
   // Oyuncu hareketi (göreli sürükleme hedefe gider)
   const p = player, b = bounds();
@@ -598,7 +770,7 @@ function update(dt) {
   if (comboTimer > 0) { comboTimer -= dt; if (comboTimer <= 0) combo = 0; }
   if (inkCharge < 1) inkCharge = Math.min(1, inkCharge + dt / (boss ? 4 : 7));
   if (shake > 0) shake = Math.max(0, shake - dt * 40);
-  if (Math.floor(depth / 5) !== Math.floor((depth - scroll * dt / (22 * S)) / 5)) Missions.track('depth_run', Math.floor(depth));
+  if (Math.floor(depth) % 5 === 0) Missions.track('depth_run', Math.floor(depth));
 
   // Doğurma
   spawnTimer -= dt;
@@ -612,7 +784,7 @@ function update(dt) {
     if (!e.fixed) e.y -= scroll * dt;
     switch (e.type) {
       case 'fish': e.x += e.dir * e.sp * dt; e.y += Math.sin(e.t * 3) * 10 * S * dt; break;
-      case 'jelly': if (!e.stunned) { e.x += Math.sin(e.t * 0.9) * 25 * S * dt; e.y -= Math.max(0, Math.sin(e.t * 2.2)) * 40 * S * dt; } break;
+      case 'jelly': if (!e.stunned) { e.x += Math.sin(e.t * 0.9) * 25 * S * dt; e.y -= Math.max(0, Math.sin(e.t * 2.2)) * 40 * S * dt + (e.rise || 0) * dt; } break;
       case 'puffer': {
         const d = Math.hypot(e.x - p.x, e.y - p.y);
         e.puff = lerp(e.puff, !e.stunned && d < 110 * S ? 1 : 0, dt * 5);
@@ -628,7 +800,7 @@ function update(dt) {
         if (e.warn > 0) e.warn -= dt;
         else { e.x += e.dir * e.sp * dt; e.y += Math.sin(e.t * 4) * 20 * S * dt; e.t += dt; }
         break;
-      case 'blob': e.x += e.vx * dt; e.y += e.vy * dt; break;
+      case 'blob': case 'spike': e.x += e.vx * dt; e.y += e.vy * dt; break;
     }
     if (e.stunned) e.y -= 60 * S * dt;
   }
@@ -642,7 +814,7 @@ function update(dt) {
       if (!e.stunned && d < e.r * 0.85 + p.r * 0.7) hurt();
     } else if (d < e.r + p.r * 0.9) { e.dead = true; collect(e); }
   }
-  if (boss && boss.phase === 'fight' && Math.hypot(boss.x - p.x, (boss.y - boss.r * 0.2) - p.y) < boss.r * 0.85 + p.r * 0.6) hurt();
+  if (boss && boss.phase === 'fight') { const cy = boss.y - boss.r * (boss.kind === 'puffer' ? 0 : boss.kind === 'jelly' ? 0.3 : 0.2); if (Math.hypot(boss.x - p.x, cy - p.y) < bossContactR() + p.r * 0.6) hurt(); }
   entities = entities.filter(e => !e.dead && e.y > -120 * S && e.y < H + 400 * S && e.x > -200 * S && e.x < W + 200 * S);
 
   // Efektler
@@ -736,6 +908,12 @@ function drawEntity(e) {
       pg.addColorStop(0, '#ffffff'); pg.addColorStop(1, '#ffe46b');
       ctx.fillStyle = pg; ctx.beginPath(); ctx.arc(0, -r * 0.05, r * 0.5, 0, TAU); ctx.fill();
       shell(1);
+      break;
+    }
+    case 'spike': {
+      ctx.rotate(Math.atan2(e.vy, e.vx));
+      ctx.fillStyle = '#e8a400'; ctx.strokeStyle = '#7a4a00'; ctx.lineWidth = 1.5 * S;
+      ctx.beginPath(); ctx.moveTo(r * 1.8, 0); ctx.lineTo(-r, -r * 0.6); ctx.lineTo(-r * 0.5, 0); ctx.lineTo(-r, r * 0.6); ctx.closePath(); ctx.fill(); ctx.stroke();
       break;
     }
     case 'blob': {
@@ -867,7 +1045,7 @@ function hsl2rgb(h) {
   return (hslCache[k] = `${f(0)},${f(8)},${f(4)}`);
 }
 
-// Dev kalamar çizimi
+// ---------- Canavar çizimleri ----------
 function bossTentacle(x0, y0, ang, len, w, t, ph, col, line) {
   const N = 16, pts = [];
   let x = x0, y = y0, a = ang;
@@ -879,51 +1057,122 @@ function bossTentacle(x0, y0, ang, len, w, t, ph, col, line) {
   ctx.fillStyle = '#ffd1dc';
   for (let k = 3; k < N - 1; k += 2) { const [px, py, pa, s] = pts[k]; ctx.beginPath(); ctx.arc(px + Math.cos(pa + Math.PI / 2) * w * 0.45 * (1 - s), py + Math.sin(pa + Math.PI / 2) * w * 0.45 * (1 - s), w * 0.25 * (1 - s * 0.8), 0, TAU); ctx.fill(); }
 }
-function drawBoss() {
-  const b = boss, R = b.r, t = time;
-  const stunned = b.stun > 0, hit = b.flashT > 0;
-  const col = hit ? '#ffffff' : '#e0475b', dark = '#8a1630', line = '#4a0a18';
-  ctx.save(); ctx.translate(b.x, b.y);
-  // dokunaçlar yukarı ve yanlara uzanır
-  for (let i = 0; i < 8; i++) {
-    const s = i / 7 - 0.5, ang = -Math.PI / 2 + s * 2.6;
-    bossTentacle(s * R * 1.2, -R * 0.1, ang, R * (1.5 + (i % 2) * 0.4), R * 0.22, t, i * 1.3, hit ? '#fff' : '#d23b52', line);
+function bossEyes(R, ey, gap, size, line, iris, stunned, angry) {
+  for (const sx of [-1, 1]) {
+    const ex = sx * gap;
+    ctx.fillStyle = '#fff'; ctx.strokeStyle = line; ctx.lineWidth = 3 * S;
+    ctx.beginPath(); ctx.ellipse(ex, ey, size, size * 1.12, 0, 0, TAU); ctx.fill(); ctx.stroke();
+    if (stunned) {
+      ctx.beginPath();
+      for (let a = 0; a < TAU * 2; a += 0.3) { const r = a / (TAU * 2) * size * 0.75, aa = a * sx + time * 8; ctx.lineTo(ex + Math.cos(aa) * r, ey + Math.sin(aa) * r); }
+      ctx.stroke();
+    } else {
+      const lx = clamp((player.x - boss.x) / W, -1, 1) * size * 0.3, ly = -size * 0.2;
+      ctx.fillStyle = iris; ctx.beginPath(); ctx.arc(ex + lx, ey + ly, size * 0.6, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#111'; ctx.beginPath(); ctx.ellipse(ex + lx, ey + ly, size * 0.2, size * 0.45, 0, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(ex + lx + size * 0.2, ey + ly - size * 0.25, size * 0.14, 0, TAU); ctx.fill();
+    }
+    if (angry) { ctx.strokeStyle = line; ctx.lineWidth = 5 * S; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(ex + sx * size * 0.85, ey - size * 1.5); ctx.lineTo(ex - sx * size * 0.75, ey - size * 1.0); ctx.stroke(); } // dış uç yukarı, iç uç aşağı: kızgın
   }
-  // gövde (manto aşağıda, ekran dışına uzanır)
+}
+function drawSquidBoss(b, R, hit, stunned) {
+  const line = '#4a0a18';
+  for (let i = 0; i < 8; i++) { const s = i / 7 - 0.5; bossTentacle(s * R * 1.2, -R * 0.1, -Math.PI / 2 + s * 2.6, R * (1.5 + (i % 2) * 0.4), R * 0.22, time, i * 1.3, hit ? '#fff' : '#d23b52', line); }
   const g = ctx.createRadialGradient(-R * 0.3, -R * 0.6, R * 0.1, 0, 0, R * 1.6);
-  g.addColorStop(0, hit ? '#fff' : '#ff8a9a'); g.addColorStop(0.6, col); g.addColorStop(1, dark);
+  g.addColorStop(0, hit ? '#fff' : '#ff8a9a'); g.addColorStop(0.6, hit ? '#fff' : '#e0475b'); g.addColorStop(1, '#8a1630');
   ctx.fillStyle = g; ctx.strokeStyle = line; ctx.lineWidth = 3 * S;
   ctx.beginPath(); ctx.ellipse(0, R * 0.4, R * 1.05, R * 1.3, 0, 0, TAU); ctx.fill(); ctx.stroke();
   ctx.fillStyle = 'rgba(255,255,255,.18)';
   for (const [x, y, r] of [[-0.5, 0.2, 0.12], [0.55, 0.0, 0.1], [0.2, 0.6, 0.14], [-0.3, 0.9, 0.1]]) { ctx.beginPath(); ctx.arc(x * R, y * R, r * R, 0, TAU); ctx.fill(); }
-  // gözler
-  for (const sx of [-1, 1]) {
-    const ex = sx * R * 0.42, ey = -R * 0.35;
-    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.ellipse(ex, ey, R * 0.3, R * 0.34, 0, 0, TAU); ctx.fill(); ctx.stroke();
-    if (stunned) {
-      ctx.strokeStyle = line; ctx.lineWidth = 3 * S; ctx.beginPath();
-      for (let a = 0; a < TAU * 2; a += 0.3) { const r = a / (TAU * 2) * R * 0.22, aa = a * sx + t * 8; ctx.lineTo(ex + Math.cos(aa) * r, ey + Math.sin(aa) * r); }
-      ctx.stroke();
-    } else {
-      const lx = clamp((player.x - b.x) / W, -1, 1) * R * 0.08, ly = -R * 0.06;
-      ctx.fillStyle = '#ffb000'; ctx.beginPath(); ctx.arc(ex + lx, ey + ly, R * 0.18, 0, TAU); ctx.fill();
-      ctx.fillStyle = '#111'; ctx.beginPath(); ctx.ellipse(ex + lx, ey + ly, R * 0.06, R * 0.14, 0, 0, TAU); ctx.fill();
-      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(ex + lx + R * 0.06, ey + ly - R * 0.07, R * 0.04, 0, TAU); ctx.fill();
-    }
-    // kızgın kaşlar
-    ctx.strokeStyle = line; ctx.lineWidth = 5 * S; ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.moveTo(ex - sx * R * 0.25, ey - R * 0.45); ctx.lineTo(ex + sx * R * 0.2, ey - R * 0.3); ctx.stroke();
-    ctx.strokeStyle = line; ctx.lineWidth = 3 * S;
+  bossEyes(R, -R * 0.35, R * 0.42, R * 0.3, line, '#ffb000', stunned, true);
+}
+function drawPufferBoss(b, R, hit, stunned) {
+  const p = b.puff, RR = R * (1 + p * 0.3), line = '#7a4a00';
+  ctx.save(); ctx.scale(1 + Math.sin(time * 30) * 0.02 * (b.puffT > 0 ? 1 : 0), 1);
+  // yüzgeçler
+  ctx.fillStyle = hit ? '#fff' : '#ffb347'; ctx.strokeStyle = line; ctx.lineWidth = 3 * S;
+  for (const sx of [-1, 1]) { ctx.save(); ctx.translate(sx * RR * 0.95, R * 0.1); ctx.rotate(sx * (0.4 + Math.sin(time * 8) * 0.3)); ctx.beginPath(); ctx.ellipse(sx * R * 0.25, 0, R * 0.3, R * 0.16, 0, 0, TAU); ctx.fill(); ctx.stroke(); ctx.restore(); }
+  // dikenler
+  const spikes = 18;
+  ctx.fillStyle = hit ? '#fff' : '#e8a400';
+  for (let i = 0; i < spikes; i++) {
+    const a = i / spikes * TAU + time * 0.2, l = RR * (1.12 + p * 0.28);
+    ctx.beginPath(); ctx.moveTo(Math.cos(a - 0.12) * RR * 0.95, Math.sin(a - 0.12) * RR * 0.95); ctx.lineTo(Math.cos(a) * l, Math.sin(a) * l); ctx.lineTo(Math.cos(a + 0.12) * RR * 0.95, Math.sin(a + 0.12) * RR * 0.95); ctx.fill(); ctx.stroke();
   }
+  const g = ctx.createRadialGradient(-RR * 0.3, -RR * 0.4, RR * 0.1, 0, 0, RR * 1.2);
+  g.addColorStop(0, hit ? '#fff' : '#fff2a8'); g.addColorStop(0.6, hit ? '#fff' : '#ffd23f'); g.addColorStop(1, '#e09500');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, RR, 0, TAU); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = 'rgba(160,100,0,.25)';
+  for (const [x, y, r] of [[-0.5, -0.5, 0.1], [0.45, -0.6, 0.08], [0.6, -0.1, 0.09], [-0.65, 0.05, 0.08]]) { ctx.beginPath(); ctx.arc(x * RR, y * RR, r * RR, 0, TAU); ctx.fill(); }
+  ctx.fillStyle = '#fff6d0'; ctx.beginPath(); ctx.ellipse(0, RR * 0.45, RR * 0.7, RR * 0.4, 0, 0, Math.PI); ctx.fill();
+  bossEyes(RR, -RR * 0.15, RR * 0.38, RR * 0.25, line, '#3a8f2a', stunned, true);
+  // somurtkan ağız
+  ctx.fillStyle = '#ff7a5c'; ctx.strokeStyle = line; ctx.lineWidth = 3 * S;
+  ctx.beginPath(); ctx.ellipse(0, RR * 0.32, RR * 0.14 * (1 + p * 0.5), RR * 0.1 * (1 + p), 0, 0, TAU); ctx.fill(); ctx.stroke();
+  ctx.restore();
+  if (b.dash && b.dash.stage === 'tele') { ctx.fillStyle = `rgba(255,60,60,${0.6 + 0.4 * Math.sin(time * 25)})`; ctx.font = `700 ${34 * S}px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('!', 0, -R * 1.7); }
+}
+function drawJellyBoss(b, R, hit, stunned) {
+  // uzun parlayan dokunaçlar
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 9; i++) {
+    const x0 = (i / 8 - 0.5) * R * 1.5;
+    ctx.strokeStyle = `rgba(150,220,255,${0.35 + 0.2 * Math.sin(time * 6 + i)})`; ctx.lineWidth = 4 * S;
+    ctx.beginPath(); ctx.moveTo(x0, R * 0.2);
+    for (let k = 1; k <= 10; k++) ctx.lineTo(x0 + Math.sin(time * 2.5 + i + k * 0.7) * 12 * S, R * 0.2 + k * R * 0.25);
+    ctx.stroke();
+  }
+  // gövde parıltısı
+  const glow = ctx.createRadialGradient(0, -R * 0.2, 0, 0, -R * 0.2, R * 2);
+  glow.addColorStop(0, `rgba(170,120,255,${0.35 + 0.15 * Math.sin(time * 5)})`); glow.addColorStop(1, 'rgba(170,120,255,0)');
+  ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(0, -R * 0.2, R * 2, 0, TAU); ctx.fill();
+  ctx.restore();
+  const pulse = Math.sin(b.t * 2.2) * 0.06;
+  const g = ctx.createRadialGradient(0, -R * 0.6, R * 0.1, 0, -R * 0.2, R * 1.3);
+  g.addColorStop(0, hit ? '#fff' : 'rgba(255,255,255,.95)'); g.addColorStop(0.45, hit ? '#fff' : 'rgba(190,150,255,.9)'); g.addColorStop(1, 'rgba(110,70,220,.75)');
+  ctx.fillStyle = g; ctx.strokeStyle = '#3b1f8a'; ctx.lineWidth = 3 * S;
+  ctx.beginPath(); ctx.ellipse(0, 0, R * (1.15 + pulse), R * (0.95 - pulse), 0, Math.PI, 0);
+  for (let i = 0; i <= 8; i++) { const x = R * (1.15 + pulse) * (1 - i / 4); ctx.quadraticCurveTo(x + R * 0.14, R * 0.28, x - R * 0.0, i % 2 ? R * 0.12 : R * 0.2); }
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+  // elektrik çakımı
+  if (!stunned && Math.sin(time * 13) > 0.6) {
+    ctx.strokeStyle = '#fff59a'; ctx.lineWidth = 2.5 * S; ctx.beginPath();
+    let x = rand(-R * 0.6, R * 0.6), y = -R * 0.8; ctx.moveTo(x, y);
+    for (let i = 0; i < 5; i++) { x += rand(-14, 14) * S; y += R * 0.18; ctx.lineTo(x, y); }
+    ctx.stroke();
+  }
+  bossEyes(R, -R * 0.35, R * 0.38, R * 0.22, '#3b1f8a', '#ffe14d', stunned, true);
+  ctx.strokeStyle = '#3b1f8a'; ctx.lineWidth = 3 * S; ctx.beginPath(); ctx.moveTo(-R * 0.18, -R * 0.02); ctx.quadraticCurveTo(0, -R * 0.12, R * 0.18, -R * 0.02); ctx.stroke();
+}
+function drawBoss() {
+  const b = boss;
+  ctx.save(); ctx.translate(b.x, b.y);
+  const hit = b.flashT > 0, stunned = b.stun > 0;
+  if (b.kind === 'puffer') drawPufferBoss(b, b.r, hit, stunned);
+  else if (b.kind === 'jelly') drawJellyBoss(b, b.r, hit, stunned);
+  else drawSquidBoss(b, b.r, hit, stunned);
   ctx.restore();
 }
 function drawSlams() {
   for (const s of slams) {
     if (s.t < s.warn) { // uyarı sütunu
       const a = 0.18 + 0.14 * Math.sin(s.t * 25);
-      ctx.fillStyle = `rgba(255,60,80,${a})`; ctx.fillRect(s.x - s.w, 0, s.w * 2, H);
+      ctx.fillStyle = s.kind === 'zap' ? `rgba(255,240,90,${a})` : `rgba(255,60,80,${a})`; ctx.fillRect(s.x - s.w, 0, s.w * 2, H);
       ctx.fillStyle = `rgba(255,255,255,${0.6 + 0.4 * Math.sin(s.t * 25)})`; ctx.font = `700 ${26 * S}px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText('!', s.x, H * 0.5);
+      ctx.fillText(s.kind === 'zap' ? '⚡' : '!', s.x, H * 0.5);
+      continue;
+    }
+    if (s.kind === 'zap') { // yıldırım
+      if (!s.reach) continue;
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      ctx.fillStyle = 'rgba(255,245,150,.25)'; ctx.fillRect(s.x - s.w, 0, s.w * 2, H);
+      for (const [lw, col] of [[10 * S, 'rgba(200,170,255,.6)'], [4 * S, '#fffbe0']]) {
+        ctx.strokeStyle = col; ctx.lineWidth = lw; ctx.beginPath();
+        let x = s.x; ctx.moveTo(x, H);
+        for (let y = H; y > -20; y -= 26 * S) { x = s.x + rand(-s.w, s.w) * 0.8; ctx.lineTo(x, y); }
+        ctx.stroke();
+      }
+      ctx.restore();
       continue;
     }
     const tipY = H - s.reach * H * 0.92, w = s.w;
@@ -947,9 +1196,11 @@ function drawPlayer() {
     blink: p.blink > 0 ? 1 : 0, wink: winkT > 0 ? 1 : 0,
     ouch: state === 'play' && invuln > 1.15 ? 1 : 0, dizzy: state === 'over' ? 1 : 0,
   };
-  OktoChar.draw(ctx, p.x, p.y, p.r, time, Object.assign(look(), {
+  let R = p.r, spin = 0;
+  if (trans) { const a = trans.t < 1.5 ? trans.t / 1.5 : 1 - clamp((trans.t - 1.5) / 0.6, 0, 1); R = p.r * (1 - a * 0.85); spin = trans.t * (trans.t < 1.5 ? 9 : 3) * a; }
+  OktoChar.draw(ctx, p.x, p.y, R, time, Object.assign(look(), {
     expr, trailX: clamp(-p.vx / (400 * S), -1, 1), trailY: clamp(-p.vy / (400 * S), -1, 1),
-    rot: clamp(p.vx / (900 * S), -0.3, 0.3), bob: Math.sin(time * 3) * 0.6,
+    rot: clamp(p.vx / (900 * S), -0.3, 0.3) + spin, bob: Math.sin(time * 3) * 0.6,
   }));
   drawShield();
 }
@@ -1032,8 +1283,11 @@ function drawHUD() {
   ctx.textAlign = 'left'; ctx.textBaseline = 'top';
   ctx.font = `700 15px ${FONT}`; ctx.fillStyle = 'rgba(255,255,255,.9)';
   ctx.fillText(`${Math.floor(depth)} m ⬇`, 12, top + 34);
+  const LI = levelInfo(levelN), prog = clamp((depth - LI.start) / (LI.end - LI.start), 0, 1);
   ctx.font = `700 12px ${FONT}`; ctx.fillStyle = tier === 1 ? '#bff3ff' : tier === 2 ? '#9fd6ff' : '#c9b6ff';
-  ctx.fillText(`${tier}. kademe`, 12, top + 54);
+  ctx.fillText(`Bölüm ${levelN}`, 12, top + 54);
+  ctx.fillStyle = 'rgba(255,255,255,.2)'; ctx.beginPath(); ctx.roundRect(12, top + 71, 80, 6, 3); ctx.fill();
+  ctx.fillStyle = prog >= 1 ? '#ff8a8a' : '#7be35a'; ctx.beginPath(); ctx.roundRect(12, top + 71, 80 * prog, 6, 3); ctx.fill();
   ctx.textAlign = 'center'; ctx.font = `700 30px ${FONT}`;
   ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,.3)'; ctx.strokeText(score, W / 2, top);
   ctx.fillStyle = '#fff'; ctx.fillText(score, W / 2, top);
@@ -1044,7 +1298,7 @@ function drawHUD() {
     const bw = Math.min(260, W - 140), bx = W / 2 - bw / 2, by = top + 76;
     ctx.fillStyle = 'rgba(0,0,0,.45)'; ctx.beginPath(); ctx.roundRect(bx - 4, by - 4, bw + 8, 22, 11); ctx.fill();
     ctx.fillStyle = '#ff4d6d'; ctx.beginPath(); ctx.roundRect(bx, by, bw * Math.max(0, boss.hp) / boss.maxHp, 14, 7); ctx.fill();
-    ctx.font = `700 12px ${FONT}`; ctx.fillStyle = '#fff'; ctx.textBaseline = 'middle'; ctx.fillText(`DEV KALAMAR  ${Math.max(0, boss.hp)}/${boss.maxHp}`, W / 2, by + 7);
+    ctx.font = `700 12px ${FONT}`; ctx.fillStyle = '#fff'; ctx.textBaseline = 'middle'; ctx.fillText(`${BOSS_NAMES[boss.kind]}  ${Math.max(0, boss.hp)}/${boss.maxHp}`, W / 2, by + 7);
   }
   // mürekkep düğmesi
   const c = inkCtx, s = 168, cx = s / 2, rr = s / 2 - 10, ready = inkCharge >= 1;
@@ -1148,6 +1402,8 @@ let last = performance.now();
 function frame(now) {
   const dt = Math.min((now - last) / 1000, 1 / 20); last = now;
   if (state === 'play') update(dt);
+  else if (state === 'transition') { updateTransition(dt); updateFx(dt); for (const q of particles) { q.x += q.vx * dt; q.y += q.vy * dt; q.life -= q.decay * dt; } particles = particles.filter(q => q.life > 0); }
+  else if (state === 'clear') { time += dt; updateFx(dt); }
   else if (state === 'over') {
     time += dt;
     for (const q of particles) { q.x += q.vx * dt; q.y += q.vy * dt; q.life -= q.decay * dt; }
@@ -1169,6 +1425,7 @@ function frame(now) {
     drawParticles();
     drawPlayer();
     drawFx();
+    if (state === 'transition') drawTransition();
   }
   ctx.restore();
   if (state === 'play' || state === 'pause') { drawHUD(); drawBanners(); }
@@ -1190,7 +1447,7 @@ requestAnimationFrame(frame);
 // Test/hata ayıklama için
 window.__okto = {
   get state() { return state; }, get score() { return score; }, get depth() { return depth; }, set depth(v) { depth = v; },
-  get lives() { return lives; }, set lives(v) { lives = v; }, get boss() { return boss; }, get tier() { return tier; },
+  get lives() { return lives; }, set lives(v) { lives = v; }, set invuln(v) { invuln = v; }, get boss() { return boss; }, get tier() { return tier; }, get levelN() { return levelN; }, get phase() { return phase; }, damageBoss, startTransition,
   Sound, TIERS, startGame, useInk, lightBomb: () => lightBomb(player.x, player.y), get entities() { return entities; }, get player() { return player; }, get target() { return target; },
   Profile, Missions, spawnGlow: () => entities.push({ type: 'glow', x: player.x, y: player.y + 80 * S, r: 15 * S, t: 0 }),
 };

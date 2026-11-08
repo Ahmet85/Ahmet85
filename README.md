@@ -17,8 +17,11 @@ Kurulum gerektirmez: telefon tarayıcısında açılır, "Ana ekrana ekle" ile u
 - 🛡️ Kalkan baloncuğu (10 sn), ⭐ deniz yıldızı (mürekkebi anında doldurur), ❤️ can.
 - Derinlere indikçe okyanus kararır, hız ve tehlike artar, derin sularda plankton parıldamaya başlar.
 - ✨ **Işık Midyesi**: yenince ışık bombası patlar, ekrandaki tüm düşmanlar yok olur.
-- 🎚️ **3 kademe**: 150 m ve 400 m'de kademe atlanır; deniz kararır, ses efektleri değişir (yankılı, derin).
-- 🦑 **Dev Kalamar**: 250 m'de ve sonra her 350 m'de gelir. Mürekkep düğmesi ona güdümlü mürekkep topu atar; ışık bombası 2 hasar verir. Dokunaç darbesinden önce kırmızı uyarı sütunu çıkar.
+- 🎚️ **3 ses kademesi**: bölüm derinleştikçe deniz kararır, ses efektleri değişir (yankılı, derin); dalgıç gibi nefes ve kabarcık sesleri.
+- 🏁 **Bölümler**: 1) Güneşli Sular 0–150 m, 2) Alacakaranlık Bölgesi 150–400 m, 3) Karanlık Derinlikler 400–700 m, sonra her 300 m'de bir sonsuz bölüm.
+- 👾 **Bölüm sonu canavarları**: 🐡 Dev Balon Balığı (diken yağmuru, yukarı hamle), ⚡ Elektrikli Denizanası (uyarılı yıldırım sütunları, yavru denizanaları), 🦑 Dev Kalamar (mürekkep lekeleri, dokunaç darbesi). Mürekkep düğmesi canavara güdümlü mürekkep topu atar; ışık bombası 2 hasar verir.
+- ⭐ **Bölüm sonu kartı**: 1–3 yıldız (bölümü bitirmek, inci hedefi, en fazla 1 hasar) ve inci ödülü; ardından girdaba dalış animasyonu ile yeni bölüm.
+- 💾 **Kayıt noktası**: yanınca ulaştığın bölümün başından devam edersin; menüden başlangıç bölümünü seçebilirsin.
 - 🛍️ **Mağaza**: toplanan inciler cüzdanda birikir; renk ve aksesuar (gözlük, çiçek, fiyonk, güneş gözlüğü, korsan şapkası, taç) alınır.
 - 📋 **Günlük görevler**: her gün 3 yeni görev ve büyüyen günlük giriş hediyesi.
 - En yüksek skor, cüzdan ve kostümler cihazda saklanır.

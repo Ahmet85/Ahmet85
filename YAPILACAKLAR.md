@@ -22,4 +22,6 @@ Oyun yayında: https://ahmet85.github.io/Ahmet85/ (GitHub Pages, dal: `claude/oc
 - [x] Dalgıç sesleri: nefes alma tıslaması + kabarcıklı nefes verme döngüsü, yüzerken kabarcık sesleri
 - [x] İnci mağazası: 7 renk, 7 aksesuar; inciler cüzdanda birikir
 - [x] Günlük görevler (her gün 3 görev) + günlük giriş hediyesi (seri büyür)
-- [x] Dev kalamar: 250 m'de ilk kez, sonra her 350 m'de; mürekkep topu ve ışık bombasıyla yenilir
+- [x] Bölüm sistemi: Bölüm 1 (0–150 m) Dev Balon Balığı · Bölüm 2 (150–400 m) Elektrikli Denizanası · Bölüm 3 (400–700 m) Dev Kalamar · sonra her 300 m sonsuz bölümler
+- [x] Bölüm sonu: yıldızlı özet kartı (inci hedefi, az hasar), bölüm ödülü, girdap geçiş animasyonu, yeni bölüm tanıtımı
+- [x] Kayıt noktası: yanınca bölüm başından devam; menüde "Bölüm N'den başla" seçici

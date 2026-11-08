@@ -60,6 +60,36 @@
   #helpBtn:active { transform:translateY(3px); box-shadow:0 1px 0 #0f3d8c; }
   #menuBest { position:absolute; left:0; right:0; bottom:max(14px,env(safe-area-inset-bottom)); text-align:center; font:700 17px Fredoka,"Trebuchet MS",sans-serif; color:#5a3410; opacity:1; text-shadow:0 1px 0 rgba(255,255,255,.6); }
   h1,h2,.btn { font-family:Fredoka,"Trebuchet MS",sans-serif; }
+  .roundBtn { pointer-events:auto; position:absolute; width:60px; height:60px; border-radius:50%; border:3px solid #0f3d8c; background:#fff; font-size:26px; line-height:1;
+    box-shadow:0 4px 0 #0f3d8c; cursor:pointer; padding:0; }
+  .roundBtn span { position:absolute; left:50%; top:64px; transform:translateX(-50%); font:700 13px Fredoka,"Trebuchet MS",sans-serif; color:#5a3410; white-space:nowrap; text-shadow:0 1px 0 rgba(255,255,255,.7); }
+  .roundBtn:active { transform:translateY(3px); box-shadow:0 1px 0 #0f3d8c; }
+  .badge { position:absolute; top:-6px; right:-6px; width:22px; height:22px; border-radius:50%; background:#ff3d6e; color:#fff; font:700 14px/22px Fredoka,sans-serif; border:2px solid #fff; }
+  .earned { color:#fff7d6; font-weight:bold; font-size:16px; }
+  .panel { justify-content:flex-start; overflow-y:auto; padding-top:max(16px,env(safe-area-inset-top)); background:linear-gradient(180deg,#0e5c93,#06223f); gap:10px; }
+  .phead { display:flex; align-items:center; gap:10px; width:100%; max-width:420px; }
+  .phead h2 { flex:1; text-align:left; font-size:26px; }
+  .wallet { background:#fff7d6; color:#5a3410; font:700 16px Fredoka,sans-serif; padding:6px 12px; border-radius:16px; }
+  .x { width:40px; height:40px; border-radius:50%; border:0; background:rgba(255,255,255,.2); color:#fff; font-size:18px; cursor:pointer; }
+  #shopPreview { position:static; width:200px; height:160px; flex:none; background:radial-gradient(circle at 50% 45%, rgba(120,220,255,.35), rgba(255,255,255,0) 70%); border-radius:20px; }
+  .tabs { display:flex; gap:8px; }
+  .tab { border:0; border-radius:14px; padding:8px 16px; font:700 15px Fredoka,sans-serif; background:rgba(255,255,255,.15); color:#fff; cursor:pointer; }
+  .tab.on { background:#ffd73a; color:#0f3d8c; }
+  .grid { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; width:100%; max-width:420px; }
+  .item { border:2px solid rgba(255,255,255,.2); background:rgba(255,255,255,.1); border-radius:14px; padding:4px 2px 6px; color:#fff; cursor:pointer; font-family:Fredoka,sans-serif; }
+  .item canvas { position:static; width:64px; height:64px; display:block; margin:0 auto; }
+  .item .nm { font-size:11px; font-weight:700; line-height:1.1; } .item .pr { font-size:11px; color:#fff7d6; }
+  .item.sel { border-color:#ffd73a; background:rgba(255,215,58,.2); }
+  .item.poor { opacity:.55; }
+  #shopAction { font-size:18px; padding:12px 26px; } #shopAction:disabled { filter:grayscale(.6); opacity:.7; }
+  #missionList { display:flex; flex-direction:column; gap:10px; width:100%; max-width:420px; }
+  .mission { display:grid; grid-template-columns:1fr auto; gap:4px 10px; align-items:center; text-align:left; background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.18); border-radius:14px; padding:10px 12px; }
+  .mission.gift { background:rgba(255,215,58,.18); border-color:#ffd73a; }
+  .mission.claimed { opacity:.6; }
+  .mission .mt { font:700 15px Fredoka,sans-serif; grid-column:1; } .mission .ms { font-size:12px; opacity:.8; grid-column:1; }
+  .mission .bar { grid-column:1; height:8px; border-radius:4px; background:rgba(255,255,255,.18); overflow:hidden; } .mission .bar i { display:block; height:100%; background:#7be35a; }
+  .claim { grid-column:2; grid-row:1 / span 3; border:0; border-radius:12px; padding:10px 12px; font:700 14px Fredoka,sans-serif; background:#4ccf3a; color:#fff; box-shadow:0 3px 0 #1f7a22; cursor:pointer; }
+  .claim:disabled { background:rgba(255,255,255,.2); box-shadow:none; color:#ddd; }
 </style>
 </head>
 <body>
@@ -73,7 +103,23 @@
 <div id="menu">
   <button id="helpBtn" aria-label="Nasıl oynanır">?</button>
   <button id="musicBtn" aria-label="Müzik">🎵 Müziği aç</button>
+  <button id="shopBtn" class="roundBtn" aria-label="Mağaza">🛍️<span>Mağaza</span></button>
+  <button id="missionBtn" class="roundBtn" aria-label="Görevler">📋<span>Görevler</span><b id="missionBadge" class="badge hidden">!</b></button>
   <div id="menuBest" class="best"></div>
+</div>
+
+<div id="shop" class="overlay panel hidden">
+  <div class="phead"><h2>🛍️ Mağaza</h2><div id="shopWallet" class="wallet">⚪ 0</div><button id="shopClose" class="x" aria-label="Kapat">✕</button></div>
+  <canvas id="shopPreview" width="400" height="320"></canvas>
+  <div class="tabs"><button class="tab on" data-tab="colors">🎨 Renkler</button><button class="tab" data-tab="accessories">🎩 Aksesuarlar</button></div>
+  <div id="shopGrid" class="grid"></div>
+  <button id="shopAction" class="btn">Bir ürün seç</button>
+</div>
+
+<div id="missions" class="overlay panel hidden">
+  <div class="phead"><h2>📋 Günlük Görevler</h2><div id="missionWallet" class="wallet">⚪ 0</div><button id="missionClose" class="x" aria-label="Kapat">✕</button></div>
+  <p class="sub">Görevler her gün yenilenir. Kazandığın incilerle mağazadan kostüm alabilirsin!</p>
+  <div id="missionList"></div>
 </div>
 
 <div id="help" class="overlay hidden">
@@ -83,7 +129,10 @@
     ⚪ <b>İnci</b> ve 🐟 <b>balık</b> topla, art arda toplayınca çarpan artar.<br>
     🪼 Denizanası, 🐡 balon balığı, deniz kestanesi ve 🦈 köpekbalığından kaç!<br>
     🖤 <b>Mürekkep</b> düğmesi dolunca bas, etraftaki düşmanlar sersemler.<br>
-    🫧 Kalkan, ⭐ deniz yıldızı ve ❤️ can toplanabilir.
+    🫧 Kalkan, ⭐ deniz yıldızı ve ❤️ can toplanabilir.<br>
+    ✨ <b>Işık Midyesi</b>: ye, ışık bombası patlasın, ekrandaki tüm düşmanlar yok olsun!<br>
+    🦑 <b>Dev Kalamar</b> derinlerde bekliyor: mürekkep topları ve ışık bombasıyla yen.<br>
+    🎚️ Derine indikçe <b>kademe</b> atlarsın; sesler ve deniz değişir.
   </div>
   <button id="helpClose" class="btn">Anladım!</button>
 </div>
@@ -104,6 +153,7 @@
     <div class="stat"><div class="v" id="oDepth">0</div><div class="l">Derinlik (m)</div></div>
     <div class="stat"><div class="v" id="oPearls">0</div><div class="l">İnci</div></div>
   </div>
+  <div id="oEarned" class="earned"></div>
   <div id="oBest" class="best"></div>
   <div class="row">
     <button id="againBtn" class="btn">Tekrar Dal</button>
@@ -111,6 +161,7 @@
   </div>
 </div>
 
+<script src="okto.js"></script>
 <script src="title.js"></script>
 <script src="music.js"></script>
 <script src="game.js"></script>

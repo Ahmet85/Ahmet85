@@ -11,216 +11,18 @@ const smooth = x => { x = clamp(x, 0, 1); return x * x * (3 - 2 * x); };
 const win = (t, a, b, f = 0.18) => smooth((t - a) / f) * (1 - smooth((t - (b - f)) / f));
 const rnd = (seed => () => (seed = (seed * 16807) % 2147483647) / 2147483647);
 
-const PALETTES = {
-  purple: { body: '#a463f2', light: '#d2a8ff', dark: '#6b35b8', line: '#3d1a73', sucker: '#f5c9ff', suckerIn: '#d78ee8', blush: '255,105,180' },
-  pink:   { body: '#ff7eb6', light: '#ffc6e0', dark: '#d0438a', line: '#7a1c4f', sucker: '#ffe3f0', suckerIn: '#ff9fc9', blush: '255,70,130' },
-};
-
-// ---------- Ahtapot ----------
-function tentaclePts(bx, by, a0, L, curlDir, curl, phase, t, wave = 1) {
-  const N = 26, pts = [];
-  let x = bx, y = by, a = a0;
-  for (let k = 0; k <= N; k++) {
-    const s = k / N;
-    pts.push([x, y, a, s]);
-    const kappa = curlDir * (0.35 + curl * Math.pow(s, 3.2) * 9) + wave * 1.4 * Math.sin(t * W0 * 2 + phase - s * 4) * (0.3 + s);
-    a += kappa / N;
-    x += Math.cos(a) * L / N; y += Math.sin(a) * L / N;
-  }
-  return pts;
-}
-function tentaclePath(ctx, pts, w0) {
-  const N = pts.length - 1, w = s => w0 * (1 - 0.82 * s);
-  ctx.beginPath();
-  for (let k = 0; k <= N; k++) { const [x, y, a, s] = pts[k]; ctx.lineTo(x + Math.cos(a - Math.PI / 2) * w(s), y + Math.sin(a - Math.PI / 2) * w(s)); }
-  const [tx, ty, ta, ts] = pts[N];
-  ctx.arc(tx, ty, w(ts), ta - Math.PI / 2, ta + Math.PI / 2);
-  for (let k = N; k >= 0; k--) { const [x, y, a, s] = pts[k]; ctx.lineTo(x + Math.cos(a + Math.PI / 2) * w(s), y + Math.sin(a + Math.PI / 2) * w(s)); }
-  ctx.closePath();
-}
-function suckers(ctx, pts, w0, side, P) {
-  const N = pts.length - 1;
-  for (let k = 5; k < N - 1; k += 2) {
-    const [x, y, a, s] = pts[k], w = w0 * (1 - 0.82 * s);
-    const ox = x + Math.cos(a + side * Math.PI / 2) * w * 0.5, oy = y + Math.sin(a + side * Math.PI / 2) * w * 0.5;
-    const r = w * 0.36;
-    ctx.fillStyle = P.sucker; ctx.beginPath(); ctx.ellipse(ox, oy, r, r * 0.85, a, 0, TAU); ctx.fill();
-    ctx.fillStyle = P.suckerIn; ctx.beginPath(); ctx.ellipse(ox, oy, r * 0.45, r * 0.4, a, 0, TAU); ctx.fill();
-  }
-}
-
-function drawOkto(ctx, cx, cy, R, t, P) {
+// ---------- Ahtapot (çizim okto.js'de) ----------
+function drawOkto(ctx, cx, cy, R, t, look) {
   const tc = ((t % LOOP) + LOOP) % LOOP;
-  // ifade zaman çizelgesi
-  const look = Math.sin(clamp((tc - 1.1) / 1.3, 0, 1) * TAU) * win(tc, 1.0, 2.5, 0.2); // önce sola sonra sağa (şüpheli bakış)
-  const sly = win(tc, 1.0, 2.6, 0.25);          // sinsi kaşlar
-  const wink = win(tc, 2.75, 4.1, 0.12);         // göz kırpma + dil
-  const blink = Math.max(win(tc, 5.05, 5.3, 0.1), win(tc, 0.35, 0.55, 0.08));
-  const wave = win(tc, 2.6, 4.4, 0.35);          // el sallama
-  const bob = Math.sin(tc * W0 * 3);
-  const sq = 1 + bob * 0.025;
-
-  ctx.save();
-  ctx.translate(cx, cy + bob * R * 0.07);
-  ctx.rotate(Math.sin(tc * W0) * 0.04 + wink * 0.06);
-  ctx.scale(1 / sq, sq);
-
-  const lw = R * 0.055;
-  // tentakül tanımları: [bx, by, açı, uzunluk, kıvrılma yönü, kıvrılma, faz, kalınlık]
-  const back = [
-    [-0.62, 0.42, Math.PI * 0.92, 1.2, 1, 1.15, 0.0, 0.3],
-    [0.62, 0.42, Math.PI * 0.08, 1.2, -1, 1.15, 1.2, 0.3],
-    [-0.45, 0.58, Math.PI * 0.72, 1.15, 1, 1.1, 2.1, 0.31],
-    [0.45, 0.58, Math.PI * 0.28, 1.15, -1, 1.1, 3.0, 0.31],
-    [-0.18, 0.66, Math.PI * 0.57, 1.05, 1, 1.0, 4.0, 0.31],
-    [0.18, 0.66, Math.PI * 0.43, 1.05, -1, 1.0, 5.0, 0.31],
-  ];
-  const tent = back.map(([bx, by, a, L, d, c, ph, w]) => ({ pts: tentaclePts(bx * R, by * R, a, L * R, d, c, ph, tc, 0.8), w: w * R, side: d }));
-  // ön tentaküller: biri içe kıvrık, diğeri göz kırparken el sallar
-  const fl = { pts: tentaclePts(-0.3 * R, 0.66 * R, Math.PI * 0.6, 0.85 * R, -1, 1.1, 0.6, tc, 0.6), w: 0.26 * R, side: -1 };
-  const wv = smooth(wave);
-  const waveA = Math.PI * 0.36 - wv * (Math.PI * 0.62) + Math.sin(tc * W0 * 9) * 0.3 * wv;
-  const fr = { pts: tentaclePts(0.62 * R, 0.4 * R, waveA, 0.95 * R, 1, 1.1 - wv * 0.55, 2.4, tc, 0.6 * (1 - wv)), w: 0.26 * R, side: 1 };
-
-  const headPath = () => {
-    ctx.beginPath(); ctx.ellipse(0, -0.08 * R, R * 1.0, R * 0.96, 0, 0, TAU);
-    ctx.moveTo(R * 0.86, 0.5 * R); ctx.ellipse(0, 0.5 * R, R * 0.86, R * 0.36, 0, 0, TAU);
+  // muzip ifade zaman çizelgesi (6 sn döngü)
+  const expr = {
+    look: Math.sin(clamp((tc - 1.1) / 1.3, 0, 1) * TAU) * win(tc, 1.0, 2.5, 0.2), // önce sola sonra sağa
+    sly: win(tc, 1.0, 2.6, 0.25),
+    wink: win(tc, 2.75, 4.1, 0.12),
+    blink: Math.max(win(tc, 5.05, 5.3, 0.1), win(tc, 0.35, 0.55, 0.08)),
+    wave: win(tc, 2.6, 4.4, 0.35),
   };
-  const bodyGrad = () => {
-    const g = ctx.createRadialGradient(-0.35 * R, -0.55 * R, R * 0.1, 0, 0.1 * R, R * 1.9);
-    g.addColorStop(0, P.light); g.addColorStop(0.45, P.body); g.addColorStop(1, P.dark); return g;
-  };
-
-  // 1) gövde + arka tentaküller: önce kalın kontur, sonra dolgu (birleşik dış hat)
-  ctx.lineJoin = 'round';
-  ctx.strokeStyle = P.line; ctx.lineWidth = lw * 2;
-  tent.push(fr); // el sallayan kol başın arkasından çıkar
-  for (const tt of tent) { tentaclePath(ctx, tt.pts, tt.w); ctx.stroke(); }
-  headPath(); ctx.stroke();
-  ctx.fillStyle = bodyGrad();
-  for (const tt of tent) { tentaclePath(ctx, tt.pts, tt.w); ctx.fill(); }
-  headPath(); ctx.fill();
-  for (const tt of tent) suckers(ctx, tt.pts, tt.w, tt.side, P);
-  // 2) ön tentaküller
-  for (const tt of [fl]) { ctx.strokeStyle = P.line; ctx.lineWidth = lw * 2; tentaclePath(ctx, tt.pts, tt.w); ctx.stroke(); ctx.fillStyle = bodyGrad(); ctx.fill(); suckers(ctx, tt.pts, tt.w, tt.side, P); }
-  // ön tentakülün gövdeyle birleştiği yeri yumuşat
-  ctx.fillStyle = bodyGrad(); ctx.beginPath(); ctx.ellipse(0, 0.52 * R, R * 0.72, R * 0.22, 0, 0, TAU); ctx.fill();
-
-  // 3) baş üzerindeki detaylar
-  ctx.save(); ctx.beginPath(); ctx.ellipse(0, -0.08 * R, R * 1.0, R * 0.96, 0, 0, TAU); ctx.clip();
-  // benekler
-  ctx.fillStyle = 'rgba(255,255,255,.16)';
-  [[0.55, -0.35, 0.09], [0.7, -0.05, 0.06], [-0.72, -0.2, 0.07], [0.38, -0.82, 0.06]].forEach(([x, y, r]) => { ctx.beginPath(); ctx.arc(x * R, y * R, r * R, 0, TAU); ctx.fill(); });
-  // parlama
-  const hg = ctx.createRadialGradient(-0.42 * R, -0.62 * R, 0, -0.42 * R, -0.62 * R, R * 0.5);
-  hg.addColorStop(0, 'rgba(255,255,255,.55)'); hg.addColorStop(1, 'rgba(255,255,255,0)');
-  ctx.fillStyle = hg; ctx.beginPath(); ctx.ellipse(-0.42 * R, -0.62 * R, R * 0.5, R * 0.32, -0.5, 0, TAU); ctx.fill();
-  // dalış gözlüğü kayışı
-  ctx.strokeStyle = '#1c8fa3'; ctx.lineWidth = R * 0.17;
-  ctx.beginPath(); ctx.moveTo(-1.1 * R, -0.42 * R); ctx.quadraticCurveTo(0, -0.78 * R, 1.1 * R, -0.42 * R); ctx.stroke();
-  ctx.strokeStyle = '#3fd2e6'; ctx.lineWidth = R * 0.1;
-  ctx.beginPath(); ctx.moveTo(-1.1 * R, -0.44 * R); ctx.quadraticCurveTo(0, -0.8 * R, 1.1 * R, -0.44 * R); ctx.stroke();
-  ctx.restore();
-  // baş konturu tekrar (kayış uçlarını temiz kapatır)
-  ctx.strokeStyle = P.line; ctx.lineWidth = lw;
-  ctx.beginPath(); ctx.ellipse(0, -0.08 * R, R * 1.0, R * 0.96, 0, Math.PI * 1.02, Math.PI * 1.98); ctx.stroke();
-
-  // gözlük camları
-  for (const sx of [-1, 1]) {
-    ctx.save(); ctx.translate(sx * 0.3 * R, -0.6 * R + (sx > 0 ? -0.02 * R : 0)); ctx.rotate(sx * 0.12);
-    ctx.fillStyle = '#ff9f1c'; ctx.strokeStyle = '#a0520a'; ctx.lineWidth = lw * 0.8;
-    ctx.beginPath(); ctx.ellipse(0, 0, R * 0.27, R * 0.21, 0, 0, TAU); ctx.fill(); ctx.stroke();
-    const gg = ctx.createLinearGradient(0, -R * 0.16, 0, R * 0.16);
-    gg.addColorStop(0, '#d9fbff'); gg.addColorStop(1, '#5cc8e8');
-    ctx.fillStyle = gg; ctx.beginPath(); ctx.ellipse(0, 0, R * 0.2, R * 0.145, 0, 0, TAU); ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,.9)';
-    ctx.beginPath(); ctx.ellipse(-R * 0.07, -R * 0.05, R * 0.07, R * 0.03, -0.6, 0, TAU); ctx.fill();
-    ctx.beginPath(); ctx.arc(R * 0.08, R * 0.06, R * 0.02, 0, TAU); ctx.fill();
-    ctx.restore();
-  }
-  ctx.fillStyle = '#ff9f1c'; ctx.strokeStyle = '#a0520a'; ctx.lineWidth = lw * 0.6;
-  ctx.beginPath(); ctx.roundRect(-0.07 * R, -0.66 * R, 0.14 * R, 0.08 * R, 0.03 * R); ctx.fill(); ctx.stroke();
-
-  // yanaklar
-  for (const sx of [-1, 1]) {
-    const bg = ctx.createRadialGradient(sx * 0.62 * R, 0.36 * R, 0, sx * 0.62 * R, 0.36 * R, 0.2 * R);
-    bg.addColorStop(0, `rgba(${P.blush},.6)`); bg.addColorStop(1, `rgba(${P.blush},0)`);
-    ctx.fillStyle = bg; ctx.beginPath(); ctx.arc(sx * 0.62 * R, 0.36 * R, 0.2 * R, 0, TAU); ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,.55)';
-    for (const [dx, dy] of [[-0.05, -0.03], [0.04, -0.05], [0, 0.03]]) { ctx.beginPath(); ctx.arc(sx * 0.62 * R + dx * R, 0.36 * R + dy * R, 0.012 * R, 0, TAU); ctx.fill(); }
-  }
-
-  // gözler
-  const ey = 0.06 * R;
-  for (const sx of [-1, 1]) {
-    const ex = sx * 0.36 * R;
-    const closedHappy = sx < 0 ? wink : 0;           // sol göz kırpılır
-    const lid = Math.max(blink, 0);
-    if (closedHappy > 0.5) {
-      ctx.strokeStyle = P.line; ctx.lineWidth = lw * 1.1; ctx.lineCap = 'round';
-      ctx.beginPath(); ctx.moveTo(ex - 0.2 * R, ey + 0.04 * R); ctx.quadraticCurveTo(ex, ey - 0.16 * R, ex + 0.2 * R, ey + 0.04 * R); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(ex - 0.2 * R, ey + 0.04 * R); ctx.lineTo(ex - 0.27 * R, ey - 0.02 * R); ctx.stroke();
-      continue;
-    }
-    ctx.save();
-    ctx.beginPath(); ctx.ellipse(ex, ey, 0.25 * R, 0.3 * R, 0, 0, TAU);
-    ctx.fillStyle = '#fff'; ctx.fill(); ctx.strokeStyle = P.line; ctx.lineWidth = lw * 0.8; ctx.stroke();
-    ctx.clip();
-    const px = ex + look * 0.07 * R + (sx > 0 ? -0.01 : 0.01) * R, py = ey + 0.04 * R;
-    const ig = ctx.createRadialGradient(px, py + 0.06 * R, 0, px, py, 0.2 * R);
-    ig.addColorStop(0, '#7d4bc4'); ig.addColorStop(0.6, '#3a1c6b'); ig.addColorStop(1, '#1a0b33');
-    ctx.fillStyle = ig; ctx.beginPath(); ctx.arc(px, py, 0.19 * R, 0, TAU); ctx.fill();
-    ctx.fillStyle = '#0d0520'; ctx.beginPath(); ctx.arc(px, py, 0.1 * R, 0, TAU); ctx.fill();
-    ctx.fillStyle = '#fff';
-    ctx.beginPath(); ctx.arc(px + 0.07 * R, py - 0.08 * R, 0.07 * R, 0, TAU); ctx.fill();
-    ctx.beginPath(); ctx.arc(px - 0.07 * R, py + 0.08 * R, 0.035 * R, 0, TAU); ctx.fill();
-    // göz kapağı (kırpma + sinsi bakışta yarı kapalı)
-    const lidAmt = Math.max(lid, sly * 0.22, closedHappy);
-    if (lidAmt > 0.01) {
-      ctx.fillStyle = P.body; ctx.fillRect(ex - 0.3 * R, ey - 0.32 * R, 0.6 * R, 0.62 * R * lidAmt);
-      ctx.strokeStyle = P.line; ctx.lineWidth = lw * 0.9;
-      ctx.beginPath(); ctx.moveTo(ex - 0.3 * R, ey - 0.32 * R + 0.62 * R * lidAmt); ctx.lineTo(ex + 0.3 * R, ey - 0.32 * R + 0.62 * R * lidAmt); ctx.stroke();
-    }
-    ctx.restore();
-    // kirpikler
-    ctx.strokeStyle = P.line; ctx.lineWidth = lw * 0.7; ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.moveTo(ex + sx * 0.2 * R, ey - 0.2 * R); ctx.lineTo(ex + sx * 0.29 * R, ey - 0.27 * R); ctx.stroke();
-  }
-  // kaşlar
-  ctx.strokeStyle = P.line; ctx.lineWidth = lw * 1.15; ctx.lineCap = 'round';
-  for (const sx of [-1, 1]) {
-    const raise = sx > 0 ? wink * 0.1 : -wink * 0.02;
-    const tilt = sx * (sly * 0.25) - (sx > 0 ? wink * 0.2 : 0);
-    const bx = sx * 0.36 * R, by = -0.33 * R - raise * R;
-    ctx.save(); ctx.translate(bx, by); ctx.rotate(tilt);
-    ctx.beginPath(); ctx.moveTo(-0.13 * R, 0.02 * R); ctx.quadraticCurveTo(0, -0.05 * R, 0.13 * R, 0.02 * R); ctx.stroke();
-    ctx.restore();
-  }
-  // ağız
-  const my = 0.4 * R;
-  ctx.lineCap = 'round';
-  if (wink > 0.5) {
-    ctx.fillStyle = '#5a1436'; ctx.strokeStyle = P.line; ctx.lineWidth = lw * 0.9;
-    ctx.beginPath(); ctx.moveTo(-0.15 * R, my - 0.02 * R); ctx.quadraticCurveTo(0, my + 0.03 * R, 0.17 * R, my - 0.05 * R); ctx.quadraticCurveTo(0.05 * R, my + 0.2 * R, -0.15 * R, my - 0.02 * R); ctx.fill(); ctx.stroke();
-    // dil
-    ctx.fillStyle = '#ff6f91'; ctx.strokeStyle = '#b8325a'; ctx.lineWidth = lw * 0.6;
-    ctx.beginPath(); ctx.ellipse(0.02 * R, my + 0.11 * R, 0.08 * R, 0.07 * R, 0.2, 0, Math.PI); ctx.lineTo(-0.06 * R, my + 0.05 * R); ctx.lineTo(0.1 * R, my + 0.06 * R); ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.strokeStyle = '#d94a72'; ctx.beginPath(); ctx.moveTo(0.02 * R, my + 0.08 * R); ctx.lineTo(0.03 * R, my + 0.14 * R); ctx.stroke();
-  } else {
-    ctx.strokeStyle = P.line; ctx.lineWidth = lw * 1.0;
-    const smirk = sly * 0.05;
-    ctx.beginPath(); ctx.moveTo(-0.14 * R, my - 0.01 * R + smirk * R * 0.3); ctx.quadraticCurveTo(0.0, my + 0.11 * R, 0.15 * R, my - 0.03 * R - smirk * R); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(0.15 * R, my - 0.03 * R - smirk * R); ctx.lineTo(0.18 * R, my - 0.07 * R - smirk * R); ctx.stroke();
-  }
-  // göz kırpınca parıltı
-  if (wink > 0.05) {
-    const sxp = -0.75 * R, syp = -0.25 * R, s = 0.13 * R * wink * (1 + 0.2 * Math.sin(tc * 20));
-    ctx.fillStyle = `rgba(255,240,140,${wink})`;
-    ctx.beginPath();
-    for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4, r = i % 2 ? s * 0.3 : s; ctx.lineTo(sxp + Math.cos(a) * r, syp + Math.sin(a) * r); }
-    ctx.fill();
-  }
-  ctx.restore();
+  OktoChar.draw(ctx, cx, cy, R, tc, { palette: look.palette, accessory: look.accessory, expr, bob: Math.sin(tc * W0 * 3), rot: Math.sin(tc * W0) * 0.04 });
 }
 
 // ---------- Deniz canlıları ----------
@@ -398,7 +200,7 @@ const bubbles = (() => { const r = rnd(7); return Array.from({ length: 26 }, () 
 const snow = (() => { const r = rnd(11); return Array.from({ length: 60 }, () => ({ x: r(), y: r(), s: 0.5 + r() * 1.6 })); })();
 
 function draw(ctx, W, H, t, opts = {}) {
-  const P = PALETTES[opts.variant] || PALETTES.purple;
+  const look = { palette: opts.palette || opts.variant || 'pink', accessory: opts.accessory || 'goggles' };
   const tc = ((t % LOOP) + LOOP) % LOOP;
   const u = Math.min(W / 390, H / 720);   // ölçek birimi
   const sandY = H * 0.74;
@@ -498,7 +300,7 @@ function draw(ctx, W, H, t, opts = {}) {
   blueTang(ctx, W + 60 * u - ((p1 + 0.45) % 1) * (W + 120 * u), H * 0.62 + Math.sin(tc * W0 * 2 + 2) * 8 * u, 0.95 * u, -1, tc);
 
   // OKTO
-  drawOkto(ctx, W / 2, oy, R, tc, P);
+  drawOkto(ctx, W / 2, oy, R, tc, look);
 
   drawBubbles(true);
 
@@ -519,5 +321,5 @@ function draw(ctx, W, H, t, opts = {}) {
   ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
 }
 
-window.OktoTitle = { draw, LOOP, PALETTES, playRect: null };
+window.OktoTitle = { draw, LOOP, playRect: null };
 })();

@@ -6,7 +6,7 @@ Kurulum gerektirmez: telefon tarayıcısında açılır, "Ana ekrana ekle" ile u
 ## Nasıl oynanır
 | Kontrol | Mobil | Masaüstü |
 |---|---|---|
-| Hareket | Parmağını ekranda sürükle | Fare / ok tuşları / WASD |
+| Hareket | Parmağını ekranın herhangi bir yerinde kaydır (Okto aynı yöne kayar) | Fareyle sürükle / ok tuşları / WASD |
 | Mürekkep | Sağ alttaki 💧 düğmesi | Boşluk |
 | Duraklat | Sağ üstteki II | P / Esc |
 
@@ -16,7 +16,12 @@ Kurulum gerektirmez: telefon tarayıcısında açılır, "Ana ekrana ekle" ile u
 - 💧 **Mürekkep** (7 sn'de dolar): etraftaki düşmanları sersemletir, onlar zararsız hale gelir ve bonus puan kazanırsın.
 - 🛡️ Kalkan baloncuğu (10 sn), ⭐ deniz yıldızı (mürekkebi anında doldurur), ❤️ can.
 - Derinlere indikçe okyanus kararır, hız ve tehlike artar, derin sularda plankton parıldamaya başlar.
-- En yüksek skor cihazda saklanır.
+- ✨ **Işık Midyesi**: yenince ışık bombası patlar, ekrandaki tüm düşmanlar yok olur.
+- 🎚️ **3 kademe**: 150 m ve 400 m'de kademe atlanır; deniz kararır, ses efektleri değişir (yankılı, derin).
+- 🦑 **Dev Kalamar**: 250 m'de ve sonra her 350 m'de gelir. Mürekkep düğmesi ona güdümlü mürekkep topu atar; ışık bombası 2 hasar verir. Dokunaç darbesinden önce kırmızı uyarı sütunu çıkar.
+- 🛍️ **Mağaza**: toplanan inciler cüzdanda birikir; renk ve aksesuar (gözlük, çiçek, fiyonk, güneş gözlüğü, korsan şapkası, taç) alınır.
+- 📋 **Günlük görevler**: her gün 3 yeni görev ve büyüyen günlük giriş hediyesi.
+- En yüksek skor, cüzdan ve kostümler cihazda saklanır.
 
 ## Çalıştırma
 ```bash
@@ -27,7 +32,10 @@ Telefonda denemek için aynı Wi‑Fi'daki bilgisayarın IP'siyle açın ya da G
 
 ## Dosyalar
 - `index.html`: ekranlar (menü, duraklatma, oyun sonu) ve stil
-- `game.js`: oyun motoru, çizimler (tüm grafikler kodla çiziliyor, harici görsel yok), sesler (WebAudio)
+- `game.js`: oyun motoru, düşmanlar, dev kalamar, mağaza ve görevler, sesler (WebAudio)
+- `okto.js`: Okto karakteri çizimi, renkler ve aksesuarlar
+- `title.js`: animasyonlu açılış ekranı
+- `music.js`: açılış müziği (`music/acilis.mp3` varsa o çalınır)
 - `manifest.json`, `sw.js`, `icon.svg`: PWA / çevrimdışı destek
 
 ## Sonraki adımlar (fikirler)

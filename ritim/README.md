@@ -8,7 +8,7 @@ Yayın adresi: https://ahmet85.github.io/Ahmet85/ritim/ (telefonda açıp "Ana e
 - [x] 1. Temel: veri modeli, Türkçe ve çeviriye hazır arayüz, bölge/saat ayarları, yedekleme, örnek profil
 - [x] 2. Görünümler: Bugün (ŞİMDİ kartı), Hafta (şerit + yan çevirince tablo), Ay, Yıl; yakınlaşma geçişleri
 - [x] 3. Randevu ekleme, hatırlatma teklifi ve çakışma yönetimi (önizleme, onay, geri al)
-- [ ] 4. Haftalık tabloda sürükle-bırak
+- [x] 4. Haftalık tabloda sürükle-bırak, süre değiştirme, "Gün ve saati değiştir", rutin blok oluşturma/düzenleme
 - [ ] 5. "Günüm değişti" ve kısa sürümler
 - [ ] 6. "Kaldığım yer" notları
 - [ ] 7. Alarmlar ve kutlamalar

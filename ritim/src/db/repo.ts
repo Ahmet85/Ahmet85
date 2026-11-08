@@ -12,6 +12,7 @@ import type {
   Profile,
   Project,
   ProgressNote,
+  RecurrenceRule,
   Reminder,
   ReminderTarget,
   Routine,
@@ -22,10 +23,28 @@ import { makeReminder, remindersFor } from '../domain/reminders';
 import { occurrenceId } from '../domain/recurrence';
 import type { AgendaItem } from '../domain/agenda';
 import type { Resolution } from '../domain/conflicts';
-import { localEnd, minutesOfDay, toDayNumber } from '../domain/time';
-import { PROFILE_TABLES, type RitimDB } from './db';
+import { splitRule, type Scope } from '../domain/moves';
+import { addDays, localEnd, minutesOfDay, toDayNumber } from '../domain/time';
+import { PROFILE_TABLES, uid, type RitimDB } from './db';
 
 export const HISTORY_LIMIT = 100;
+
+/** Randevunun dakika cinsinden süresi (tüm gün ise 60 varsayılır). */
+export function eventDuration(e: EventItem) {
+  return e.startTime && e.endTime
+    ? (toDayNumber(e.endDate) - toDayNumber(e.startDate)) * 1440 + minutesOfDay(e.endTime) - minutesOfDay(e.startTime)
+    : 60;
+}
+
+/** Randevuyu yeni başlangıca taşı (süre korunur). Tüm gün etkinlik gün olarak kayar. */
+export function movedEvent(e: EventItem, date: string, startTime: string | undefined, durationMin: number): EventItem {
+  if (!e.startTime || !startTime) {
+    const span = toDayNumber(e.endDate) - toDayNumber(e.startDate);
+    return { ...e, startDate: date, endDate: addDays(date, span) };
+  }
+  const end = localEnd(date, startTime, durationMin);
+  return { ...e, startDate: date, startTime, endDate: end.date, endTime: end.time };
+}
 
 /** Tablo satırı (yalnızca kimliği zorunlu) */
 const row = <T extends { id: string }>(x: T) => x;
@@ -134,6 +153,11 @@ export class Repo {
     return this.apply(c.profileId, 'history.saveCategory', [{ table: 'categories', put: c }]);
   }
 
+  /** Kategoriyi sil: bağlı bloklar silinmez, kategorisiz kalır. */
+  deleteCategory(c: Category) {
+    return this.apply(c.profileId, 'history.deleteCategory', [{ table: 'categories', del: c.id }]);
+  }
+
   // ---- Rutinler ----
   putRoutine(r: Routine) {
     return this.apply(r.profileId, 'history.saveRoutine', [{ table: 'routines', put: r }]);
@@ -209,24 +233,23 @@ export class Repo {
     item: { table: 'events' | 'tasks'; row: EventItem | DatedTask },
     resolutions: { target: AgendaItem; resolution: Resolution }[],
   ) {
-    const ops: Op[] = [{ table: item.table, put: item.row }];
+    const ops: Op[] = [{ table: item.table, put: item.row }, ...(await this.resolutionOps(profileId, resolutions))];
+    return this.apply(profileId, label, ops);
+  }
+
+  /** Çakışma çözümlerinin veritabanı işlemleri. */
+  private async resolutionOps(profileId: string, resolutions: { target: AgendaItem; resolution: Resolution }[]) {
+    const ops: Op[] = [];
     for (const { target, resolution: r } of resolutions) {
       if (r.action === 'keep') continue;
       if (target.kind === 'routine') {
-        const id = occurrenceId(target.routineId!, target.originalDate!);
-        const existing = (await this.db.occurrences.get(id)) ?? {
-          id,
-          profileId,
-          routineId: target.routineId!,
-          originalDate: target.originalDate!,
-        };
         const patch: Partial<OccurrenceRecord> =
           r.action === 'skip'
             ? { status: 'skipped' }
             : r.action === 'move'
               ? { date: target.date, startTime: r.startTime }
               : { date: r.date, startTime: r.startTime };
-        ops.push({ table: 'occurrences', put: row({ ...existing, ...patch, consciousChange: true }) });
+        ops.push(await this.occurrenceOp(profileId, target.routineId!, target.originalDate!, { ...patch, consciousChange: true }));
       } else if (target.kind === 'event') {
         const e = await this.db.events.get(target.eventId!);
         if (!e) continue;
@@ -235,15 +258,131 @@ export class Repo {
           continue;
         }
         const date = r.action === 'move' ? e.startDate : r.date;
-        const dur =
-          e.startTime && e.endTime
-            ? (toDayNumber(e.endDate) - toDayNumber(e.startDate)) * 1440 + minutesOfDay(e.endTime) - minutesOfDay(e.startTime)
-            : 60;
-        const end = localEnd(date, r.startTime, dur);
-        ops.push({ table: 'events', put: row({ ...e, startDate: date, startTime: r.startTime, endDate: end.date, endTime: end.time }) });
+        ops.push({ table: 'events', put: row(movedEvent(e, date, r.startTime, eventDuration(e))) });
       }
     }
-    return this.apply(profileId, label, ops);
+    return ops;
+  }
+
+  private async occurrenceOp(profileId: string, routineId: string, originalDate: string, patch: Partial<OccurrenceRecord>): Promise<Op> {
+    const id = occurrenceId(routineId, originalDate);
+    const existing = (await this.db.occurrences.get(id)) ?? { id, profileId, routineId, originalDate };
+    return { table: 'occurrences', put: row({ ...existing, ...patch }) };
+  }
+
+  /**
+   * Bir öğeyi yeni gün/saate taşır veya süresini değiştirir (sürükle-bırak,
+   * "Gün ve saati değiştir"). Tekrarlayan blokta scope='one' yalnızca o tarihi,
+   * 'future' o tarihten sonraki tüm tekrarları değiştirir. Çakışma çözümleri
+   * aynı işleme dahildir; tek "Geri al" hepsini geri alır.
+   */
+  async moveItem(
+    profileId: string,
+    item: AgendaItem,
+    to: { date: string; startTime?: string; durationMin: number },
+    scope: Scope,
+    resolutions: { target: AgendaItem; resolution: Resolution }[] = [],
+  ) {
+    const ops: Op[] = [];
+    if (item.kind === 'routine') {
+      const r = (await this.db.routines.get(item.routineId!))!;
+      if (scope === 'one') {
+        ops.push(
+          await this.occurrenceOp(profileId, r.id, item.originalDate!, {
+            date: to.date,
+            startTime: to.startTime,
+            durationMin: to.durationMin === r.durationMin ? undefined : to.durationMin,
+            consciousChange: true,
+          }),
+        );
+      } else {
+        ops.push(
+          ...(await this.splitOps(r, item.originalDate!, {
+            ...r,
+            startTime: to.startTime ?? r.startTime,
+            durationMin: to.durationMin,
+          }, toDayNumber(to.date) - toDayNumber(item.originalDate!))),
+        );
+      }
+    } else if (item.kind === 'event') {
+      const e = (await this.db.events.get(item.eventId!))!;
+      ops.push({ table: 'events', put: row(movedEvent(e, to.date, to.startTime, to.durationMin)) });
+    } else {
+      const k = (await this.db.tasks.get(item.taskId!))!;
+      ops.push({ table: 'tasks', put: row({ ...k, date: to.date, time: to.startTime ?? k.time }) });
+    }
+    ops.push(...(await this.resolutionOps(profileId, resolutions)));
+    return this.apply(profileId, 'history.moveItem', ops);
+  }
+
+  /**
+   * Rutini fromDate'ten böler: önceki kısım aynen kalır, yeni seri `next`
+   * değerleriyle (delta gün kaydırılarak) devam eder. fromDate ve sonrasına ait
+   * istisnalar ve hatırlatmalar yeni seriye taşınır.
+   */
+  private async splitOps(r: Routine, fromDate: string, next: Routine, delta: number, ruleOverride?: RecurrenceRule): Promise<Op[]> {
+    const ops: Op[] = [];
+    const { old, next: rule } = splitRule(r.recurrence, fromDate, delta);
+    const newId = uid();
+    ops.push({ table: 'routines', put: row({ ...next, id: newId, recurrence: ruleOverride ?? rule }) });
+    if (old) ops.push({ table: 'routines', put: row({ ...r, recurrence: old }) });
+    else ops.push({ table: 'routines', del: r.id });
+
+    const recs = await this.db.occurrences.where('routineId').equals(r.id).toArray();
+    for (const rec of recs) {
+      if (rec.originalDate < fromDate) continue;
+      ops.push({ table: 'occurrences', del: rec.id });
+      if (rec.originalDate === fromDate) continue; // taşınan oluşumun eski istisnası artık gereksiz
+      const od = addDays(rec.originalDate, delta);
+      ops.push({ table: 'occurrences', put: row({ ...rec, id: occurrenceId(newId, od), routineId: newId, originalDate: od }) });
+    }
+    const rems = await this.db.reminders.where('profileId').equals(r.profileId).toArray();
+    for (const m of remindersFor(rems, { routineId: r.id })) {
+      const t = m.target;
+      if (t.kind === 'routine') {
+        const copy = makeReminder(r.profileId, { kind: 'routine', routineId: newId }, m.offsetMin);
+        ops.push({ table: 'reminders', put: copy });
+        if (!old) ops.push({ table: 'reminders', del: m.id });
+      } else if (t.kind === 'occurrence' && t.originalDate >= fromDate) {
+        ops.push({ table: 'reminders', del: m.id });
+        ops.push({
+          table: 'reminders',
+          put: makeReminder(r.profileId, { kind: 'occurrence', routineId: newId, originalDate: addDays(t.originalDate, delta) }, m.offsetMin),
+        });
+      }
+    }
+    return ops;
+  }
+
+  /**
+   * Rutin düzenleme. Saat, süre veya tekrar günleri değiştiyse geçmiş bozulmasın
+   * diye seri fromDate'ten bölünür; yalnızca ad/kategori/esneklik gibi
+   * değişiklikler tüm seriye uygulanır.
+   */
+  async updateRoutine(prev: Routine, next: Routine, fromDate: string) {
+    const timingChanged =
+      prev.startTime !== next.startTime ||
+      prev.durationMin !== next.durationMin ||
+      JSON.stringify(prev.recurrence) !== JSON.stringify(next.recurrence);
+    if (!timingChanged || next.recurrence.startDate >= fromDate || prev.recurrence.startDate >= fromDate)
+      return this.apply(next.profileId, 'history.saveRoutine', [{ table: 'routines', put: next }]);
+    const ops = await this.splitOps(prev, fromDate, next, 0, { ...next.recurrence, startDate: fromDate });
+    return this.apply(next.profileId, 'history.saveRoutine', ops);
+  }
+
+  /** "Bundan sonraki tüm tekrarları sil": geçmiş kalır (karne için). */
+  async endRoutineFrom(r: Routine, fromDate: string) {
+    const { old } = splitRule(r.recurrence, fromDate, 0);
+    if (!old) return this.deleteRoutine(r);
+    const recs = await this.db.occurrences.where('routineId').equals(r.id).toArray();
+    const rems = await this.db.reminders.where('profileId').equals(r.profileId).toArray();
+    await this.apply(r.profileId, 'history.endRoutine', [
+      { table: 'routines', put: row({ ...r, recurrence: old }) },
+      ...recs.filter((x) => x.originalDate >= fromDate).map((x) => ({ table: 'occurrences' as const, del: x.id })),
+      ...remindersFor(rems, { routineId: r.id })
+        .filter((m) => m.target.kind === 'occurrence' && m.target.originalDate >= fromDate)
+        .map((m) => ({ table: 'reminders' as const, del: m.id })),
+    ]);
   }
 
   // ---- Projeler ve notlar ----

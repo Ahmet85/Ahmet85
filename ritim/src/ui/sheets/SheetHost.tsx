@@ -5,6 +5,11 @@ import type { AgendaItem } from '../../domain/agenda';
 import type { PlainDateStr } from '../../domain/types';
 import { AddFlow } from './AddFlow';
 import { ItemSheet } from './ItemSheet';
+import { MoveFlow, type MoveTo } from './MoveFlow';
+import { RoutineForm } from './RoutineForm';
+import { Sheet } from '../Sheet';
+import { useT } from '../../i18n/i18n';
+import { useStore } from '../store';
 
 export interface AddInit {
   date: PlainDateStr;
@@ -16,16 +21,24 @@ export interface AddInit {
   taskId?: string;
 }
 
-type Open = { kind: 'add'; init: AddInit; n: number } | { kind: 'item'; item: AgendaItem; n: number } | null;
+type Open =
+  | { kind: 'add'; init: AddInit; n: number }
+  | { kind: 'item'; item: AgendaItem; n: number }
+  | { kind: 'move'; item: AgendaItem; to?: MoveTo; n: number }
+  | { kind: 'routine'; routineId: string; n: number }
+  | null;
 
 interface Sheets {
   openAdd: (init: AddInit) => void;
   openItem: (item: AgendaItem) => void;
+  openMove: (item: AgendaItem, to?: MoveTo) => void;
+  openRoutine: (routineId: string) => void;
   close: () => void;
   goDay?: (d: PlainDateStr) => void;
 }
 
-const Ctx = createContext<Sheets>({ openAdd: () => {}, openItem: () => {}, close: () => {} });
+const noop = () => {};
+const Ctx = createContext<Sheets>({ openAdd: noop, openItem: noop, openMove: noop, openRoutine: noop, close: noop });
 export const useSheets = () => useContext(Ctx);
 
 export function SheetHost({ children, goDay }: { children: ReactNode; goDay: (d: PlainDateStr) => void }) {
@@ -34,6 +47,8 @@ export function SheetHost({ children, goDay }: { children: ReactNode; goDay: (d:
   const value: Sheets = {
     openAdd: (init) => setOpen({ kind: 'add', init, n: Date.now() }),
     openItem: (item) => setOpen({ kind: 'item', item, n: Date.now() }),
+    openMove: (item, to) => setOpen({ kind: 'move', item, to, n: Date.now() }),
+    openRoutine: (routineId) => setOpen({ kind: 'routine', routineId, n: Date.now() }),
     close,
     goDay,
   };
@@ -43,7 +58,20 @@ export function SheetHost({ children, goDay }: { children: ReactNode; goDay: (d:
       <AnimatePresence>
         {open?.kind === 'add' && <AddFlow key={open.n} init={open.init} onClose={close} />}
         {open?.kind === 'item' && <ItemSheet key={open.n} item={open.item} onClose={close} />}
+        {open?.kind === 'move' && <MoveFlow key={open.n} item={open.item} to={open.to} onClose={close} />}
+        {open?.kind === 'routine' && <RoutineSheet key={open.n} routineId={open.routineId} onClose={close} />}
       </AnimatePresence>
     </Ctx.Provider>
+  );
+}
+
+function RoutineSheet({ routineId, onClose }: { routineId: string; onClose: () => void }) {
+  const { t } = useT();
+  const { data } = useStore();
+  const r = data.routines.find((x) => x.id === routineId);
+  return (
+    <Sheet title={t('routine.editTitle')} onClose={onClose}>
+      {r ? <RoutineForm routine={r} onDone={onClose} /> : null}
+    </Sheet>
   );
 }

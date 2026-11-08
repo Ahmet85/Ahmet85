@@ -215,26 +215,40 @@ export function Settings() {
 function Categories() {
   const { t } = useT();
   const { profile, data, run } = useStore();
-  const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState<string | null>(null); // kategori id veya 'new'
   const [name, setName] = useState('');
   const [color, setColor] = useState<PaletteKey>('yesil');
   const [icon, setIcon] = useState('leaf');
   const cats = [...data.categories].sort((a, b) => a.order - b.order);
+  const current = cats.find((c) => c.id === editing);
+
+  const open = (id: string | 'new') => {
+    const c = cats.find((x) => x.id === id);
+    setEditing(id);
+    setName(c?.name ?? '');
+    setIcon(c?.icon ?? 'leaf');
+    setColor((Object.keys(PALETTE) as PaletteKey[]).find((k) => PALETTE[k].bg === c?.color.bg) ?? 'yesil');
+  };
 
   const save = async () => {
     if (!name.trim() || !profile) return;
     await run('history.saveCategory', () =>
       repo.putCategory({
-        id: uid(),
+        id: current?.id ?? uid(),
         profileId: profile.id,
         name: name.trim(),
         color: PALETTE[color],
         icon,
-        order: cats.length,
+        order: current?.order ?? cats.length,
       }),
     );
-    setName('');
-    setAdding(false);
+    setEditing(null);
+  };
+
+  const remove = async () => {
+    if (!current || !confirm(t('settings.deleteCategoryConfirm', { name: current.name }))) return;
+    await run('history.deleteCategory', () => repo.deleteCategory(current));
+    setEditing(null);
   };
 
   return (
@@ -243,11 +257,13 @@ function Categories() {
       <ul className="cat-list">
         {cats.map((c) => (
           <li key={c.id} style={{ background: c.color.bg, color: c.color.fg }}>
-            <Icon name={c.icon} size={18} /> {c.name}
+            <button aria-label={`${t('settings.editCategory')}: ${c.name}`} onClick={() => open(c.id)}>
+              <Icon name={c.icon} size={18} /> {c.name}
+            </button>
           </li>
         ))}
       </ul>
-      {adding ? (
+      {editing ? (
         <div className="stack">
           <label className="field">
             <span>{t('settings.categoryName')}</span>
@@ -286,13 +302,18 @@ function Categories() {
             <button className="btn primary" onClick={save}>
               {t('settings.save')}
             </button>
-            <button className="btn ghost" onClick={() => setAdding(false)}>
+            <button className="btn ghost" onClick={() => setEditing(null)}>
               {t('settings.cancel')}
             </button>
+            {current && (
+              <button className="btn ghost danger" onClick={remove}>
+                <Icon name="trash" size={18} /> {t('settings.deleteCategory')}
+              </button>
+            )}
           </div>
         </div>
       ) : (
-        <button className="btn" onClick={() => setAdding(true)}>
+        <button className="btn" onClick={() => open('new')}>
           <Icon name="plus" size={18} /> {t('settings.addCategory')}
         </button>
       )}

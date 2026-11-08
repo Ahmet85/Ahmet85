@@ -1,17 +1,12 @@
 // Randevu / etkinlik / tek seferlik görev ekleme akışı (tarif bölüm 7):
 // form → (çakışma varsa) seçenekler → önizleme → onay → hatırlatma teklifi.
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useT } from '../../i18n/i18n';
 import { repo, useStore } from '../store';
 import { uid } from '../../db/db';
-import {
-  findConflicts,
-  freeStarts,
-  suggestDays,
-  type Placed,
-  type Resolution,
-  type Span,
-} from '../../domain/conflicts';
+import { findConflicts, type Placed, type Span } from '../../domain/conflicts';
+import { ConflictChoices, ResolutionLines, toResolutions, type Choices } from './ConflictParts';
+import { RoutineForm } from './RoutineForm';
 import { addDays, clock, minutesOfDay, toDayNumber } from '../../domain/time';
 import type { DatedTask, EventItem, ReminderTarget } from '../../domain/types';
 import { formatClock, formatDayMonth, formatWeekdayShort } from '../format';
@@ -19,10 +14,6 @@ import { Sheet } from '../Sheet';
 import type { AddInit } from './SheetHost';
 
 type Step = 'form' | 'conflicts' | 'preview' | 'reminder';
-
-interface Choice {
-  res?: Resolution;
-}
 
 export function AddFlow({ init, onClose }: { init: AddInit; onClose: () => void }) {
   const { t } = useT();
@@ -33,7 +24,7 @@ export function AddFlow({ init, onClose }: { init: AddInit; onClose: () => void 
   const isEdit = !!(editing || editingTask);
 
   // ---- Form durumu ----
-  const [kind, setKind] = useState<'event' | 'task'>(editingTask ? 'task' : (init.kind ?? 'event'));
+  const [kind, setKind] = useState<'event' | 'task' | 'routine'>(editingTask ? 'task' : (init.kind ?? 'event'));
   const [title, setTitle] = useState(editing?.title ?? editingTask?.title ?? '');
   const [date, setDate] = useState(editing?.startDate ?? editingTask?.date ?? init.date);
   const [allDay, setAllDay] = useState(editing ? !editing.startTime : false);
@@ -53,7 +44,7 @@ export function AddFlow({ init, onClose }: { init: AddInit; onClose: () => void 
 
   const [step, setStep] = useState<Step>('form');
   const [conflicts, setConflicts] = useState<Placed[]>([]);
-  const [choices, setChoices] = useState<Record<string, Choice>>({});
+  const [choices, setChoices] = useState<Choices>({});
   const [saved, setSaved] = useState<ReminderTarget | null>(null);
   const [customMin, setCustomMin] = useState('10');
   const [showCustom, setShowCustom] = useState(false);
@@ -112,44 +103,16 @@ export function AddFlow({ init, onClose }: { init: AddInit; onClose: () => void 
     } else save([]);
   };
 
-  // ---- Çakışma önerileri ----
-  /** Çakışan öğenin kendi günü ve o güne göre başlangıcı */
-  const home = (p: Placed) => {
-    const k = Math.floor(p.start / 1440);
-    return { date: addDays(date, k), start: p.start - k * 1440, dur: p.end - p.start, off: k * 1440 };
-  };
+  const allChosen = conflicts.every((p) => choices[p.item.key]);
 
-  const suggestions = useMemo(
-    () =>
-      conflicts.map((p, idx) => {
-        const h = home(p);
-        const extraBusy: Span[] = [];
-        if (span) extraBusy.push({ start: span.start - h.off, end: span.end - h.off });
-        conflicts.forEach((q, j) => {
-          const r = choices[q.item.key]?.res;
-          if (j !== idx && r?.action === 'move' && home(q).date === h.date)
-            extraBusy.push({ start: minutesOfDay(r.startTime), end: minutesOfDay(r.startTime) + home(q).dur });
-        });
-        const ignore = (i: { key: string; eventId?: string }) => i.key === p.item.key || ignoreSelf(i);
-        return {
-          moves: freeStarts(data, h.date, h.dur, h.start, { extraBusy, ignore, max: 4 }).filter((m) => m !== h.start),
-          days: suggestDays(data, h.date, h.dur, h.start, { ignore, max: 3 }),
-        };
-      }),
-    [conflicts, choices, data, date, span?.start, span?.end], // eslint-disable-line
-  );
-
-  const allChosen = conflicts.every((p) => choices[p.item.key]?.res);
-  const choose = (key: string, res: Resolution) => setChoices({ ...choices, [key]: { res } });
-
-  const save = async (resolutions: { target: Placed; resolution: Resolution }[]) => {
+  const save = async (resolutions: ReturnType<typeof toResolutions>) => {
     const item = buildRow();
     await run(isEdit ? 'add.updated' : 'add.saved', () =>
       repo.saveWithResolutions(
         profile!.id,
         item.table === 'events' ? 'history.saveEvent' : 'history.saveTask',
         item,
-        resolutions.map((r) => ({ target: { ...r.target.item, date: home(r.target).date }, resolution: r.resolution })),
+        resolutions,
       ),
     );
     // Hatırlatma teklifi yalnızca yeni kayıtta (düzenlemede mevcutlar kendiliğinden güncellenir)
@@ -172,17 +135,24 @@ export function AddFlow({ init, onClose }: { init: AddInit; onClose: () => void 
     return `${d} ${formatClock(start, s)}–${endTxt}`;
   };
 
-  const placedTime = (p: Placed) => {
-    const h = home(p);
-    return `${formatClock(clock(h.start), s)}–${formatClock(clock((h.start + h.dur) % 1440), s)}`;
-  };
-
   const sheetTitle =
     step === 'conflicts' ? t('conflict.title') : step === 'preview' ? t('preview.title') : step === 'reminder' ? t('reminder.ask') : t(isEdit ? 'add.titleEdit' : 'add.titleNew');
 
   return (
     <Sheet title={sheetTitle} onClose={onClose}>
-      {step === 'form' && (
+      {step === 'form' && kind === 'routine' && (
+        <>
+          <div className="seg-control three" role="radiogroup">
+            {(['event', 'task', 'routine'] as const).map((k) => (
+              <button type="button" key={k} role="radio" aria-checked={kind === k} className={kind === k ? 'active' : ''} onClick={() => setKind(k)}>
+                {t(k === 'event' ? 'add.kindEvent' : k === 'task' ? 'add.kindTask' : 'add.kindRoutine')}
+              </button>
+            ))}
+          </div>
+          <RoutineForm init={{ date, start, end }} onDone={onClose} />
+        </>
+      )}
+      {step === 'form' && kind !== 'routine' && (
         <form
           className="stack"
           onSubmit={(e) => {
@@ -191,10 +161,10 @@ export function AddFlow({ init, onClose }: { init: AddInit; onClose: () => void 
           }}
         >
           {!isEdit && (
-            <div className="seg-control" role="radiogroup">
-              {(['event', 'task'] as const).map((k) => (
+            <div className="seg-control three" role="radiogroup">
+              {(['event', 'task', 'routine'] as const).map((k) => (
                 <button type="button" key={k} role="radio" aria-checked={kind === k} className={kind === k ? 'active' : ''} onClick={() => setKind(k)}>
-                  {t(k === 'event' ? 'add.kindEvent' : 'add.kindTask')}
+                  {t(k === 'event' ? 'add.kindEvent' : k === 'task' ? 'add.kindTask' : 'add.kindRoutine')}
                 </button>
               ))}
             </div>
@@ -308,74 +278,7 @@ export function AddFlow({ init, onClose }: { init: AddInit; onClose: () => void 
 
       {step === 'conflicts' && (
         <div className="stack">
-          <p>{t('conflict.intro')}</p>
-          {conflicts.map((p, idx) => {
-            const key = p.item.key;
-            const res = choices[key]?.res;
-            const sug = suggestions[idx];
-            const isRoutine = p.item.kind === 'routine';
-            return (
-              <section key={key} className="card conflict">
-                <p className="conflict-q">
-                  <strong>{t('conflict.item', { title: p.item.title, time: placedTime(p) })}</strong>
-                </p>
-                {p.item.flex?.protected && <p className="small muted">{t('conflict.protected')}</p>}
-
-                <div className={`opt${res?.action === 'move' ? ' selected' : ''}`}>
-                  <span className="opt-label">{t('conflict.move')}</span>
-                  {sug.moves.length ? (
-                    <div className="chips">
-                      {sug.moves.map((m) => {
-                        const st = clock(m);
-                        const on = res?.action === 'move' && res.startTime === st;
-                        return (
-                          <button key={m} className={`chip${on ? ' on' : ''}`} aria-pressed={on} onClick={() => choose(key, { action: 'move', startTime: st })}>
-                            {formatClock(st, s)}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <span className="small muted">{t('conflict.moveNone')}</span>
-                  )}
-                </div>
-
-                <div className={`opt${res?.action === 'postpone' ? ' selected' : ''}`}>
-                  <span className="opt-label">{t('conflict.postpone')}</span>
-                  {sug.days.length ? (
-                    <div className="chips">
-                      {sug.days.map((d) => {
-                        const on = res?.action === 'postpone' && res.date === d.date && res.startTime === d.startTime;
-                        return (
-                          <button
-                            key={d.date}
-                            className={`chip${on ? ' on' : ''}`}
-                            aria-pressed={on}
-                            onClick={() => choose(key, { action: 'postpone', date: d.date, startTime: d.startTime })}
-                          >
-                            {formatWeekdayShort(d.date, s)} {formatDayMonth(d.date, s)} · {formatClock(d.startTime, s)}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <span className="small muted">{t('conflict.postponeNone')}</span>
-                  )}
-                </div>
-
-                <div className="chips">
-                  <button className={`chip${res?.action === 'skip' ? ' on' : ''}`} aria-pressed={res?.action === 'skip'} onClick={() => choose(key, { action: 'skip' })}>
-                    {t(isRoutine ? 'conflict.skip' : 'conflict.skipEvent')}
-                  </button>
-                  <button className={`chip${res?.action === 'keep' ? ' on' : ''}`} aria-pressed={res?.action === 'keep'} onClick={() => choose(key, { action: 'keep' })}>
-                    {t('conflict.keep')}
-                  </button>
-                </div>
-              </section>
-            );
-          })}
-          {conflicts.some((p) => p.item.kind === 'routine') && <p className="small muted">{t('conflict.onlyThisDate')}</p>}
-          {!allChosen && <p className="small muted">{t('conflict.chooseAll')}</p>}
+          <ConflictChoices conflicts={conflicts} baseDate={date} primary={span} choices={choices} setChoices={setChoices} ignore={ignoreSelf} />
           <div className="row-btns">
             <button className="btn primary" disabled={!allChosen} onClick={() => setStep('preview')}>
               {t('conflict.toPreview')}
@@ -392,27 +295,10 @@ export function AddFlow({ init, onClose }: { init: AddInit; onClose: () => void 
           <p className="muted">{t('preview.intro')}</p>
           <ul className="preview-list">
             <li className="pv-add">{t(isEdit ? 'preview.update' : 'preview.add', { title: title.trim(), when: when() })}</li>
-            {conflicts.map((p) => {
-              const r = choices[p.item.key]!.res!;
-              const h = home(p);
-              const txt =
-                r.action === 'move'
-                  ? t('preview.move', { title: p.item.title, from: formatClock(clock(h.start), s), to: formatClock(r.startTime, s) })
-                  : r.action === 'postpone'
-                    ? t('preview.postpone', {
-                        title: p.item.title,
-                        to: `${formatWeekdayShort(r.date, s)} ${formatDayMonth(r.date, s)} ${formatClock(r.startTime, s)}`,
-                      })
-                    : t(r.action === 'skip' ? 'preview.skip' : 'preview.keep', { title: p.item.title });
-              return (
-                <li key={p.item.key} className={`pv-${r.action}`}>
-                  {txt}
-                </li>
-              );
-            })}
+            <ResolutionLines conflicts={conflicts} choices={choices} baseDate={date} />
           </ul>
           <div className="row-btns">
-            <button className="btn primary" onClick={() => save(conflicts.map((p) => ({ target: p, resolution: choices[p.item.key]!.res! })))}>
+            <button className="btn primary" onClick={() => save(toResolutions(conflicts, choices, date))}>
               {t('preview.confirm')}
             </button>
             <button className="btn ghost" onClick={() => setStep('conflicts')}>

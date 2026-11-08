@@ -159,6 +159,16 @@ export function ItemSheet({ item: initial, onClose }: { item: AgendaItem; onClos
               <Icon name="plus" size={18} /> {t('item.addHere')}
             </button>
           )}
+          {status !== 'cancelled' && (
+            <button className="btn" onClick={() => sheets.openMove(item)}>
+              <Icon name="clock" size={18} /> {t('move.title')}
+            </button>
+          )}
+          {routine && (
+            <button className="btn" onClick={() => sheets.openRoutine(routine.id)}>
+              <Icon name="edit" size={18} /> {t('routine.editTitle')}
+            </button>
+          )}
           {(event || task) && (
             <button className="btn" onClick={() => sheets.openAdd({ date: startDate, eventId: event?.id, taskId: task?.id })}>
               <Icon name="edit" size={18} /> {t('common.edit')}

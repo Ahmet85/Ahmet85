@@ -878,6 +878,9 @@ select {
   background-color: color-mix(in srgb, var(--accent) 6%, transparent);
 }
 .wt-block {
+  --cat-bg: var(--card);
+  --cat-fg: var(--text);
+  --cat-accent: var(--muted);
   position: absolute;
   padding: 2px 5px;
   border: none;
@@ -1391,4 +1394,99 @@ textarea {
 }
 .wt-col {
   cursor: copy;
+}
+
+/* ================= 4. adım: Sürükle-bırak ve düzenleme ================= */
+.wt-block {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  transition: opacity 150ms;
+}
+.wt-block.drag-src {
+  opacity: 0.3;
+}
+.week-table.dragging {
+  cursor: grabbing;
+}
+.week-table.dragging .wt-col {
+  cursor: grabbing;
+}
+.wt-col.drop-target {
+  background-color: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+.wt-day.drop-target {
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  border-radius: 12px;
+}
+.wt-ghost {
+  position: absolute;
+  inset-inline: 2px;
+  z-index: 4;
+  padding: 3px 6px;
+  border-radius: 8px;
+  background: var(--cat-bg, var(--card));
+  color: var(--cat-fg, var(--text));
+  border: 2px solid var(--accent);
+  box-shadow: 0 8px 20px rgb(0 0 0 / 22%);
+  font-size: 0.72rem;
+  line-height: 1.15;
+  display: flex;
+  flex-direction: column;
+  transition: top 90ms ease-out, height 90ms ease-out;
+  transform: scale(1.04);
+  pointer-events: none;
+}
+.wt-resize {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  height: 10px;
+  cursor: ns-resize;
+  touch-action: none;
+}
+.wt-resize::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 3px;
+  width: 18px;
+  height: 3px;
+  margin-left: -9px;
+  border-radius: 2px;
+  background: currentColor;
+  opacity: 0.35;
+}
+.drag-label {
+  position: sticky;
+  bottom: 0;
+  margin: 8px auto 0;
+  padding: 8px 14px;
+  width: fit-content;
+  border-radius: 999px;
+  background: var(--text);
+  color: var(--bg);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.seg-control.three {
+  grid-template-columns: repeat(3, 1fr);
+}
+.chips.days .chip {
+  min-width: 48px;
+  justify-content: center;
+}
+.short-row {
+  display: grid;
+  grid-template-columns: 1fr 80px 44px;
+  gap: 6px;
+  align-items: center;
+}
+.cat-list li button {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  min-height: 32px;
 }

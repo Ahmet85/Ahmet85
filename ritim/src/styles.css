@@ -1,0 +1,464 @@
+/* Tasarım dili: Krem Ajanda (varsayılan), otomatik gece modunda Gece Kahvesi.
+   Mantıksal CSS (margin-inline vb.) kullanılır: sağdan sola diller bozulmaz. */
+:root {
+  --bg: #f6f0e4;
+  --card: #fbf7ee;
+  --border: #e6dcc8;
+  --text: #2e2a24;
+  --muted: #6b6257;
+  --accent: #c2643f;
+  --accent-text: #fbf7ee;
+  --danger: #8a3c1e;
+  --shadow: 0 1px 2px rgb(46 42 36 / 6%), 0 6px 18px rgb(46 42 36 / 6%);
+  --r-card: 24px;
+  --r-row: 16px;
+  --r-btn: 14px;
+  --font: 'Nunito', system-ui, sans-serif;
+  --hand: 'Caveat', 'Nunito', cursive;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #221d19;
+    --card: #2e2722;
+    --border: #3e352e;
+    --text: #f3ebdd;
+    --muted: #b8ac98;
+    --accent: #e08a62;
+    --accent-text: #221d19;
+    --danger: #e08a62;
+    --shadow: 0 1px 2px rgb(0 0 0 / 25%), 0 6px 18px rgb(0 0 0 / 20%);
+    color-scheme: dark;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 17px;
+  line-height: 1.45;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0 0 0.5rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+h1 {
+  font-size: 1.25rem;
+}
+h2 {
+  font-size: 1.05rem;
+}
+h3 {
+  font-size: 0.95rem;
+  margin-block-start: 1rem;
+}
+p {
+  margin: 0 0 0.75rem;
+}
+
+.app {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+.content {
+  flex: 1;
+  width: 100%;
+  max-width: 640px;
+  margin-inline: auto;
+  padding: max(16px, env(safe-area-inset-top)) 16px calc(96px + env(safe-area-inset-bottom));
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  padding: 18px;
+  box-shadow: var(--shadow);
+}
+.muted {
+  color: var(--muted);
+}
+.small {
+  font-size: 0.85rem;
+}
+.center {
+  text-align: center;
+}
+.hand {
+  font-family: var(--hand);
+  font-weight: 500;
+}
+.hand.big {
+  font-size: 2rem;
+  line-height: 1.1;
+  margin-block-end: 0.25rem;
+}
+.page-title {
+  font-size: 1.5rem;
+  margin-block: 8px;
+}
+.note {
+  margin-block-start: 16px;
+}
+
+/* Düğmeler: dokunma hedefi ≥ 44px */
+.btn {
+  min-height: 44px;
+  padding: 10px 16px;
+  border-radius: var(--r-btn);
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: transform 200ms var(--ease), background 200ms var(--ease);
+}
+.btn:active {
+  transform: scale(0.97);
+}
+.btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+.btn.ghost {
+  background: transparent;
+}
+.btn.danger {
+  color: var(--danger);
+}
+.small-btn {
+  min-height: 36px;
+  padding: 6px 12px;
+  font-size: 0.9rem;
+}
+.icon-btn {
+  min-width: 44px;
+  min-height: 44px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  border-radius: 50%;
+  display: inline-grid;
+  place-items: center;
+  cursor: pointer;
+}
+.icon-btn:active {
+  background: var(--border);
+}
+.row-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Form */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-block-end: 12px;
+  border: none;
+  padding: 0;
+}
+.field > span,
+.field > legend {
+  font-weight: 600;
+  font-size: 0.95rem;
+  margin-block-end: 6px;
+  padding: 0;
+}
+input:not([type='radio']),
+select {
+  min-height: 44px;
+  padding: 10px 12px;
+  border-radius: var(--r-btn);
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  width: 100%;
+}
+.choice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  cursor: pointer;
+}
+.choice input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--accent);
+}
+.choice.row {
+  padding-inline: 12px;
+  border-radius: var(--r-row);
+}
+.choice.row.selected {
+  background: var(--bg);
+}
+.profile-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-block-end: 12px;
+}
+
+/* Bugün */
+.day-head {
+  margin-block-end: 12px;
+}
+.day-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.day-title {
+  flex: 1;
+  text-align: center;
+}
+.day-title h1 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+.blocks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.block {
+  --cat-bg: var(--card);
+  --cat-fg: var(--text);
+  --cat-accent: var(--border);
+  display: flex;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--r-row);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-inline-start: 6px solid var(--cat-accent);
+  animation: rise 350ms var(--ease) both;
+}
+.block.now {
+  background: var(--cat-bg);
+  color: var(--cat-fg);
+  box-shadow: var(--shadow);
+}
+.block-time {
+  display: flex;
+  flex-direction: column;
+  min-width: 64px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+.block.now .muted {
+  color: inherit;
+  opacity: 0.8;
+}
+.block-body {
+  flex: 1;
+  min-width: 0;
+}
+.block-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+.cat-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--cat-bg);
+  color: var(--cat-fg);
+  flex-shrink: 0;
+}
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-block-start: 6px;
+}
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+.block.now .tag {
+  color: inherit;
+  border-color: currentColor;
+}
+.tag.now-tag {
+  background: var(--cat-fg);
+  color: var(--cat-bg) !important;
+  border-color: var(--cat-fg);
+  font-weight: 700;
+}
+.tag.status {
+  font-weight: 700;
+}
+
+/* Kategoriler */
+.cat-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.cat-list li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.swatch {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.swatch.selected {
+  border-color: var(--accent);
+  border-width: 3px;
+}
+
+.welcome {
+  margin-block: 16px;
+}
+
+/* Alt gezinme */
+.tabbar {
+  position: fixed;
+  inset-inline: 0;
+  inset-block-end: 0;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 16px calc(8px + env(safe-area-inset-bottom));
+  background: color-mix(in srgb, var(--card) 92%, transparent);
+  backdrop-filter: blur(12px);
+  border-block-start: 1px solid var(--border);
+}
+.tabbar button {
+  flex: 1;
+  max-width: 160px;
+  min-height: 52px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  border-radius: var(--r-btn);
+  cursor: pointer;
+}
+.tabbar button.active {
+  color: var(--text);
+  background: var(--bg);
+}
+
+/* Bildirim şeridi ("Geri al") */
+.toast {
+  position: fixed;
+  inset-inline: 16px;
+  inset-block-end: calc(84px + env(safe-area-inset-bottom));
+  max-width: 560px;
+  margin-inline: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 8px 8px 16px;
+  border-radius: var(--r-row);
+  background: var(--text);
+  color: var(--bg);
+  box-shadow: var(--shadow);
+  animation: rise 300ms var(--ease) both;
+}
+.toast span {
+  flex: 1;
+}
+.toast .icon-btn {
+  color: inherit;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Animasyonları azalt (sistem ayarı) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    transition-duration: 1ms !important;
+  }
+}

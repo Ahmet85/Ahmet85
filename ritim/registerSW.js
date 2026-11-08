@@ -1,0 +1,1 @@
+if('serviceWorker' in navigator) {window.addEventListener('load', () => {navigator.serviceWorker.register('/Ahmet85/ritim/sw.js', { scope: '/Ahmet85/ritim/' })})}

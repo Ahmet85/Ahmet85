@@ -24,7 +24,37 @@ export interface ProfileSettings {
   celebrations?: boolean;
   /** Haftalık karne günü (varsayılan Pazar) */
   reportDay?: Weekday;
+  /** Görünüm, ses ve hareket (yoksa varsayılanlar: appearanceOf) */
+  appearance?: Appearance;
 }
+
+export type ThemeName = 'krem' | 'kil' | 'zeytin' | 'bal' | 'gece';
+export type FontModel = 'samimi' | 'defter' | 'yuvarlak';
+export type FontSize = 'small' | 'normal' | 'large' | 'xlarge';
+
+export interface Appearance {
+  theme: ThemeName;
+  /** Sistem koyu moddayken Gece Kahvesi */
+  autoNight: boolean;
+  font: FontModel;
+  fontSize: FontSize;
+  /** Animasyonları azalt (sistem ayarına ek olarak) */
+  reduceMotion: boolean;
+  /** Sekme ve ekran geçişlerinde yumuşak sesler */
+  uiSound: boolean;
+  uiVolume: number; // 0..1
+}
+
+export const DEFAULT_APPEARANCE: Appearance = {
+  theme: 'krem',
+  autoNight: true,
+  font: 'samimi',
+  fontSize: 'normal',
+  reduceMotion: false,
+  uiSound: true,
+  uiVolume: 0.35,
+};
+export const appearanceOf = (s: { appearance?: Appearance }): Appearance => ({ ...DEFAULT_APPEARANCE, ...s.appearance });
 
 export interface AlarmPrefs {
   sound: 'bell' | 'marimba' | 'silent';

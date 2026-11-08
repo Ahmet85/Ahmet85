@@ -87,3 +87,25 @@ describe('hatırlatma çalma kuralları', () => {
     expect(f[0].source).toEqual({ routineId: 'g', originalDate: '2026-03-04' });
   });
 });
+
+import { buildProgramIcs } from '../src/domain/ics';
+describe('programı takvime aktarma', () => {
+  it('rutinler, randevular ve görevler; atlananlar ve iptaller hariç; tüm gün etkinlik gün olarak', () => {
+    const r = routine({ id: 'g', title: 'Gitar', startTime: '20:00', durationMin: 60, categoryId: 'm' });
+    const recs: OccurrenceRecord[] = [{ id: 'g@2026-03-03', profileId: 'p1', routineId: 'g', originalDate: '2026-03-03', status: 'skipped' }];
+    const ev = { id: 'trip', profileId: 'p1', title: 'Tatil', startDate: '2026-03-02', endDate: '2026-03-03', status: 'planned' as const };
+    const cancelled = { id: 'x', profileId: 'p1', title: 'İptal', startDate: '2026-03-02', startTime: '10:00', endDate: '2026-03-02', endTime: '11:00', status: 'cancelled' as const };
+    const task = { id: 't', profileId: 'p1', title: 'Fatura', date: '2026-03-04', status: 'planned' as const };
+    const ics = buildProgramIcs(
+      { routines: [r], records: recs, events: [ev, cancelled], tasks: [task] },
+      { from: '2026-03-02', to: '2026-03-04', timeZone: 'Europe/Istanbul', calendarName: 'Ritim', categoryName: (id) => (id === 'm' ? 'Müzik' : undefined), now: Temporal.Instant.from('2026-03-01T00:00:00Z') },
+    );
+    expect(ics.match(/BEGIN:VEVENT/g)).toHaveLength(4); // Gitar x2, Tatil x1, Fatura x1
+    expect(ics).toContain('DTSTART:20260302T170000Z');
+    expect(ics).not.toContain('DTSTART:20260303T170000Z');
+    expect(ics).toContain('DTSTART;VALUE=DATE:20260302');
+    expect(ics).toContain('DTEND;VALUE=DATE:20260304');
+    expect(ics).toContain('CATEGORIES:Müzik');
+    expect(ics).not.toContain('İptal');
+  });
+});

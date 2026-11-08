@@ -16,6 +16,7 @@ import { MonthView, monthGrid } from './views/MonthView';
 import { YearView } from './views/YearView';
 import { SheetHost, useSheets } from './sheets/SheetHost';
 import { clock } from '../domain/time';
+import { uiSound } from './alarm/sound';
 
 export const LEVELS = ['day', 'week', 'month', 'year'] as const;
 export type Level = (typeof LEVELS)[number];
@@ -82,6 +83,7 @@ export function Calendar() {
   const go = (to: Level, d: PlainDateStr = date) => {
     if (to === level && d === date) return;
     const dir = LEVELS.indexOf(to) - LEVELS.indexOf(level);
+    if (dir) uiSound('paper');
     setMove({ kind: 'zoom', dir: Math.sign(dir), origin: originFor(level, to, d, s.weekStart, cols) });
     setDate(d);
     setLevelPref(to);
@@ -91,6 +93,7 @@ export function Calendar() {
     if (i >= 0 && i < LEVELS.length) go(LEVELS[i]);
   };
   const step = (n: number) => {
+    uiSound('tick');
     setMove({ kind: 'slide', dir: n, origin: '50% 50%' });
     setDate(shift(level, date, n));
   };

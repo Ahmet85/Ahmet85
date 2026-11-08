@@ -6,6 +6,10 @@ import { SheetHost } from './ui/sheets/SheetHost';
 import { CelebrateHost } from './ui/Celebrate';
 import { AlarmHost } from './ui/alarm/AlarmHost';
 import { Report } from './ui/Report';
+import { useApplyAppearance } from './ui/appearance';
+import { LockScreen } from './ui/LockScreen';
+import { isUnlocked } from './ui/pin';
+import { uiSound } from './ui/alarm/sound';
 import { MotionConfig } from 'motion/react';
 import { Settings } from './ui/Settings';
 import { Welcome } from './ui/Welcome';
@@ -17,6 +21,7 @@ function Shell() {
   const { t } = useT();
   const { ready, profile, toast, undo, dismissToast } = useStore();
   const [tab, setTab] = useState<Tab>('today');
+  const [, setUnlockTick] = useState(0);
   // Başka ekranlardan sekme değiştirme (ör. "Karnen hazır" kartı)
   useEffect(() => {
     const on = (e: Event) => setTab((e as CustomEvent<Tab>).detail);
@@ -31,6 +36,14 @@ function Shell() {
   }, [toast, dismissToast]);
 
   if (!ready) return null;
+  if (profile?.pinHash && !isUnlocked(profile.id))
+    return (
+      <div className="app">
+        <main className="content">
+          <LockScreen onUnlock={() => setUnlockTick((n) => n + 1)} />
+        </main>
+      </div>
+    );
 
   return (
     <div className="app">
@@ -73,7 +86,10 @@ function Shell() {
             ['settings', 'settings', 'nav.settings'],
           ] as const
         ).map(([id, icon, label]) => (
-          <button key={id} className={tab === id ? 'active' : ''} aria-current={tab === id} onClick={() => setTab(id)}>
+          <button key={id} className={tab === id ? 'active' : ''} aria-current={tab === id} onClick={() => {
+              if (tab !== id) uiSound('tick');
+              setTab(id);
+            }}>
             <Icon name={icon} />
             <span>{t(label)}</span>
           </button>
@@ -86,13 +102,14 @@ function Shell() {
 function WithIntl() {
   const { profile, defaults } = useStore();
   const s = profile?.settings ?? defaults;
+  const look = useApplyAppearance(s);
   return (
     <I18nProvider language={s.language} region={s.region} timeZone={s.timeZone}>
       {/* Sistemde "hareketi azalt" açıksa animasyonlar sade geçişe döner */}
-      <MotionConfig reducedMotion="user">
+      <MotionConfig reducedMotion={look.reduceMotion ? 'always' : 'user'}>
         <CelebrateHost>
           <Shell />
-          {profile && <AlarmHost key={profile.id} />}
+          {profile && (!profile.pinHash || isUnlocked(profile.id)) && <AlarmHost key={profile.id} />}
         </CelebrateHost>
       </MotionConfig>
     </I18nProvider>

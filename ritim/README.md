@@ -12,8 +12,16 @@ Yayın adresi: https://ahmet85.github.io/Ahmet85/ritim/ (telefonda açıp "Ana e
 - [x] 5. "Günüm değişti" (neden, müsait saat, öneri, tek tek değiştirme, onay, geri al) ve kısa sürümler
 - [x] 6. "Kaldığım yer" notları (tamamlayınca isteğe bağlı not, çalışmaya bağlı, sonraki oturumda görünür, geçmiş listesi)
 - [x] 7. Alarmlar (uygulama içi dürtme + alarmlı takvim dosyası) ve başarı kutlamaları
-- [ ] 8. Karne
-- [ ] 9. Ayarlar ve dışa aktarma
+- [x] 8. Karne: tamamlama halkası, durumlar, planlanan/gerçekleşen süre, sık ertelenenler, gözleme dayalı koç önerileri
+- [x] 9. Ayarlar (renk ve yazı modelleri, yazı boyutu, geçiş sesleri, animasyonları azalt, profil PIN'i) ve dışa aktarma (.ics program, A4 yatay yazdırma, JSON yedek)
+
+## Sonraki fazlar (tarif bölüm 19)
+- Hedef zinciri ayrıntıları (yıl → ay → hafta, ölçülebilir ilerleme)
+- Vakte / gün doğumuna göre kayan bloklar (kullanıcı isterse)
+- Şablon kütüphanesi ve yaşam tarzı seçimli karşılama
+- Ortak (aile/çift) bloklar, cihaz takvimini içe aktarma
+- Hesap ve senkron, yeni diller
+- Kapalı uygulamada güvenilir alarm için yerel uygulama sarmalayıcısı (Capacitor)
 
 ## Teknik
 - Vite + React + TypeScript, çevrimdışı çalışan PWA

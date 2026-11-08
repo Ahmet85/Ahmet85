@@ -9,6 +9,12 @@ import { nowLocal } from '../domain/time';
 import { REGIONS, formatClock, formatLongDate, regionName, timeZones, weekdayName } from './format';
 import { Icon, ICON_NAMES } from './Icon';
 import { Welcome } from './Welcome';
+import { appearanceOf, type Appearance, type FontModel, type FontSize, type ThemeName } from '../domain/types';
+import { buildProgramIcs } from '../domain/ics';
+import { startOfWeek } from '../domain/time';
+import { PrintWeek } from './PrintWeek';
+import { hashPin, markUnlocked } from './pin';
+import { uiSound } from './alarm/sound';
 import { useSheets } from './sheets/SheetHost';
 import { alarmPrefs, type AlarmPrefs } from '../domain/types';
 import { buildIcs } from '../domain/ics';
@@ -100,6 +106,7 @@ export function Settings() {
             <button className="btn" onClick={() => setCreating(true)}>
               <Icon name="plus" size={18} /> {t('settings.newProfile')}
             </button>
+            {profile && <PinControl />}
             {profile && (
               <button
                 className="btn ghost danger"
@@ -115,6 +122,7 @@ export function Settings() {
         )}
       </Section>
 
+      {profile && <AppearanceSection />}
       {profile && (
         <Section title={t('settings.region')}>
           <label className="field">
@@ -171,6 +179,7 @@ export function Settings() {
       {profile && <Categories />}
       {profile && <Projects />}
 
+      {profile && <ExportSection />}
       <Section title={t('settings.backup')}>
         <p className="muted">{t('settings.backupBody')}</p>
         <div className="row-btns">
@@ -499,5 +508,227 @@ function Alarms() {
       <p className="muted small">{t('alarmSettings.openBody')}</p>
       <PermissionAsk />
     </Section>
+  );
+}
+
+const THEMES: { id: ThemeName; bg: string; card: string; accent: string; text: string }[] = [
+  { id: 'krem', bg: '#F6F0E4', card: '#FBF7EE', accent: '#A9532F', text: '#2E2A24' },
+  { id: 'kil', bg: '#F3E6DD', card: '#FAF1EA', accent: '#9E4E30', text: '#33251E' },
+  { id: 'zeytin', bg: '#EEEEE1', card: '#F7F7EE', accent: '#5E6B2E', text: '#2A2C21' },
+  { id: 'bal', bg: '#F8EFD9', card: '#FDF7E8', accent: '#E0A43A', text: '#33291A' },
+  { id: 'gece', bg: '#221D19', card: '#2E2722', accent: '#E08A62', text: '#F3EBDD' },
+];
+const FONTS: { id: FontModel; family: string }[] = [
+  { id: 'samimi', family: 'Nunito' },
+  { id: 'defter', family: 'Lora' },
+  { id: 'yuvarlak', family: 'Quicksand' },
+];
+
+function AppearanceSection() {
+  const { t } = useT();
+  // Önizlemeler için tüm yazı tiplerini yükle
+  useEffect(() => {
+    import('@fontsource/lora/400.css');
+    import('@fontsource/lora/700.css');
+    import('@fontsource/quicksand/400.css');
+    import('@fontsource/quicksand/700.css');
+  }, []);
+  const { profile, run } = useStore();
+  const p = profile!;
+  const a = appearanceOf(p.settings);
+  const set = (patch: Partial<Appearance>) =>
+    run('history.updateProfile', () => repo.updateProfile({ ...p, settings: { ...p.settings, appearance: { ...a, ...patch } } }), { undo: false });
+
+  return (
+    <Section title={t('look.title')}>
+      <fieldset className="field">
+        <legend>{t('look.theme')}</legend>
+        <div className="theme-grid" role="radiogroup">
+          {THEMES.map((th) => (
+            <button
+              key={th.id}
+              role="radio"
+              aria-checked={a.theme === th.id}
+              className={`theme-swatch${a.theme === th.id ? ' selected' : ''}`}
+              style={{ background: th.bg, color: th.text }}
+              onClick={() => set({ theme: th.id })}
+            >
+              <span className="ts-card" style={{ background: th.card }}>
+                <span className="ts-dot" style={{ background: th.accent }} />
+              </span>
+              <span className="ts-name">{t(`look.theme.${th.id}`)}</span>
+            </button>
+          ))}
+        </div>
+      </fieldset>
+      <label className="choice">
+        <input type="checkbox" checked={a.autoNight} onChange={(e) => set({ autoNight: e.target.checked })} />
+        <span>
+          {t('look.autoNight')}
+          <br />
+          <span className="small muted">{t('look.autoNightHint')}</span>
+        </span>
+      </label>
+
+      <fieldset className="field">
+        <legend>{t('look.font')}</legend>
+        <div className="font-list" role="radiogroup">
+          {FONTS.map((f) => (
+            <button
+              key={f.id}
+              role="radio"
+              aria-checked={a.font === f.id}
+              className={`font-choice${a.font === f.id ? ' selected' : ''}`}
+              style={{ fontFamily: `'${f.family}', system-ui` }}
+              onClick={() => set({ font: f.id })}
+            >
+              <strong>{t(`look.font.${f.id}`)}</strong>
+              <span className="small">{t('look.fontSample')}</span>
+            </button>
+          ))}
+        </div>
+      </fieldset>
+      <fieldset className="field">
+        <legend>{t('look.size')}</legend>
+        <div className="seg-control four">
+          {(['small', 'normal', 'large', 'xlarge'] as FontSize[]).map((k, i) => (
+            <button key={k} className={a.fontSize === k ? 'active' : ''} aria-pressed={a.fontSize === k} onClick={() => set({ fontSize: k })} style={{ fontSize: `${0.8 + i * 0.12}rem` }}>
+              {t(`look.size.${k}`)}
+            </button>
+          ))}
+        </div>
+      </fieldset>
+
+      <h3>{t('look.motionSound')}</h3>
+      <label className="choice">
+        <input type="checkbox" checked={a.reduceMotion} onChange={(e) => set({ reduceMotion: e.target.checked })} />
+        <span>
+          {t('look.reduceMotion')}
+          <br />
+          <span className="small muted">{t('look.reduceMotionHint')}</span>
+        </span>
+      </label>
+      <label className="choice">
+        <input
+          type="checkbox"
+          checked={a.uiSound}
+          onChange={(e) => {
+            set({ uiSound: e.target.checked });
+          }}
+        />
+        <span>
+          {t('look.uiSound')}
+          <br />
+          <span className="small muted">{t('look.uiSoundHint')}</span>
+        </span>
+      </label>
+      {a.uiSound && (
+        <div className="field-row align-end">
+          <label className="field">
+            <span>{t('alarmSettings.volume')}</span>
+            <input type="range" min={0.1} max={1} step={0.1} value={a.uiVolume} onChange={(e) => set({ uiVolume: Number(e.target.value) })} />
+          </label>
+          <div className="row-btns">
+            <button className="btn ghost small-btn" onClick={() => uiSound('paper')}>
+              {t('look.testPaper')}
+            </button>
+            <button className="btn ghost small-btn" onClick={() => uiSound('tick')}>
+              {t('look.testTick')}
+            </button>
+          </div>
+        </div>
+      )}
+    </Section>
+  );
+}
+
+function ExportSection() {
+  const { t } = useT();
+  const { profile, data } = useStore();
+  const p = profile!;
+  const s = p.settings;
+  const today = nowLocal(s.timeZone).date;
+  const [printing, setPrinting] = useState(false);
+  const [weeks, setWeeks] = useState(8);
+
+  const exportProgram = () => {
+    const ics = buildProgramIcs(data, {
+      from: today,
+      to: addDays(today, weeks * 7 - 1),
+      timeZone: s.timeZone,
+      calendarName: `${t('app.name')} · ${p.name}`,
+      categoryName: (id) => data.categories.find((c) => c.id === id)?.name,
+    });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([ics], { type: 'text/calendar;charset=utf-8' }));
+    a.download = `ritim-program-${today}.ics`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1500);
+  };
+
+  return (
+    <Section title={t('export.title')}>
+      <p className="muted small">{t('export.icsBody')}</p>
+      <div className="field-row align-end">
+        <label className="field">
+          <span>{t('export.weeks')}</span>
+          <select value={weeks} onChange={(e) => setWeeks(Number(e.target.value))}>
+            {[1, 4, 8, 13, 26].map((w) => (
+              <option key={w} value={w}>
+                {t('export.weeksOpt', { count: w })}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button className="btn" onClick={exportProgram}>
+          <Icon name="download" size={18} /> {t('export.ics')}
+        </button>
+      </div>
+      <p className="muted small">{t('export.printBody')}</p>
+      <button className="btn" onClick={() => setPrinting(true)}>
+        <Icon name="table" size={18} /> {t('export.print')}
+      </button>
+      {printing && <PrintWeek weekStart={startOfWeek(today, s.weekStart)} onClose={() => setPrinting(false)} />}
+    </Section>
+  );
+}
+
+function PinControl() {
+  const { t } = useT();
+  const { profile, run } = useStore();
+  const p = profile!;
+  const [editing, setEditing] = useState(false);
+  const [pin, setPin] = useState('');
+  const save = async () => {
+    if (!/^\d{4,8}$/.test(pin)) return;
+    const pinHash = await hashPin(p.id, pin);
+    markUnlocked(p.id);
+    await run('pin.saved', () => repo.updateProfile({ ...p, pinHash }), { undo: false });
+    setEditing(false);
+    setPin('');
+  };
+  if (editing)
+    return (
+      <div className="field-row align-end pin-row">
+        <label className="field">
+          <span>{t('pin.new')}</span>
+          <input type="password" inputMode="numeric" autoComplete="new-password" maxLength={8} value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))} autoFocus />
+        </label>
+        <button className="btn primary" disabled={!/^\d{4,8}$/.test(pin)} onClick={save}>
+          {t('common.save')}
+        </button>
+        <button className="btn ghost" onClick={() => setEditing(false)}>
+          {t('common.cancel')}
+        </button>
+      </div>
+    );
+  return p.pinHash ? (
+    <button className="btn ghost" onClick={() => run('pin.removed', () => repo.updateProfile({ ...p, pinHash: undefined }), { undo: false })}>
+      <Icon name="lock" size={18} /> {t('pin.remove')}
+    </button>
+  ) : (
+    <button className="btn ghost" onClick={() => setEditing(true)}>
+      <Icon name="lock" size={18} /> {t('pin.set')}
+    </button>
   );
 }

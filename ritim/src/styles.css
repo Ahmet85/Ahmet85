@@ -1,12 +1,14 @@
 /* Tasarım dili: Krem Ajanda (varsayılan), otomatik gece modunda Gece Kahvesi.
    Mantıksal CSS (margin-inline vb.) kullanılır: sağdan sola diller bozulmaz. */
 :root {
+  /* Krem Ajanda (varsayılan) */
   --bg: #f6f0e4;
   --card: #fbf7ee;
   --border: #e6dcc8;
   --text: #2e2a24;
   --muted: #6b6257;
-  --accent: #c2643f;
+  --accent: #a9532f;
+  --accent-ink: #a9532f; /* yazı olarak kullanılan vurgu */
   --accent-text: #fbf7ee;
   --danger: #8a3c1e;
   --ring: #6f8a6a;
@@ -17,25 +19,82 @@
   --r-btn: 14px;
   --font: 'Nunito', system-ui, sans-serif;
   --hand: 'Caveat', 'Nunito', cursive;
+  --fs: 17px;
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
   color-scheme: light;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #221d19;
-    --card: #2e2722;
-    --border: #3e352e;
-    --text: #f3ebdd;
-    --muted: #b8ac98;
-    --accent: #e08a62;
-    --accent-text: #221d19;
-    --danger: #e08a62;
-    --ring: #9db897;
-    --seal: #e08a62;
-    --shadow: 0 1px 2px rgb(0 0 0 / 25%), 0 6px 18px rgb(0 0 0 / 20%);
-    color-scheme: dark;
-  }
+/* Renk modelleri (hepsi sıcak ve samimi; kontrast ≥ 4.5) */
+html[data-theme='kil'] {
+  --bg: #f3e6dd;
+  --card: #faf1ea;
+  --border: #e5d2c6;
+  --text: #33251e;
+  --muted: #6e5446;
+  --accent: #9e4e30;
+  --accent-ink: #9e4e30;
+  --accent-text: #faf1ea;
+  --danger: #8a3c1e;
+  --ring: #6f7f5a;
+  --seal: #8a3c1e;
+}
+html[data-theme='zeytin'] {
+  --bg: #eeeee1;
+  --card: #f7f7ee;
+  --border: #d9d8c2;
+  --text: #2a2c21;
+  --muted: #5c5f4b;
+  --accent: #5e6b2e;
+  --accent-ink: #5e6b2e;
+  --accent-text: #f7f7ee;
+  --danger: #8a3c1e;
+  --ring: #5f7a55;
+  --seal: #5e6b2e;
+}
+html[data-theme='bal'] {
+  --bg: #f8efd9;
+  --card: #fdf7e8;
+  --border: #ebdcb7;
+  --text: #33291a;
+  --muted: #6a5835;
+  --accent: #e0a43a;
+  --accent-ink: #7f5a12;
+  --accent-text: #2e2414;
+  --danger: #8a3c1e;
+  --ring: #6f8a6a;
+  --seal: #7f5a12;
+}
+/* Gece Kahvesi (koyu; siyah yok) */
+html[data-theme='gece'] {
+  --bg: #221d19;
+  --card: #2e2722;
+  --border: #3e352e;
+  --text: #f3ebdd;
+  --muted: #b8ac98;
+  --accent: #e08a62;
+  --accent-ink: #e08a62;
+  --accent-text: #221d19;
+  --danger: #e08a62;
+  --ring: #9db897;
+  --seal: #e08a62;
+  --shadow: 0 1px 2px rgb(0 0 0 / 25%), 0 6px 18px rgb(0 0 0 / 20%);
+  color-scheme: dark;
+}
+
+/* Yazı tipi modelleri (hepsi Türkçe karakterleri destekler) */
+html[data-font='defter'] {
+  --font: 'Lora', Georgia, serif;
+}
+html[data-font='yuvarlak'] {
+  --font: 'Quicksand', system-ui, sans-serif;
+}
+
+/* Animasyonları azalt (ayar) */
+html[data-reduce-motion] *,
+html[data-reduce-motion] *::before,
+html[data-reduce-motion] *::after {
+  animation-duration: 1ms !important;
+  transition-duration: 1ms !important;
 }
 
 * {
@@ -48,7 +107,7 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--font);
-  font-size: 17px;
+  font-size: var(--fs);
   line-height: 1.45;
   -webkit-text-size-adjust: 100%;
   -webkit-tap-highlight-color: transparent;
@@ -1560,7 +1619,7 @@ textarea {
 .planned-short {
   margin: 4px 0 0;
   font-weight: 600;
-  color: var(--accent);
+  color: var(--accent-ink);
 }
 .now-card .planned-short {
   color: inherit;
@@ -1986,4 +2045,202 @@ input[type='range'] {
 }
 .tabbar button {
   max-width: 130px;
+}
+
+/* ================= 9. adım: Ayarlar ve dışa aktarma ================= */
+.theme-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 8px;
+}
+.theme-swatch {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  min-height: 84px;
+  border-radius: var(--r-row);
+  border: 2px solid var(--border);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: start;
+}
+.theme-swatch.selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent);
+}
+.ts-card {
+  flex: 1;
+  border-radius: 10px;
+  display: flex;
+  align-items: flex-end;
+  padding: 6px;
+}
+.ts-dot {
+  width: 22px;
+  height: 8px;
+  border-radius: 4px;
+}
+.font-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.font-choice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 10px 14px;
+  min-height: 44px;
+  border-radius: var(--r-row);
+  border: 2px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+  text-align: start;
+  font-size: 1rem;
+}
+.font-choice.selected {
+  border-color: var(--accent);
+}
+.seg-control.four {
+  grid-template-columns: repeat(4, 1fr);
+}
+.pin-row {
+  width: 100%;
+}
+.lock {
+  margin-top: 10vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+}
+.lock form,
+.lock .stack {
+  width: 100%;
+  max-width: 320px;
+  text-align: start;
+}
+.lock-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--bg);
+}
+.lock input {
+  font-size: 1.4rem;
+  letter-spacing: 0.4em;
+  text-align: center;
+}
+
+/* Yazdırma (A4 yatay) */
+.print-root {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  overflow: auto;
+  background: #fff;
+  color: #2e2a24;
+  padding: 16px;
+}
+.print-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.print-page {
+  width: 277mm;
+  max-width: 100%;
+  margin: 0 auto;
+  font-family: var(--font);
+}
+.print-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  border-bottom: 2px solid #2e2a24;
+  margin-bottom: 8px;
+}
+.print-head h1 {
+  font-size: 15pt;
+  margin: 0 0 4px;
+}
+.print-head .hand {
+  font-size: 13pt;
+  margin: 0;
+}
+.print-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0;
+  border: 1px solid #c9bb9f;
+}
+.print-day {
+  border-inline-end: 1px solid #c9bb9f;
+  min-height: 160mm;
+  padding: 4px;
+}
+.print-day:last-child {
+  border-inline-end: none;
+}
+.print-day h2 {
+  font-size: 10pt;
+  margin: 0 0 4px;
+  padding-bottom: 3px;
+  border-bottom: 1px solid #e6dcc8;
+}
+.print-day ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.print-day li {
+  font-size: 7.5pt;
+  line-height: 1.25;
+  padding: 2px 0 2px 4px;
+  border-inline-start: 3px solid;
+  margin-bottom: 2px;
+  break-inside: avoid;
+}
+.print-day .pt {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+@page {
+  size: A4 landscape;
+  margin: 10mm;
+}
+@media print {
+  html,
+  body {
+    background: #fff !important;
+  }
+  body > *:not(.print-root) {
+    display: none !important;
+  }
+  .print-root {
+    position: static;
+    padding: 0;
+    overflow: visible;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-page {
+    width: auto;
+  }
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
 }

@@ -2244,3 +2244,20 @@ input[type='range'] {
     print-color-adjust: exact;
   }
 }
+
+/* iPhone durum çubuğu (saat, pil) içeriğin üstüne binmesin: üstte sabit bir örtü */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  inset-inline: 0;
+  height: env(safe-area-inset-top);
+  background: var(--bg);
+  z-index: 15;
+  pointer-events: none;
+}
+@media print {
+  body::before {
+    display: none;
+  }
+}

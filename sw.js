@@ -1,6 +1,6 @@
 // Çevrimdışı oynanabilmesi için basit önbellek
-const CACHE = 'okto-v2';
-const FILES = ['./', './index.html', './game.js', './manifest.json', './icon.svg', './title.js', './fonts/fredoka-700-latin.woff2', './fonts/fredoka-700-latin-ext.woff2'];
+const CACHE = 'okto-v3';
+const FILES = ['./', './index.html', './game.js', './manifest.json', './icon.svg', './title.js', './music.js', './fonts/fredoka-700-latin.woff2', './fonts/fredoka-700-latin-ext.woff2'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES))); self.skipWaiting(); });
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))));

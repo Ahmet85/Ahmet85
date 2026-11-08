@@ -94,6 +94,7 @@ function drawOkto(ctx, cx, cy, R, t, P) {
   // 1) gövde + arka tentaküller: önce kalın kontur, sonra dolgu (birleşik dış hat)
   ctx.lineJoin = 'round';
   ctx.strokeStyle = P.line; ctx.lineWidth = lw * 2;
+  tent.push(fr); // el sallayan kol başın arkasından çıkar
   for (const tt of tent) { tentaclePath(ctx, tt.pts, tt.w); ctx.stroke(); }
   headPath(); ctx.stroke();
   ctx.fillStyle = bodyGrad();
@@ -101,7 +102,7 @@ function drawOkto(ctx, cx, cy, R, t, P) {
   headPath(); ctx.fill();
   for (const tt of tent) suckers(ctx, tt.pts, tt.w, tt.side, P);
   // 2) ön tentaküller
-  for (const tt of [fl, fr]) { ctx.strokeStyle = P.line; ctx.lineWidth = lw * 2; tentaclePath(ctx, tt.pts, tt.w); ctx.stroke(); ctx.fillStyle = bodyGrad(); ctx.fill(); suckers(ctx, tt.pts, tt.w, tt.side, P); }
+  for (const tt of [fl]) { ctx.strokeStyle = P.line; ctx.lineWidth = lw * 2; tentaclePath(ctx, tt.pts, tt.w); ctx.stroke(); ctx.fillStyle = bodyGrad(); ctx.fill(); suckers(ctx, tt.pts, tt.w, tt.side, P); }
   // ön tentakülün gövdeyle birleştiği yeri yumuşat
   ctx.fillStyle = bodyGrad(); ctx.beginPath(); ctx.ellipse(0, 0.52 * R, R * 0.72, R * 0.22, 0, 0, TAU); ctx.fill();
 
@@ -502,8 +503,8 @@ function draw(ctx, W, H, t, opts = {}) {
   drawBubbles(true);
 
   // başlık
-  const ty = H * 0.13;
-  chunkyText(ctx, 'Sevimli Ahtapot', W / 2, ty, 30 * u, tc, { stroke: 0.22, outline: '#0f3d8c', fill: '#ffffff', bounce: 0.03, rot: 0.03, spacing: 0, arcY: -0.35 * u });
+  const ty = (opts.top || 0) + Math.max(H * 0.13, 114 * u); // üstteki düğmeler ve çentik için pay
+  chunkyText(ctx, 'Sevimli Ahtapot', W / 2, ty, 30 * u, tc, { stroke: 0.22, outline: '#0f3d8c', fill: '#ffffff', bounce: 0.03, rot: 0.03, spacing: 0, arcY: -0.25 * u });
   chunkyText(ctx, 'OKTO', W / 2, ty + 84 * u, 92 * u, tc, { stroke: 0.2, outline: '#123a8c', inner: '#ff8a00', grad: ['#fff9a8', '#ffd73a', '#ff9d0a'], bounce: 0.045, rot: 0.06, gloss: true, spacing: 2 * u });
 
   // oyna düğmesi

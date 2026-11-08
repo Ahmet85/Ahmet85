@@ -4,7 +4,7 @@ Oyun yayında: https://ahmet85.github.io/Ahmet85/ (GitHub Pages, dal: `claude/oc
 
 ## Sıradaki işler
 - [ ] **Parmak kontrolü:** Okto şu an parmağın biraz üstüne gidiyor, bu yüzden zor hissettiriyor. Parmak nereye konursa konsun, kaydırma miktarı kadar hareket eden göreli kontrole geçilecek.
-- [ ] **Müzik:** Sakin, su altı temalı arka plan müziği. Derinlere inildikçe değişsin; ses düğmesiyle kapatılabilsin.
+- [ ] **Müzik:** Ahmet kendi açılış müziğini yapıp verecek → `music/acilis.mp3` olarak eklenecek. Oyun içi müzik de yapılacak (derinlere inildikçe değişebilir).
 - [ ] **Kol fırlatma:** Okto dokunacını fırlatıp uzaktaki inci/balığı çekebilsin ya da düşmanı itebilsin.
 - [ ] Diğer yeni özellik fikirleri (aşağıya eklenecek)
 
@@ -19,4 +19,5 @@ Oyun yayında: https://ahmet85.github.io/Ahmet85/ (GitHub Pages, dal: `claude/oc
 ## Tamamlananlar
 - [x] Oyunun ilk sürümü (inci, balık, düşmanlar, mürekkep, güçlendirmeler, PWA)
 - [x] GitHub Pages ile yayın, iPhone ana ekranına ekleme
+- [x] Geçici açılış müziği (kodla üretilmiş marimba ezgisi, `music.js`); "Müziği aç" / sessiz düğmesi
 - [x] Animasyonlu açılış ekranı: muzip pembe Okto, sualtı sahnesi, OKTO başlığı (`title.js`)

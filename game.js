@@ -105,7 +105,22 @@ document.addEventListener('contextmenu', e => e.preventDefault());
 const ui = { menu: $('menu'), over: $('over'), pause: $('pauseMenu'), ink: $('inkBtn'), pauseBtn: $('pauseBtn'), mute: $('muteBtn') };
 const inkCtx = $('inkCanvas').getContext('2d');
 function show(el, v) { el.classList.toggle('hidden', !v); }
-function refreshMute() { ui.mute.textContent = Sound.muted ? '🔇' : '🔊'; }
+function refreshMute() {
+  ui.mute.textContent = Sound.muted ? '🔇' : '🔊';
+  const mb = $('musicBtn'), M = window.OktoMusic;
+  if (!mb) return;
+  const on = M && M.playing && !Sound.muted;
+  mb.textContent = !M || (!M.playing && !Sound.muted) ? '🎵 Müziği aç' : (Sound.muted ? '🔇' : '🔊');
+  mb.classList.toggle('icon', !!(M && M.playing) || Sound.muted);
+  mb.classList.toggle('hint', !(M && M.playing) && !Sound.muted);
+  void on;
+}
+function menuMusic() { // açılış ekranındayken müziği başlat (ilk dokunuşla)
+  const M = window.OktoMusic; if (!M || state !== 'menu') return;
+  M.setMuted(Sound.muted); if (!M.playing) M.start(); setTimeout(refreshMute, 50);
+}
+document.addEventListener('pointerdown', e => { if (state === 'menu' && !Sound.muted && e.target.id !== 'musicBtn') menuMusic(); }, true);
+document.addEventListener('keydown', () => { if (state === 'menu' && !Sound.muted) menuMusic(); }, true);
 function refreshMenuBest() { $('menuBest').textContent = best > 0 ? `🏆 En iyi puan: ${best}` : ''; }
 refreshMute(); refreshMenuBest();
 
@@ -117,16 +132,26 @@ $('homeBtn').onclick = () => toMenu();
 $('quitBtn').onclick = () => toMenu();
 $('resumeBtn').onclick = () => togglePause();
 ui.pauseBtn.onclick = () => togglePause();
-ui.mute.onclick = () => { Sound.muted = !Sound.muted; store.set('okto_muted', Sound.muted); refreshMute(); };
+ui.mute.onclick = () => { Sound.muted = !Sound.muted; store.set('okto_muted', Sound.muted); window.OktoMusic && OktoMusic.setMuted(Sound.muted); refreshMute(); };
+$('musicBtn').onclick = e => {
+  const M = window.OktoMusic;
+  if (M && !M.playing && !Sound.muted) { e.stopPropagation(); menuMusic(); return; } // ilk dokunuş: müziği aç
+  Sound.muted = !Sound.muted; store.set('okto_muted', Sound.muted);
+  if (M) { M.setMuted(Sound.muted); if (!Sound.muted && !M.playing) M.start(); }
+  refreshMute();
+};
 ui.ink.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); Sound.init(); useInk(); });
 
 function startGame() {
   Sound.init(); reset(); state = 'play';
+  window.OktoMusic && OktoMusic.stop(0.8);
   show(ui.menu, false); show(ui.over, false); show(ui.pause, false);
   show(ui.ink, true); show(ui.pauseBtn, true); show(ui.mute, true);
 }
 function toMenu() {
   state = 'menu'; refreshMenuBest();
+  if (Sound.ctx && !Sound.muted) menuMusic(); // ses zaten açıldıysa menüye dönünce müzik tekrar başlar
+  refreshMute();
   show(ui.menu, true); show(ui.over, false); show(ui.pause, false);
   show(ui.ink, false); show(ui.pauseBtn, false); show(ui.mute, false);
 }
@@ -661,7 +686,7 @@ function frame(now) {
 
   ctx.save();
   if (shake > 0) ctx.translate(rand(-shake, shake), rand(-shake, shake));
-  if (state === 'menu' && window.OktoTitle) OktoTitle.draw(ctx, W, H, time, { variant: 'pink' });
+  if (state === 'menu' && window.OktoTitle) OktoTitle.draw(ctx, W, H, time, { variant: 'pink', top: safeTop });
   else drawBackground();
   if (state !== 'menu') {
     for (const e of entities) drawEntity(e);

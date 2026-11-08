@@ -53,6 +53,10 @@
   #menu.hidden { display:none; }
   #helpBtn { pointer-events:auto; position:absolute; top:max(12px,env(safe-area-inset-top)); right:max(12px,env(safe-area-inset-right)); width:46px; height:46px; border-radius:50%;
     border:3px solid #0f3d8c; background:#ffd73a; color:#0f3d8c; font:700 24px Fredoka,"Trebuchet MS",sans-serif; cursor:pointer; box-shadow:0 4px 0 #0f3d8c; }
+  #musicBtn { pointer-events:auto; position:absolute; top:max(12px,env(safe-area-inset-top)); left:max(12px,env(safe-area-inset-left)); height:46px; padding:0 16px; border-radius:23px;
+    border:3px solid #0f3d8c; background:#fff; color:#0f3d8c; font:700 17px Fredoka,"Trebuchet MS",sans-serif; cursor:pointer; box-shadow:0 4px 0 #0f3d8c; }
+  #musicBtn.hint { animation:pulse .7s infinite alternate; }
+  #musicBtn.icon { width:46px; padding:0; font-size:20px; }
   #helpBtn:active { transform:translateY(3px); box-shadow:0 1px 0 #0f3d8c; }
   #menuBest { position:absolute; left:0; right:0; bottom:max(14px,env(safe-area-inset-bottom)); text-align:center; font:700 17px Fredoka,"Trebuchet MS",sans-serif; color:#5a3410; opacity:1; text-shadow:0 1px 0 rgba(255,255,255,.6); }
   h1,h2,.btn { font-family:Fredoka,"Trebuchet MS",sans-serif; }
@@ -68,6 +72,7 @@
 <!-- Açılış ekranı tuvale çizilir (title.js); burada yalnızca küçük düğmeler var -->
 <div id="menu">
   <button id="helpBtn" aria-label="Nasıl oynanır">?</button>
+  <button id="musicBtn" aria-label="Müzik">🎵 Müziği aç</button>
   <div id="menuBest" class="best"></div>
 </div>
 
@@ -107,6 +112,7 @@
 </div>
 
 <script src="title.js"></script>
+<script src="music.js"></script>
 <script src="game.js"></script>
 <script>
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {

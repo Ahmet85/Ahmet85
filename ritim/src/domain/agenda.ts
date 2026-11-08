@@ -46,6 +46,12 @@ export interface AgendaItem {
   shortVersions: ShortVersion[];
   /** Bu tarih için kısa sürüm planlandıysa (ör. "Günüm değişti") */
   plannedShort?: ShortVersion;
+  /** Gerçekleşen süre (dakika) */
+  actualMin?: number;
+  /** Bilinçli değişiklik (Günüm değişti, çakışma kararı): başarısızlık sayılmaz */
+  conscious?: boolean;
+  /** Başka bir güne taşındıysa asıl tarihi */
+  movedFromDate?: PlainDateStr;
 }
 
 const INACTIVE: Status[] = ['skipped', 'cancelled', 'postponed'];
@@ -89,6 +95,9 @@ export function buildRange(src: AgendaSource, from: PlainDateStr, to: PlainDateS
         flex: r.flex,
         shortVersions: r.shortVersions,
         plannedShort: o.record?.shortVersionId ? r.shortVersions.find((v) => v.id === o.record!.shortVersionId) : undefined,
+        actualMin: o.record?.actualMin,
+        conscious: o.record?.consciousChange,
+        movedFromDate: o.date !== o.originalDate ? o.originalDate : undefined,
       });
     }
   }
@@ -118,6 +127,7 @@ export function buildRange(src: AgendaSource, from: PlainDateStr, to: PlainDateS
         status: e.status,
         eventId: e.id,
         shortVersions: [],
+        actualMin: e.actualMin,
       });
     }
   }

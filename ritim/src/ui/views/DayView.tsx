@@ -5,7 +5,7 @@ import { db, repo, useStore } from '../store';
 import { useCelebrate, type Celebration } from '../Celebrate';
 import { streakInfo } from '../../domain/streaks';
 import { buildDay, isDone, nowAndNext, type AgendaItem } from '../../domain/agenda';
-import { monthKey, nowLocal } from '../../domain/time';
+import { monthKey, nowLocal, weekdayOf } from '../../domain/time';
 import type { Category, OccurrenceRecord, PlainDateStr, ProfileSettings, ShortVersion, Status } from '../../domain/types';
 import { latestNote } from '../../domain/notes';
 import { formatClock } from '../format';
@@ -342,6 +342,17 @@ export function DayView({ date }: { date: PlainDateStr }) {
         </div>
       )}
 
+      {isToday && weekdayOf(date) === (s.reportDay ?? 7) && (
+        <button className="card report-ready" onClick={() => window.dispatchEvent(new CustomEvent('ritim:tab', { detail: 'report' }))}>
+          <Icon name="ring" size={22} />
+          <span>
+            <strong>{t('report.readyTitle')}</strong>
+            <br />
+            <span className="small muted">{t('report.readyBody')}</span>
+          </span>
+          <Icon name="right" size={18} />
+        </button>
+      )}
       {isToday && (
         <>
           <NowCard items={items} nowMin={now.minutes} />

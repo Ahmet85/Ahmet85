@@ -22,6 +22,8 @@ export interface ProfileSettings {
   alarm?: AlarmPrefs;
   /** Başarı kutlamaları (varsayılan açık) */
   celebrations?: boolean;
+  /** Haftalık karne günü (varsayılan Pazar) */
+  reportDay?: Weekday;
 }
 
 export interface AlarmPrefs {

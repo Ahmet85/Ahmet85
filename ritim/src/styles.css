@@ -1819,3 +1819,171 @@ input[type='range'] {
   border: none;
   background: none;
 }
+
+/* ================= 8. adım: Karne ================= */
+.report-title {
+  font-size: 1.2rem;
+  margin: 0;
+}
+.report .cal-title {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.ring-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.ring-wrap {
+  position: relative;
+  width: 148px;
+  height: 148px;
+}
+.ring-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.ring-center strong {
+  font-size: 1.8rem;
+  font-variant-numeric: tabular-nums;
+}
+.outcomes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+}
+.oc {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--bg);
+  font-size: 0.85rem;
+}
+.oc-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  background: var(--muted);
+}
+.oc-done .oc-dot {
+  background: var(--ring);
+}
+.oc-done_short .oc-dot {
+  background: #9db897;
+  border-radius: 50%;
+}
+.oc-postponed .oc-dot {
+  background: #7a93b8;
+}
+.oc-skipped .oc-dot {
+  background: var(--border);
+  border: 1.5px solid var(--muted);
+}
+.oc-conscious .oc-dot {
+  background: #d9a93f;
+  transform: rotate(45deg);
+}
+.oc-unmarked .oc-dot {
+  background: transparent;
+  border: 1.5px dashed var(--muted);
+}
+.streak-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-weight: 700;
+  color: var(--ring);
+}
+.time-total {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 20px;
+}
+.cat-bars {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.cat-bar-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.bar {
+  position: relative;
+  height: 12px;
+  border-radius: 6px;
+  background: var(--bg);
+  overflow: hidden;
+}
+.bar-planned {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  background: var(--border);
+  border-radius: 6px;
+}
+.bar-actual {
+  position: absolute;
+  inset-block: 2px;
+  inset-inline-start: 0;
+  border-radius: 6px;
+  background: var(--ring);
+}
+.best-day {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.best-day p {
+  margin: 0;
+}
+.coach {
+  border-inline-start: 4px solid var(--ring);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+}
+.coach .hand {
+  font-size: 1.3rem;
+}
+.coach-notEnoughData {
+  border-inline-start-color: var(--muted);
+}
+.report-ready {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: start;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+  border-color: var(--ring);
+}
+.report-ready > span {
+  flex: 1;
+}
+.tabbar button {
+  max-width: 130px;
+}

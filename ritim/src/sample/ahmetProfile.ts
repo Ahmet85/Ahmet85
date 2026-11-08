@@ -196,5 +196,14 @@ export function buildSampleProfile(id: string, settings: ProfileSettings, today:
     };
   });
 
+  // Koç önerisini gösterebilmek için: Perşembe akşamı video çalışması son iki
+  // Perşembe ertelenmiş olsun
+  const video = routines.find((r) => r.title === 'Akşam odağı: Video projeler')!;
+  for (const rec of records)
+    if (rec.routineId === video.id && rec.originalDate >= addDays(today, -14)) {
+      rec.status = 'postponed';
+      rec.actualMin = undefined;
+    }
+
   return { profile, categories, projects, routines, monthThemes, yearGoals, events, tasks, records };
 }

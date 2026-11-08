@@ -20,6 +20,7 @@ const PATHS: Record<string, string> = {
   user: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM5 20a7 7 0 0 1 14 0',
   trash: 'M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12',
   close: 'M6 6l12 12M18 6L6 18',
+  ring: 'M12 4a8 8 0 1 0 8 8M12 4a8 8 0 0 1 8 8M12 8a4 4 0 1 0 4 4',
   up: 'M6 14.5l6-6 6 6',
   down: 'M6 9.5l6 6 6-6',
   table: 'M4 5h16v14H4zM4 10h16M9.3 5v14M14.6 5v14',

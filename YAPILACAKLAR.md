@@ -8,6 +8,8 @@ Oyun yayında: https://ahmet85.github.io/Ahmet85/ (GitHub Pages, dal: `claude/oc
 - [ ] **Kol fırlatma:** Okto dokunacını fırlatıp uzaktaki inci/balığı çekebilsin ya da düşmanı itebilsin.
 - [ ] Diğer yeni özellik fikirleri (aşağıya eklenecek)
 
+- [ ] Oyun içindeki Okto'ya da açılış ekranındaki gibi dalış gözlüğü takmak (karakter tutarlılığı)
+
 ## Fikir havuzu
 - Kostüm/renk mağazası (incilerle satın alma)
 - Dev kalamar boss bölümü
@@ -17,3 +19,4 @@ Oyun yayında: https://ahmet85.github.io/Ahmet85/ (GitHub Pages, dal: `claude/oc
 ## Tamamlananlar
 - [x] Oyunun ilk sürümü (inci, balık, düşmanlar, mürekkep, güçlendirmeler, PWA)
 - [x] GitHub Pages ile yayın, iPhone ana ekranına ekleme
+- [x] Animasyonlu açılış ekranı: muzip pembe Okto, sualtı sahnesi, OKTO başlığı (`title.js`)

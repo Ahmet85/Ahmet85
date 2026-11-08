@@ -12,6 +12,8 @@
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon.svg">
 <style>
+  @font-face{font-family:Fredoka;font-weight:700;font-display:block;src:url(fonts/fredoka-700-latin.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+20AC,U+2122,U+2212,U+FEFF,U+FFFD}
+  @font-face{font-family:Fredoka;font-weight:700;font-display:block;src:url(fonts/fredoka-700-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+1E00-1E9F,U+2020,U+20A0-20AB,U+2C60-2C7F,U+A720-A7FF}
   :root { --sat: env(safe-area-inset-top, 0px); }
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none; -webkit-user-select:none; }
   html,body { margin:0; height:100%; overflow:hidden; background:#04213d; font-family:"Trebuchet MS","Segoe UI",system-ui,sans-serif; color:#fff; }
@@ -47,6 +49,13 @@
     background:rgba(255,255,255,.15); color:#fff; font-size:20px; z-index:4; cursor:pointer; }
   .row { display:flex; gap:12px; flex-wrap:wrap; justify-content:center; }
   .best { font-size:15px; opacity:.85; }
+  #menu { position:fixed; inset:0; z-index:3; pointer-events:none; }
+  #menu.hidden { display:none; }
+  #helpBtn { pointer-events:auto; position:absolute; top:max(12px,env(safe-area-inset-top)); right:max(12px,env(safe-area-inset-right)); width:46px; height:46px; border-radius:50%;
+    border:3px solid #0f3d8c; background:#ffd73a; color:#0f3d8c; font:700 24px Fredoka,"Trebuchet MS",sans-serif; cursor:pointer; box-shadow:0 4px 0 #0f3d8c; }
+  #helpBtn:active { transform:translateY(3px); box-shadow:0 1px 0 #0f3d8c; }
+  #menuBest { position:absolute; left:0; right:0; bottom:max(14px,env(safe-area-inset-bottom)); text-align:center; font:700 17px Fredoka,"Trebuchet MS",sans-serif; color:#5a3410; opacity:1; text-shadow:0 1px 0 rgba(255,255,255,.6); }
+  h1,h2,.btn { font-family:Fredoka,"Trebuchet MS",sans-serif; }
 </style>
 </head>
 <body>
@@ -56,23 +65,14 @@
 <button id="muteBtn" class="hidden" aria-label="Ses">🔊</button>
 <button id="inkBtn" class="hidden" aria-label="Mürekkep"><canvas id="inkCanvas" width="168" height="168" style="position:static;width:84px;height:84px"></canvas></button>
 
-<div id="menu" class="overlay">
-  <svg id="menuOcto" viewBox="0 0 100 100" aria-hidden="true">
-    <g fill="#c04dff">
-      <path d="M22 55 q-6 20 -16 26 q12 2 20 -14z"/><path d="M32 60 q-2 22 -12 32 q14 -2 18 -26z"/>
-      <path d="M44 62 q0 22 -4 34 q10 -6 10 -32z"/><path d="M56 62 q0 22 4 34 q-10 -6 -10 -32z"/>
-      <path d="M68 60 q2 22 12 32 q-14 -2 -18 -26z"/><path d="M78 55 q6 20 16 26 q-12 2 -20 -14z"/>
-    </g>
-    <ellipse cx="50" cy="40" rx="32" ry="30" fill="#ff7eb6"/>
-    <ellipse cx="42" cy="26" rx="10" ry="6" fill="#ffd1e8" opacity=".6"/>
-    <circle cx="38" cy="44" r="8" fill="#fff"/><circle cx="62" cy="44" r="8" fill="#fff"/>
-    <circle cx="39" cy="45" r="4.2" fill="#1b1033"/><circle cx="63" cy="45" r="4.2" fill="#1b1033"/>
-    <circle cx="40.5" cy="43.5" r="1.5" fill="#fff"/><circle cx="64.5" cy="43.5" r="1.5" fill="#fff"/>
-    <ellipse cx="29" cy="54" rx="5" ry="3" fill="#ff4f9a" opacity=".6"/><ellipse cx="71" cy="54" rx="5" ry="3" fill="#ff4f9a" opacity=".6"/>
-    <path d="M45 55 q5 5 10 0" stroke="#1b1033" stroke-width="2.4" fill="none" stroke-linecap="round"/>
-  </svg>
-  <h1>OKTO</h1>
-  <p class="sub">Derinlerin Kaşifi</p>
+<!-- Açılış ekranı tuvale çizilir (title.js); burada yalnızca küçük düğmeler var -->
+<div id="menu">
+  <button id="helpBtn" aria-label="Nasıl oynanır">?</button>
+  <div id="menuBest" class="best"></div>
+</div>
+
+<div id="help" class="overlay hidden">
+  <h2>Nasıl oynanır?</h2>
   <div class="card">
     👆 <b>Parmağını sürükle</b>: Okto parmağını takip eder.<br>
     ⚪ <b>İnci</b> ve 🐟 <b>balık</b> topla, art arda toplayınca çarpan artar.<br>
@@ -80,8 +80,7 @@
     🖤 <b>Mürekkep</b> düğmesi dolunca bas, etraftaki düşmanlar sersemler.<br>
     🫧 Kalkan, ⭐ deniz yıldızı ve ❤️ can toplanabilir.
   </div>
-  <button id="playBtn" class="btn">DAL! 🌊</button>
-  <div id="menuBest" class="best"></div>
+  <button id="helpClose" class="btn">Anladım!</button>
 </div>
 
 <div id="pauseMenu" class="overlay hidden">
@@ -107,6 +106,7 @@
   </div>
 </div>
 
+<script src="title.js"></script>
 <script src="game.js"></script>
 <script>
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {

@@ -86,8 +86,8 @@ function reset() {
 function setPointer(e) {
   pointer.x = e.clientX; pointer.y = e.clientY; pointer.type = e.pointerType || 'mouse';
 }
-cvs.addEventListener('pointerdown', e => { Sound.init(); pointer.down = true; setPointer(e); cvs.setPointerCapture && cvs.setPointerCapture(e.pointerId); });
-cvs.addEventListener('pointermove', e => { setPointer(e); if (e.pointerType === 'mouse') pointer.down = true; });
+cvs.addEventListener('pointerdown', e => { Sound.init(); if (state === 'menu') { if (hitPlay(e.clientX, e.clientY)) startGame(); return; } pointer.down = true; setPointer(e); cvs.setPointerCapture && cvs.setPointerCapture(e.pointerId); });
+cvs.addEventListener('pointermove', e => { setPointer(e); if (state === 'menu') { cvs.style.cursor = hitPlay(e.clientX, e.clientY) ? 'pointer' : 'default'; return; } cvs.style.cursor = 'default'; if (e.pointerType === 'mouse') pointer.down = true; });
 cvs.addEventListener('pointerup', e => { if (e.pointerType !== 'mouse') pointer.down = false; });
 cvs.addEventListener('pointercancel', () => { pointer.down = false; });
 cvs.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') pointer.down = false; });
@@ -109,7 +109,9 @@ function refreshMute() { ui.mute.textContent = Sound.muted ? '🔇' : '🔊'; }
 function refreshMenuBest() { $('menuBest').textContent = best > 0 ? `🏆 En iyi puan: ${best}` : ''; }
 refreshMute(); refreshMenuBest();
 
-$('playBtn').onclick = () => startGame();
+$('helpBtn').onclick = () => show($('help'), true);
+$('helpClose').onclick = () => show($('help'), false);
+function hitPlay(x, y) { const r = window.OktoTitle && OktoTitle.playRect; return r && x >= r.x - 10 && x <= r.x + r.w + 10 && y >= r.y - 10 && y <= r.y + r.h + 16; }
 $('againBtn').onclick = () => startGame();
 $('homeBtn').onclick = () => toMenu();
 $('quitBtn').onclick = () => toMenu();
@@ -653,13 +655,14 @@ function frame(now) {
   let dt = Math.min((now - last) / 1000, 1 / 20); last = now;
   if (state === 'play') update(dt);
   else if (state === 'over') { time += dt; for (const q of particles) { q.x += q.vx * dt; q.y += q.vy * dt; q.life -= q.decay * dt; } particles = particles.filter(q => q.life > 0); player.vy = 40 * S; player.y = Math.min(player.y + 40 * S * dt, H + 80 * S); }
-  else if (state === 'menu') { time += dt; depth = (Math.sin(time * 0.1) * 0.5 + 0.5) * 60; }
+  else if (state === 'menu') { time += dt; }
   const scroll = state === 'play' ? (70 + Math.min(depth, 900) * 0.18) * S : 20 * S;
-  if (state !== 'pause') updateAmbient(dt, scroll);
+  if (state !== 'pause' && state !== 'menu') updateAmbient(dt, scroll);
 
   ctx.save();
   if (shake > 0) ctx.translate(rand(-shake, shake), rand(-shake, shake));
-  drawBackground();
+  if (state === 'menu' && window.OktoTitle) OktoTitle.draw(ctx, W, H, time, { variant: 'pink' });
+  else drawBackground();
   if (state !== 'menu') {
     for (const e of entities) drawEntity(e);
     drawParticles();

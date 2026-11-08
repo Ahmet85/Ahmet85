@@ -1,5 +1,7 @@
 // Bir öğeye dokununca açılan ayrıntı penceresi.
+import { useState } from 'react';
 import { useT } from '../../i18n/i18n';
+import { PermissionAsk, ReminderPicker } from '../alarm/ReminderPicker';
 import { repo, useStore } from '../store';
 import { isDone, type AgendaItem } from '../../domain/agenda';
 import { clock } from '../../domain/time';
@@ -33,14 +35,26 @@ export function ItemSheet({ item: initial, onClose }: { item: AgendaItem; onClos
   const c = item.categoryId ? cats.get(item.categoryId) : undefined;
   const lastNote = latestNote(data.notes, project?.id);
 
-  const target: ReminderTarget | null = event ? { kind: 'event', eventId: event.id } : task ? { kind: 'task', taskId: task.id } : null;
-  const reminders = target
-    ? data.reminders.filter((r) =>
-        target.kind === 'event'
-          ? r.target.kind === 'event' && r.target.eventId === target.eventId
-          : r.target.kind === 'task' && target.kind === 'task' && r.target.taskId === target.taskId,
-      )
-    : [];
+  // Rutinde varsayılan: tüm tekrarlar (tek dokunuşla); istenirse yalnızca bu tarih
+  const [routineScope, setRoutineScope] = useState<'all' | 'one'>('all');
+  const target: ReminderTarget | null = event
+    ? { kind: 'event', eventId: event.id }
+    : task
+      ? { kind: 'task', taskId: task.id }
+      : routine
+        ? routineScope === 'all'
+          ? { kind: 'routine', routineId: routine.id }
+          : { kind: 'occurrence', routineId: routine.id, originalDate: item.originalDate! }
+        : null;
+  const reminders = data.reminders.filter((r) => {
+    const x = r.target;
+    if (event) return x.kind === 'event' && x.eventId === event.id;
+    if (task) return x.kind === 'task' && x.taskId === task.id;
+    if (routine)
+      return (x.kind === 'routine' && x.routineId === routine.id) || (x.kind === 'occurrence' && x.routineId === routine.id && x.originalDate === item.originalDate);
+    return false;
+  });
+  const existingForTarget = reminders.filter((r) => target && JSON.stringify(r.target) === JSON.stringify(target)).map((r) => r.offsetMin);
 
   const startDate = event?.startDate ?? task?.date ?? item.date;
   const whenParts = [`${formatWeekdayShort(startDate, s)} ${formatDayMonth(startDate, s)}`];
@@ -127,7 +141,10 @@ export function ItemSheet({ item: initial, onClose }: { item: AgendaItem; onClos
               <ul className="rem-list">
                 {reminders.map((r) => (
                   <li key={r.id}>
-                    <span>{t('reminder.offset', { offset: r.offsetMin })}</span>
+                    <span>
+                      {t('reminder.offset', { offset: r.offsetMin })}
+                      {routine && <span className="small muted"> · {t(r.target.kind === 'routine' ? 'reminder.allRepeats' : 'reminder.onlyThisDate')}</span>}
+                    </span>
                     <button className="icon-btn" aria-label={t('reminder.remove')} onClick={() => run('history.removeReminder', () => repo.removeReminder(r))}>
                       <Icon name="close" size={16} />
                     </button>
@@ -135,15 +152,17 @@ export function ItemSheet({ item: initial, onClose }: { item: AgendaItem; onClos
                 ))}
               </ul>
             )}
-            <div className="chips">
-              {[0, 15, 30, ...(task ? [1440] : [])]
-                .filter((m) => !reminders.some((r) => r.offsetMin === m))
-                .map((m) => (
-                  <button key={m} className="chip" onClick={() => run('reminder.added', () => repo.addReminder(profile!.id, target, m))}>
-                    <Icon name="plus" size={14} /> {t('reminder.offset', { offset: m })}
+            {routine && (
+              <div className="seg-control">
+                {(['all', 'one'] as const).map((k) => (
+                  <button key={k} className={routineScope === k ? 'active' : ''} aria-pressed={routineScope === k} onClick={() => setRoutineScope(k)}>
+                    {t(k === 'all' ? 'reminder.allRepeats' : 'reminder.onlyThisDate')}
                   </button>
                 ))}
-            </div>
+              </div>
+            )}
+            <ReminderPicker existing={existingForTarget} dayBefore={!!task} onPick={(m) => run('reminder.added', () => repo.addReminder(profile!.id, target!, m))} />
+            {reminders.length > 0 && <PermissionAsk />}
           </section>
         )}
 

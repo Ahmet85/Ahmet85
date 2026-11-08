@@ -86,7 +86,8 @@ describe('taşıma (sürükle-bırak)', () => {
     expect(d.records.find((r) => r.originalDate === '2026-03-23')!.routineId).toBe(newId);
     expect(d.records.find((r) => r.originalDate === '2026-03-02')!.routineId).toBe('r1');
     const times = fireTimes(d.reminders, d, '2026-03-02', '2026-03-16', 'Europe/Istanbul').map((f) => `${f.date} ${f.time}`);
-    expect(times).toEqual(['2026-03-02 20:00', '2026-03-09 19:00', '2026-03-16 19:00']);
+    // 2 Mart tamamlandığı için çalmaz; sonrası yeni saatte
+    expect(times).toEqual(['2026-03-09 19:00', '2026-03-16 19:00']);
   });
 
   it('tek "Geri al" bölmeyi tamamen geri alır', async () => {

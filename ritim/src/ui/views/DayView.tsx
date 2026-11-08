@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useT } from '../../i18n/i18n';
-import { repo, useStore } from '../store';
+import { db, repo, useStore } from '../store';
+import { useCelebrate, type Celebration } from '../Celebrate';
+import { streakInfo } from '../../domain/streaks';
 import { buildDay, isDone, nowAndNext, type AgendaItem } from '../../domain/agenda';
-import { monthKey } from '../../domain/time';
+import { monthKey, nowLocal } from '../../domain/time';
 import type { Category, OccurrenceRecord, PlainDateStr, ProfileSettings, ShortVersion, Status } from '../../domain/types';
 import { latestNote } from '../../domain/notes';
 import { formatClock } from '../format';
@@ -24,9 +26,29 @@ export const catStyle = (c?: Category) =>
   (c ? { '--cat-bg': c.color.bg, '--cat-fg': c.color.fg, '--cat-accent': c.color.accent } : {}) as React.CSSProperties;
 
 /** Öğenin durumunu değiştir (rutin: yalnızca o tarih; şablon bozulmaz). */
+/** Tamamlanınca: parıltı + gerekirse büyük kutlama (gün bitti, seri, geri dönüş) */
+async function celebrateAfterDone(profileId: string, timeZone: string, c: ReturnType<typeof useCelebrate>) {
+  c.sparkle();
+  const today = nowLocal(timeZone).date;
+  const info = streakInfo(await repo.loadProfileData(profileId), today);
+  const key = `celebrated:${profileId}:${today}`;
+  const seen = new Set(((await db.meta.get(key))?.value as string[] | undefined) ?? []);
+  let pick: Celebration | null = null;
+  if (info.dayComplete && !seen.has('day')) pick = { kind: 'day' };
+  else if (info.comeback && !seen.has('comeback')) pick = { kind: 'comeback' };
+  else if (STREAK_MILESTONES.includes(info.streak) && !seen.has(`streak${info.streak}`)) pick = { kind: 'streak', days: info.streak };
+  if (!pick) return;
+  seen.add(pick.kind === 'streak' ? `streak${pick.days}` : pick.kind);
+  await db.meta.put({ key, value: [...seen] });
+  setTimeout(() => c.celebrate(pick!), 700);
+}
+
+const STREAK_MILESTONES = [3, 7, 14, 21, 30, 50, 100];
+
 export function useSetStatus() {
   const { profile, data, run } = useStore();
   const { openNote } = useSheets();
+  const cel = useCelebrate();
   return async (item: AgendaItem, status: Status, toastKey: string, sv?: ShortVersion) => {
     if (status === 'done' && item.plannedShort) toastKey = 'day.shortToast';
     const pid = profile!.id;
@@ -44,6 +66,7 @@ export function useSetStatus() {
       };
       if (sv) patch.shortVersionId = sv.id;
       await run(toastKey, () => repo.patchOccurrence(pid, item.routineId!, item.originalDate!, patch));
+      if (isDone(status)) await celebrateAfterDone(pid, profile!.settings.timeZone, cel);
       // Çalışmaya bağlı blok tamamlandıysa "Kaldığım yer" notu sor (isteğe bağlı)
       if (isDone(status) && item.projectId)
         openNote({ projectId: item.projectId, routineId: item.routineId, originalDate: item.originalDate, afterDone: true });
@@ -51,10 +74,12 @@ export function useSetStatus() {
     }
     if (item.kind === 'event') {
       const e = data.events.find((x) => x.id === item.eventId)!;
-      return run(toastKey, () => repo.putEvent({ ...e, status }));
+      await run(toastKey, () => repo.putEvent({ ...e, status }));
+    } else {
+      const k = data.tasks.find((x) => x.id === item.taskId)!;
+      await run(toastKey, () => repo.putTask({ ...k, status }));
     }
-    const k = data.tasks.find((x) => x.id === item.taskId)!;
-    return run(toastKey, () => repo.putTask({ ...k, status }));
+    if (isDone(status)) await celebrateAfterDone(pid, profile!.settings.timeZone, cel);
   };
 }
 
@@ -292,6 +317,7 @@ export function DayView({ date }: { date: PlainDateStr }) {
   const tasks = items.filter((i) => i.kind === 'task');
   const { current, next } = nowAndNext(items, now.minutes);
   const theme = data.monthThemes.find((m) => m.month === monthKey(date));
+  const streak = useMemo(() => streakInfo(data, now.date), [data, now.date]);
 
   const hour = Number(now.time.slice(0, 2));
   const greet =
@@ -301,6 +327,20 @@ export function DayView({ date }: { date: PlainDateStr }) {
     <div className="stack">
       {isToday && <p className="hand big greet">{t(greet, { name: profile!.name })}</p>}
       {theme?.theme && <p className="muted small theme-line">{t('day.monthTheme', { theme: theme.theme })}</p>}
+      {isToday && (streak.streak >= 2 || streak.comeback) && (
+        <div className="badges">
+          {streak.comeback && (
+            <span className="badge comeback">
+              <Icon name="heart" size={14} /> {t('badge.comeback')}
+            </span>
+          )}
+          {streak.streak >= 2 && (
+            <span className="badge">
+              <Icon name="leaf" size={14} /> {t('badge.streak', { days: streak.streak })}
+            </span>
+          )}
+        </div>
+      )}
 
       {isToday && (
         <>

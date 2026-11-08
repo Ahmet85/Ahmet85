@@ -10,6 +10,12 @@ import { REGIONS, formatClock, formatLongDate, regionName, timeZones, weekdayNam
 import { Icon, ICON_NAMES } from './Icon';
 import { Welcome } from './Welcome';
 import { useSheets } from './sheets/SheetHost';
+import { alarmPrefs, type AlarmPrefs } from '../domain/types';
+import { buildIcs } from '../domain/ics';
+import { addDays } from '../domain/time';
+import { alarmMessage } from './alarm/messages';
+import { playAlarm, playSuccess } from './alarm/sound';
+import { PermissionAsk } from './alarm/ReminderPicker';
 import { latestNote, notesFor } from '../domain/notes';
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -161,6 +167,7 @@ export function Settings() {
         </Section>
       )}
 
+      {profile && <Alarms />}
       {profile && <Categories />}
       {profile && <Projects />}
 
@@ -379,6 +386,118 @@ function Projects() {
           <Icon name="plus" size={18} /> {t('project.add')}
         </button>
       )}
+    </Section>
+  );
+}
+
+function Alarms() {
+  const { t } = useT();
+  const { profile, data, run } = useStore();
+  const p = profile!;
+  const prefs = alarmPrefs(p.settings);
+  const setPrefs = (patch: Partial<AlarmPrefs>) =>
+    run('history.updateProfile', () => repo.updateProfile({ ...p, settings: { ...p.settings, alarm: { ...prefs, ...patch } } }), { undo: false });
+  const celebrations = p.settings.celebrations !== false;
+  const today = nowLocal(p.settings.timeZone).date;
+  const count = data.reminders.length;
+
+  const exportIcs = () => {
+    const routineDur = new Map(data.routines.map((r) => [r.id, r.durationMin]));
+    const ics = buildIcs(data.reminders, data, {
+      from: today,
+      to: addDays(today, 30),
+      timeZone: p.settings.timeZone,
+      calendarName: `${t('app.name')} · ${p.name}`,
+      alarmText: (f, off) => alarmMessage(t, f, off),
+      durationOf: (f) => (f.source.routineId ? (routineDur.get(f.source.routineId) ?? 30) : 30),
+    });
+    const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `ritim-alarmlar-${today}.ics`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1500);
+  };
+
+  return (
+    <Section title={t('alarmSettings.title')}>
+      <div className="field-row">
+        <label className="field">
+          <span>{t('alarmSettings.sound')}</span>
+          <select value={prefs.sound} onChange={(e) => setPrefs({ sound: e.target.value as AlarmPrefs['sound'] })}>
+            <option value="bell">{t('alarmSettings.bell')}</option>
+            <option value="marimba">{t('alarmSettings.marimba')}</option>
+            <option value="silent">{t('alarmSettings.silent')}</option>
+          </select>
+        </label>
+        <label className="field">
+          <span>{t('alarmSettings.volume')}</span>
+          <input
+            type="range"
+            min={0.1}
+            max={1}
+            step={0.1}
+            value={prefs.volume}
+            onChange={(e) => setPrefs({ volume: Number(e.target.value) })}
+            aria-valuetext={`${Math.round(prefs.volume * 100)}%`}
+          />
+        </label>
+      </div>
+      <button className="btn ghost small-btn" onClick={() => playAlarm({ ...prefs, quietFrom: undefined }, 0)}>
+        {t('alarmSettings.test')}
+      </button>
+      <label className="choice">
+        <input type="checkbox" checked={prefs.vibrate} onChange={(e) => setPrefs({ vibrate: e.target.checked })} />
+        {t('alarmSettings.vibrate')}
+      </label>
+      <label className="choice">
+        <input
+          type="checkbox"
+          checked={!!prefs.quietFrom}
+          onChange={(e) => setPrefs(e.target.checked ? { quietFrom: '23:00', quietTo: '07:00' } : { quietFrom: undefined, quietTo: undefined })}
+        />
+        {t('alarmSettings.quiet')}
+      </label>
+      {prefs.quietFrom && (
+        <div className="field-row">
+          <label className="field">
+            <span>{t('alarmSettings.quietFrom')}</span>
+            <input type="time" value={prefs.quietFrom} onChange={(e) => e.target.value && setPrefs({ quietFrom: e.target.value })} />
+          </label>
+          <label className="field">
+            <span>{t('alarmSettings.quietTo')}</span>
+            <input type="time" value={prefs.quietTo} onChange={(e) => e.target.value && setPrefs({ quietTo: e.target.value })} />
+          </label>
+        </div>
+      )}
+      <label className="choice">
+        <input
+          type="checkbox"
+          checked={celebrations}
+          onChange={(e) => {
+            run('history.updateProfile', () => repo.updateProfile({ ...p, settings: { ...p.settings, celebrations: e.target.checked } }), { undo: false });
+            if (e.target.checked) playSuccess(prefs);
+          }}
+        />
+        {t('alarmSettings.celebrations')}
+      </label>
+
+      <h3>{t('alarmSettings.closedTitle')}</h3>
+      <p className="muted small">{t('alarmSettings.closedBody')}</p>
+      <button className="btn" disabled={!count} onClick={exportIcs}>
+        <Icon name="download" size={18} /> {t('alarmSettings.export', { count })}
+      </button>
+      <details className="details">
+        <summary>{t('alarmSettings.howTitle')}</summary>
+        <ol className="how small">
+          <li>{t('alarmSettings.how1')}</li>
+          <li>{t('alarmSettings.how2')}</li>
+          <li>{t('alarmSettings.how3')}</li>
+        </ol>
+      </details>
+      <h3>{t('alarmSettings.openTitle')}</h3>
+      <p className="muted small">{t('alarmSettings.openBody')}</p>
+      <PermissionAsk />
     </Section>
   );
 }

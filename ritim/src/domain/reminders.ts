@@ -45,6 +45,8 @@ export interface ReminderSources {
 
 export interface FireTime {
   reminderId: string;
+  /** Hatırlatılan kaynak (durum değiştirmek için) */
+  source: { routineId?: string; originalDate?: string; eventId?: string; taskId?: string };
   at: Temporal.Instant;
   /** Hatırlatılan şeyin yerel tarih/saati */
   date: PlainDateStr;
@@ -52,7 +54,8 @@ export interface FireTime {
   title: string;
 }
 
-const inactive = (s: string) => s === 'skipped' || s === 'cancelled' || s === 'postponed';
+// Tamamlanmış, atlanmış, iptal ya da ertelenmiş şey için hatırlatma çalmaz
+const inactive = (s: string) => s !== 'planned';
 
 /** [from, to] aralığındaki kaynaklar için çalma zamanları. */
 export function fireTimes(
@@ -65,9 +68,10 @@ export function fireTimes(
   const out: FireTime[] = [];
   const occs = expandRange(src.routines, src.records, from, to);
   const routineTitle = new Map(src.routines.map((r) => [r.id, r.title]));
-  const push = (rem: Reminder, date: string, time: string, title: string) =>
+  const push = (rem: Reminder, date: string, time: string, title: string, source: FireTime['source']) =>
     out.push({
       reminderId: rem.id,
+      source,
       at: toZoned(date, time, timeZone).subtract({ minutes: rem.offsetMin }).toInstant(),
       date,
       time,
@@ -80,16 +84,16 @@ export function fireTimes(
       for (const o of occs) {
         if (o.routineId !== t.routineId || inactive(o.status)) continue;
         if (t.kind === 'occurrence' && o.originalDate !== t.originalDate) continue;
-        push(rem, o.date, o.startTime, routineTitle.get(o.routineId) ?? '');
+        push(rem, o.date, o.startTime, routineTitle.get(o.routineId) ?? '', { routineId: o.routineId, originalDate: o.originalDate });
       }
     } else if (t.kind === 'event') {
       const e = src.events.find((x) => x.id === t.eventId);
       if (e && !inactive(e.status) && e.startDate >= from && e.startDate <= to)
-        push(rem, e.startDate, e.startTime ?? DEFAULT_TASK_TIME, e.title);
+        push(rem, e.startDate, e.startTime ?? DEFAULT_TASK_TIME, e.title, { eventId: e.id });
     } else {
       const k = src.tasks.find((x) => x.id === t.taskId);
       if (k && !inactive(k.status) && k.date >= from && k.date <= to)
-        push(rem, k.date, k.time ?? DEFAULT_TASK_TIME, k.title);
+        push(rem, k.date, k.time ?? DEFAULT_TASK_TIME, k.title, { taskId: k.id });
     }
   }
   return out.sort((a, b) => Temporal.Instant.compare(a.at, b.at));

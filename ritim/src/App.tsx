@@ -3,6 +3,8 @@ import { I18nProvider, useT } from './i18n/i18n';
 import { StoreProvider, useStore } from './ui/store';
 import { Calendar } from './ui/Calendar';
 import { SheetHost } from './ui/sheets/SheetHost';
+import { CelebrateHost } from './ui/Celebrate';
+import { AlarmHost } from './ui/alarm/AlarmHost';
 import { MotionConfig } from 'motion/react';
 import { Settings } from './ui/Settings';
 import { Welcome } from './ui/Welcome';
@@ -72,7 +74,10 @@ function WithIntl() {
     <I18nProvider language={s.language} region={s.region} timeZone={s.timeZone}>
       {/* Sistemde "hareketi azalt" açıksa animasyonlar sade geçişe döner */}
       <MotionConfig reducedMotion="user">
-        <Shell />
+        <CelebrateHost>
+          <Shell />
+          {profile && <AlarmHost key={profile.id} />}
+        </CelebrateHost>
       </MotionConfig>
     </I18nProvider>
   );

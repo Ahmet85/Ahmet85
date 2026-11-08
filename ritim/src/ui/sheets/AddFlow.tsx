@@ -7,6 +7,7 @@ import { uid } from '../../db/db';
 import { findConflicts, type Placed, type Span } from '../../domain/conflicts';
 import { ConflictChoices, ResolutionLines, toResolutions, type Choices } from './ConflictParts';
 import { RoutineForm } from './RoutineForm';
+import { PermissionAsk, ReminderPicker } from '../alarm/ReminderPicker';
 import { addDays, clock, minutesOfDay, toDayNumber } from '../../domain/time';
 import type { DatedTask, EventItem, ReminderTarget } from '../../domain/types';
 import { formatClock, formatDayMonth, formatWeekdayShort } from '../format';
@@ -46,8 +47,6 @@ export function AddFlow({ init, onClose }: { init: AddInit; onClose: () => void 
   const [conflicts, setConflicts] = useState<Placed[]>([]);
   const [choices, setChoices] = useState<Choices>({});
   const [saved, setSaved] = useState<ReminderTarget | null>(null);
-  const [customMin, setCustomMin] = useState('10');
-  const [showCustom, setShowCustom] = useState(false);
 
   // ---- Türetilen kayıt ----
   const timedEvent = kind === 'event' && !allDay;
@@ -310,38 +309,8 @@ export function AddFlow({ init, onClose }: { init: AddInit; onClose: () => void 
 
       {step === 'reminder' && (
         <div className="stack">
-          <div className="chips big">
-            <button className="chip" onClick={onClose}>
-              {t('reminder.no')}
-            </button>
-            <button className="chip" onClick={() => addReminder(0)}>
-              {t('reminder.onTime')}
-            </button>
-            {[15, 30].map((m) => (
-              <button key={m} className="chip" onClick={() => addReminder(m)}>
-                {t('reminder.before', { min: m })}
-              </button>
-            ))}
-            {kind === 'task' && (
-              <button className="chip" onClick={() => addReminder(1440)}>
-                {t('reminder.dayBefore')}
-              </button>
-            )}
-            <button className={`chip${showCustom ? ' on' : ''}`} onClick={() => setShowCustom(!showCustom)}>
-              {t('reminder.custom')}
-            </button>
-          </div>
-          {showCustom && (
-            <div className="field-row align-end">
-              <label className="field">
-                <span>{t('reminder.customLabel')}</span>
-                <input type="number" inputMode="numeric" min={0} max={10080} value={customMin} onChange={(e) => setCustomMin(e.target.value)} />
-              </label>
-              <button className="btn primary" onClick={() => addReminder(Math.max(0, Math.min(10080, Number(customMin) || 0)))}>
-                {t('common.add')}
-              </button>
-            </div>
-          )}
+          <ReminderPicker noLabel onNo={onClose} dayBefore={kind === 'task'} onPick={addReminder} />
+          <PermissionAsk />
           <p className="small muted">{t('reminder.note')}</p>
         </div>
       )}

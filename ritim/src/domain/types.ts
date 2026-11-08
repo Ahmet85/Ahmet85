@@ -18,7 +18,23 @@ export interface ProfileSettings {
   timeZone: string; // IANA, ör. "Europe/Istanbul"
   weekStart: Weekday; // haftanın ilk günü
   hourCycle: 'h23' | 'h12'; // 24 / 12 saat
+  /** Alarm tercihleri (yoksa varsayılanlar: alarmPrefs) */
+  alarm?: AlarmPrefs;
+  /** Başarı kutlamaları (varsayılan açık) */
+  celebrations?: boolean;
 }
+
+export interface AlarmPrefs {
+  sound: 'bell' | 'marimba' | 'silent';
+  volume: number; // 0..1
+  vibrate: boolean;
+  /** Sessiz saatler: bu aralıkta ses/titreşim yok (gece yarısını aşabilir) */
+  quietFrom?: PlainTimeStr;
+  quietTo?: PlainTimeStr;
+}
+
+export const DEFAULT_ALARM: AlarmPrefs = { sound: 'bell', volume: 0.6, vibrate: true, quietFrom: '23:00', quietTo: '07:00' };
+export const alarmPrefs = (s: { alarm?: AlarmPrefs }): AlarmPrefs => ({ ...DEFAULT_ALARM, ...s.alarm });
 
 export interface Profile {
   id: ID;

@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="tr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Okto açılış denemesi</title>
+<style>
+@font-face{font-family:Fredoka;font-weight:700;src:url(../fonts/fredoka-700-latin.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:Fredoka;font-weight:700;src:url(../fonts/fredoka-700-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+html,body{margin:0;height:100%;overflow:hidden;background:#0a4f86}canvas{display:block}
+</style></head><body><canvas id="c"></canvas>
+<script src="../title.js"></script>
+<script>
+const q=new URLSearchParams(location.search), variant=q.get('v')||'purple';
+const c=document.getElementById('c'),ctx=c.getContext('2d');
+let W,H,D;
+function size(){D=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;c.width=W*D;c.height=H*D;c.style.width=W+'px';c.style.height=H+'px';}
+size();addEventListener('resize',size);
+window.renderAt=t=>{ctx.setTransform(D,0,0,D,0,0);OktoTitle.draw(ctx,W,H,t,{variant});};
+document.fonts.load('700 40px Fredoka','ŞşİıĞğ').then(()=>{window.ready=true;
+  if(!q.has('still')){const s=performance.now();(function f(n){renderAt((n-s)/1000);requestAnimationFrame(f)})(s);}});
+</script></body></html>

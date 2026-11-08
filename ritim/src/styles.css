@@ -1490,3 +1490,104 @@ textarea {
   cursor: pointer;
   min-height: 32px;
 }
+
+/* ================= 5. adım: Günüm değişti ================= */
+.replan-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.replan-row {
+  padding: 10px 12px;
+  border-radius: var(--r-row);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-inline-start: 4px solid var(--ring);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.replan-row.anchor {
+  border-inline-start-color: var(--muted);
+  background: transparent;
+  padding-block: 6px;
+}
+.replan-row.act-move,
+.replan-row.act-shorten {
+  border-inline-start-color: var(--accent);
+}
+.replan-row.act-postpone {
+  border-inline-start-color: #7a93b8;
+}
+.replan-row.act-skip {
+  border-inline-start-color: var(--border);
+}
+.replan-row.act-skip .replan-title {
+  color: var(--muted);
+}
+.replan-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 12px;
+}
+.replan-title {
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.replan-row.anchor .replan-title {
+  font-weight: 600;
+}
+.replan-dec {
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+.replan-row:not(.anchor) .replan-dec {
+  color: var(--text);
+  font-weight: 600;
+}
+.small-chips .chip {
+  min-height: 34px;
+  padding: 4px 10px;
+  font-size: 0.8rem;
+}
+.planned-short {
+  margin: 4px 0 0;
+  font-weight: 600;
+  color: var(--accent);
+}
+.now-card .planned-short {
+  color: inherit;
+  opacity: 0.9;
+}
+.tone-tired {
+  color: var(--ring);
+}
+button.replan-head {
+  all: unset;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 4px 12px;
+  min-height: 36px;
+  cursor: pointer;
+}
+button.replan-head:disabled {
+  cursor: default;
+}
+button.replan-head:focus-visible {
+  outline: 3px solid var(--accent);
+  border-radius: 8px;
+}
+.replan-dec {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}

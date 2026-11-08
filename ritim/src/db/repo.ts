@@ -24,6 +24,7 @@ import { occurrenceId } from '../domain/recurrence';
 import type { AgendaItem } from '../domain/agenda';
 import type { Resolution } from '../domain/conflicts';
 import { splitRule, type Scope } from '../domain/moves';
+import type { PlanEntry } from '../domain/replan';
 import { addDays, localEnd, minutesOfDay, toDayNumber } from '../domain/time';
 import { PROFILE_TABLES, uid, type RitimDB } from './db';
 
@@ -45,6 +46,8 @@ export function movedEvent(e: EventItem, date: string, startTime: string | undef
   const end = localEnd(date, startTime, durationMin);
   return { ...e, startDate: date, startTime, endDate: end.date, endTime: end.time };
 }
+
+const clockOf = (m: number) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
 
 /** Tablo satırı (yalnızca kimliği zorunlu) */
 const row = <T extends { id: string }>(x: T) => x;
@@ -368,6 +371,27 @@ export class Repo {
       return this.apply(next.profileId, 'history.saveRoutine', [{ table: 'routines', put: next }]);
     const ops = await this.splitOps(prev, fromDate, next, 0, { ...next.recurrence, startDate: fromDate });
     return this.apply(next.profileId, 'history.saveRoutine', ops);
+  }
+
+  /**
+   * "Günüm değişti" planını uygular: yalnızca bugünün oluşumları değişir
+   * (şablon bozulmaz), hepsi bilinçli değişiklik; tek "Geri al".
+   */
+  async applyReplan(profileId: string, plan: PlanEntry[]) {
+    const ops: Op[] = [];
+    for (const e of plan) {
+      if (e.anchor || e.item.kind !== 'routine') continue;
+      const d = e.decision;
+      const base = { consciousChange: true as const };
+      let patch: Partial<OccurrenceRecord> | null = null;
+      if (d.action === 'move') patch = { ...base, date: e.item.date, startTime: clockOf(d.start) };
+      else if (d.action === 'shorten')
+        patch = { ...base, date: e.item.date, startTime: clockOf(d.start), durationMin: d.duration, shortVersionId: d.version.id };
+      else if (d.action === 'postpone') patch = { ...base, date: d.date, startTime: d.startTime };
+      else if (d.action === 'skip') patch = { ...base, status: 'skipped' };
+      if (patch) ops.push(await this.occurrenceOp(profileId, e.item.routineId!, e.item.originalDate!, patch));
+    }
+    return this.apply(profileId, 'history.replan', ops);
   }
 
   /** "Bundan sonraki tüm tekrarları sil": geçmiş kalır (karne için). */

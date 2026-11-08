@@ -26,9 +26,15 @@ export const catStyle = (c?: Category) =>
 export function useSetStatus() {
   const { profile, data, run } = useStore();
   return (item: AgendaItem, status: Status, toastKey: string, sv?: ShortVersion) => {
+    if (status === 'done' && item.plannedShort) toastKey = 'day.shortToast';
     const pid = profile!.id;
     if (item.kind === 'routine') {
       const dur = item.endMin - item.startMin;
+      // Bu tarih için kısa sürüm planlandıysa "Tamamladım" = kısa sürüm tamamlandı
+      if (status === 'done' && item.plannedShort && !sv) {
+        status = 'done_short';
+        sv = item.plannedShort;
+      }
       return run(toastKey, () =>
         repo.patchOccurrence(pid, item.routineId!, item.originalDate!, {
           status,
@@ -103,6 +109,7 @@ export function ItemRow({ item, highlight, onOpen }: { item: AgendaItem; highlig
           )}
           <span>{item.title}</span>
         </div>
+        {item.plannedShort && <div className="small planned-short">{t('day.plannedShort', { version: item.plannedShort.title })}</div>}
         <div className="tags">
           {highlight && <span className="tag now-tag">{t('day.now')}</span>}
           {c && <span className="tag">{c.name}</span>}
@@ -159,6 +166,11 @@ function NowCard({ items, nowMin }: { items: AgendaItem[]; nowMin: number }) {
         )}
         {current.title}
       </h2>
+      {current.plannedShort && (
+        <p className="planned-short">
+          {t('day.plannedShort', { version: current.plannedShort.title })}
+        </p>
+      )}
       <p className="now-time">
         {current.continues ? t('day.continues') : formatClock(current.startTime!, s)} – {formatClock(current.endTime!, s)}
         <span className="dot-sep">·</span>
@@ -208,7 +220,7 @@ function NowCard({ items, nowMin }: { items: AgendaItem[]; nowMin: number }) {
               <button className="btn primary" onClick={() => setStatus(current, 'done', 'day.doneToast')}>
                 {t('day.done')}
               </button>
-              {current.shortVersions.length > 0 && (
+              {current.shortVersions.length > 0 && !current.plannedShort && (
                 <button
                   className="btn"
                   onClick={() =>
@@ -265,8 +277,8 @@ function Tasks({ items, title }: { items: AgendaItem[]; title: string }) {
 
 export function DayView({ date }: { date: PlainDateStr }) {
   const { t } = useT();
-  const { profile, data, notify } = useStore();
-  const { openItem } = useSheets();
+  const { profile, data } = useStore();
+  const { openItem, openReplan } = useSheets();
   const s = profile!.settings;
   const now = useNow(s.timeZone);
   const isToday = date === now.date;
@@ -289,7 +301,7 @@ export function DayView({ date }: { date: PlainDateStr }) {
       {isToday && (
         <>
           <NowCard items={items} nowMin={now.minutes} />
-          <button className="btn day-changed" onClick={() => notify('day.dayChangedSoon')}>
+          <button className="btn day-changed" onClick={openReplan}>
             <Icon name="undo" size={18} /> {t('day.dayChanged')}
           </button>
           {next.length > 0 && (

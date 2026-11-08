@@ -92,12 +92,12 @@ export function suggestDays(
   fromDate: PlainDateStr,
   durationMin: number,
   preferred: number,
-  o: SlotOptions & { days?: number } = {},
+  o: SlotOptions & { days?: number; busyByDate?: Record<PlainDateStr, Span[]> } = {},
 ): DaySuggestion[] {
   const out: DaySuggestion[] = [];
   for (let k = 1; k <= (o.days ?? 7) && out.length < (o.max ?? 3); k++) {
     const date = addDays(fromDate, k);
-    const [best] = freeStarts(src, date, durationMin, preferred, { ...o, extraBusy: [], max: 1 });
+    const [best] = freeStarts(src, date, durationMin, preferred, { ...o, extraBusy: o.busyByDate?.[date] ?? [], max: 1 });
     if (best !== undefined) out.push({ date, startTime: clock(best), sameTime: best === preferred });
   }
   return out;

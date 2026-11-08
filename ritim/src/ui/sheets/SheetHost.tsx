@@ -7,6 +7,7 @@ import { AddFlow } from './AddFlow';
 import { ItemSheet } from './ItemSheet';
 import { MoveFlow, type MoveTo } from './MoveFlow';
 import { RoutineForm } from './RoutineForm';
+import { ReplanFlow } from './ReplanFlow';
 import { Sheet } from '../Sheet';
 import { useT } from '../../i18n/i18n';
 import { useStore } from '../store';
@@ -26,6 +27,7 @@ type Open =
   | { kind: 'item'; item: AgendaItem; n: number }
   | { kind: 'move'; item: AgendaItem; to?: MoveTo; n: number }
   | { kind: 'routine'; routineId: string; n: number }
+  | { kind: 'replan'; n: number }
   | null;
 
 interface Sheets {
@@ -33,12 +35,13 @@ interface Sheets {
   openItem: (item: AgendaItem) => void;
   openMove: (item: AgendaItem, to?: MoveTo) => void;
   openRoutine: (routineId: string) => void;
+  openReplan: () => void;
   close: () => void;
   goDay?: (d: PlainDateStr) => void;
 }
 
 const noop = () => {};
-const Ctx = createContext<Sheets>({ openAdd: noop, openItem: noop, openMove: noop, openRoutine: noop, close: noop });
+const Ctx = createContext<Sheets>({ openAdd: noop, openItem: noop, openMove: noop, openRoutine: noop, openReplan: noop, close: noop });
 export const useSheets = () => useContext(Ctx);
 
 export function SheetHost({ children, goDay }: { children: ReactNode; goDay: (d: PlainDateStr) => void }) {
@@ -49,6 +52,7 @@ export function SheetHost({ children, goDay }: { children: ReactNode; goDay: (d:
     openItem: (item) => setOpen({ kind: 'item', item, n: Date.now() }),
     openMove: (item, to) => setOpen({ kind: 'move', item, to, n: Date.now() }),
     openRoutine: (routineId) => setOpen({ kind: 'routine', routineId, n: Date.now() }),
+    openReplan: () => setOpen({ kind: 'replan', n: Date.now() }),
     close,
     goDay,
   };
@@ -59,6 +63,7 @@ export function SheetHost({ children, goDay }: { children: ReactNode; goDay: (d:
         {open?.kind === 'add' && <AddFlow key={open.n} init={open.init} onClose={close} />}
         {open?.kind === 'item' && <ItemSheet key={open.n} item={open.item} onClose={close} />}
         {open?.kind === 'move' && <MoveFlow key={open.n} item={open.item} to={open.to} onClose={close} />}
+        {open?.kind === 'replan' && <ReplanFlow key={open.n} onClose={close} />}
         {open?.kind === 'routine' && <RoutineSheet key={open.n} routineId={open.routineId} onClose={close} />}
       </AnimatePresence>
     </Ctx.Provider>

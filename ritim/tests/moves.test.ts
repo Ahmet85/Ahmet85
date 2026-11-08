@@ -138,3 +138,24 @@ describe('rutin düzenleme', () => {
     expect(await titlesOn('2026-03-05')).toEqual([]);
   });
 });
+
+import { replan } from '../src/domain/replan';
+describe('Günüm değişti uygulanması', () => {
+  it('plan tek işlemde uygulanır, şablon bozulmaz, tek "Geri al" ile döner', async () => {
+    await repo.putRoutine(routine({ id: 'g', title: 'Gitar', startTime: '18:00', durationMin: 60, flex: { timing: 'flexible', priority: 'medium', shortenable: true, movable: true, protected: false }, shortVersions: [{ id: 's', title: '15 dk', durationMin: 15 }] }));
+    await repo.putRoutine(routine({ id: 'w', title: 'Yürüyüş', startTime: '19:00', durationMin: 60, flex: { timing: 'flexible', priority: 'low', shortenable: false, movable: false, protected: false } }));
+    const D = '2026-03-03';
+    const d0 = await repo.loadProfileData('p1');
+    const plan = replan({ src: d0, date: D, nowMin: 17 * 60, reason: 'tired' });
+    await repo.applyReplan('p1', plan);
+    const d = await repo.loadProfileData('p1');
+    const day = buildDay(d, D);
+    expect(day.find((i) => i.routineId === 'g')).toMatchObject({ endMin: 18 * 60 + 15, plannedShort: { title: '15 dk' } });
+    expect(day.find((i) => i.routineId === 'w')!.status).toBe('skipped');
+    expect(d.records.every((r) => r.consciousChange)).toBe(true);
+    expect(d.routines.find((r) => r.id === 'g')!.durationMin).toBe(60);
+    expect(buildDay(d, '2026-03-04').find((i) => i.routineId === 'g')!.endMin).toBe(19 * 60);
+    await repo.undoLast('p1');
+    expect((await repo.loadProfileData('p1')).records).toHaveLength(0);
+  });
+});

@@ -44,6 +44,8 @@ export interface AgendaItem {
   projectId?: string;
   flex?: Flexibility;
   shortVersions: ShortVersion[];
+  /** Bu tarih için kısa sürüm planlandıysa (ör. "Günüm değişti") */
+  plannedShort?: ShortVersion;
 }
 
 const INACTIVE: Status[] = ['skipped', 'cancelled', 'postponed'];
@@ -86,6 +88,7 @@ export function buildRange(src: AgendaSource, from: PlainDateStr, to: PlainDateS
         projectId: r.projectId,
         flex: r.flex,
         shortVersions: r.shortVersions,
+        plannedShort: o.record?.shortVersionId ? r.shortVersions.find((v) => v.id === o.record!.shortVersionId) : undefined,
       });
     }
   }

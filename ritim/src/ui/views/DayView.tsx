@@ -8,6 +8,7 @@ import type { Category, PlainDateStr, ProfileSettings, ShortVersion, Status } fr
 import { formatClock } from '../format';
 import { useCategories, useNow } from '../hooks';
 import { Icon } from '../Icon';
+import { useSheets } from '../sheets/SheetHost';
 
 export function useDuration() {
   const { t } = useT();
@@ -80,6 +81,9 @@ export function ItemRow({ item, highlight, onOpen }: { item: AgendaItem; highlig
       className={`block${highlight ? ' now' : ''}${isDone(item.status) ? ' done' : ''}${item.status === 'skipped' || item.status === 'cancelled' ? ' faded' : ''}`}
       style={catStyle(c)}
       onClick={onOpen}
+      role={onOpen ? 'button' : undefined}
+      tabIndex={onOpen ? 0 : undefined}
+      onKeyDown={(e) => onOpen && (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onOpen())}
     >
       <div className="block-time">
         <span className={item.continues ? 'small' : ''}>{timeLabel(item, s, t)}</span>
@@ -229,6 +233,7 @@ function NowCard({ items, nowMin }: { items: AgendaItem[]; nowMin: number }) {
 
 function Tasks({ items, title }: { items: AgendaItem[]; title: string }) {
   const { profile } = useStore();
+  const { openItem } = useSheets();
   const setStatus = useSetStatus();
   if (!items.length) return null;
   return (
@@ -248,6 +253,9 @@ function Tasks({ items, title }: { items: AgendaItem[]; title: string }) {
               <span className={isDone(k.status) ? 'struck' : ''}>{k.title}</span>
               {k.startTime && <span className="muted small">{formatClock(k.startTime, profile!.settings)}</span>}
             </label>
+            <button className="icon-btn" aria-label={k.title} onClick={() => openItem(k)}>
+              <Icon name="right" size={18} />
+            </button>
           </li>
         ))}
       </ul>
@@ -258,6 +266,7 @@ function Tasks({ items, title }: { items: AgendaItem[]; title: string }) {
 export function DayView({ date }: { date: PlainDateStr }) {
   const { t } = useT();
   const { profile, data, notify } = useStore();
+  const { openItem } = useSheets();
   const s = profile!.settings;
   const now = useNow(s.timeZone);
   const isToday = date === now.date;
@@ -288,7 +297,7 @@ export function DayView({ date }: { date: PlainDateStr }) {
               <h2 className="section-title">{t('day.upNext')}</h2>
               <ol className="blocks">
                 {next.map((i) => (
-                  <ItemRow key={i.key} item={i} />
+                  <ItemRow key={i.key} item={i} onOpen={() => openItem(i)} />
                 ))}
               </ol>
             </section>
@@ -314,7 +323,12 @@ export function DayView({ date }: { date: PlainDateStr }) {
             {showAll && (
               <ol className="blocks">
                 {blocks.map((i) => (
-                  <ItemRow key={i.key} item={i} highlight={isToday && current?.key === i.key && current.date === i.date} />
+                  <ItemRow
+                    key={i.key}
+                    item={i}
+                    highlight={isToday && current?.key === i.key && current.date === i.date}
+                    onOpen={() => openItem(i)}
+                  />
                 ))}
               </ol>
             )}

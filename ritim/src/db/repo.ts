@@ -20,9 +20,15 @@ import type {
 } from '../domain/types';
 import { makeReminder, remindersFor } from '../domain/reminders';
 import { occurrenceId } from '../domain/recurrence';
+import type { AgendaItem } from '../domain/agenda';
+import type { Resolution } from '../domain/conflicts';
+import { localEnd, minutesOfDay, toDayNumber } from '../domain/time';
 import { PROFILE_TABLES, type RitimDB } from './db';
 
 export const HISTORY_LIMIT = 100;
+
+/** Tablo satırı (yalnızca kimliği zorunlu) */
+const row = <T extends { id: string }>(x: T) => x;
 
 type Op = { table: TableName; put: { id: string } } | { table: TableName; del: string };
 
@@ -180,6 +186,64 @@ export class Repo {
       ...remindersFor(rems, { taskId: t.id }).map((x) => ({ table: 'reminders' as const, del: x.id })),
       { table: 'tasks', del: t.id },
     ]);
+  }
+
+  /** Randevuyu iptal et: bağlı hatırlatmalar da silinir (geri alınabilir). */
+  async cancelEvent(e: EventItem) {
+    const rems = await this.db.reminders.where('profileId').equals(e.profileId).toArray();
+    await this.apply(e.profileId, 'history.cancelEvent', [
+      ...remindersFor(rems, { eventId: e.id }).map((x) => ({ table: 'reminders' as const, del: x.id })),
+      { table: 'events', put: row({ ...e, status: 'cancelled' as const }) },
+    ]);
+  }
+
+  /**
+   * Yeni/düzenlenen randevu veya görevi, seçilen çakışma çözümleriyle birlikte
+   * TEK işlemde kaydeder; "Geri al" hepsini birden geri alır.
+   * Tekrarlayan bloklarda yalnızca o tarih değişir (şablon bozulmaz) ve
+   * değişiklik "bilinçli" olarak işaretlenir (karnede başarısızlık sayılmaz).
+   */
+  async saveWithResolutions(
+    profileId: string,
+    label: string,
+    item: { table: 'events' | 'tasks'; row: EventItem | DatedTask },
+    resolutions: { target: AgendaItem; resolution: Resolution }[],
+  ) {
+    const ops: Op[] = [{ table: item.table, put: item.row }];
+    for (const { target, resolution: r } of resolutions) {
+      if (r.action === 'keep') continue;
+      if (target.kind === 'routine') {
+        const id = occurrenceId(target.routineId!, target.originalDate!);
+        const existing = (await this.db.occurrences.get(id)) ?? {
+          id,
+          profileId,
+          routineId: target.routineId!,
+          originalDate: target.originalDate!,
+        };
+        const patch: Partial<OccurrenceRecord> =
+          r.action === 'skip'
+            ? { status: 'skipped' }
+            : r.action === 'move'
+              ? { date: target.date, startTime: r.startTime }
+              : { date: r.date, startTime: r.startTime };
+        ops.push({ table: 'occurrences', put: row({ ...existing, ...patch, consciousChange: true }) });
+      } else if (target.kind === 'event') {
+        const e = await this.db.events.get(target.eventId!);
+        if (!e) continue;
+        if (r.action === 'skip') {
+          ops.push({ table: 'events', put: row({ ...e, status: 'skipped' as const }) });
+          continue;
+        }
+        const date = r.action === 'move' ? e.startDate : r.date;
+        const dur =
+          e.startTime && e.endTime
+            ? (toDayNumber(e.endDate) - toDayNumber(e.startDate)) * 1440 + minutesOfDay(e.endTime) - minutesOfDay(e.startTime)
+            : 60;
+        const end = localEnd(date, r.startTime, dur);
+        ops.push({ table: 'events', put: row({ ...e, startDate: date, startTime: r.startTime, endDate: end.date, endTime: end.time }) });
+      }
+    }
+    return this.apply(profileId, label, ops);
   }
 
   // ---- Projeler ve notlar ----

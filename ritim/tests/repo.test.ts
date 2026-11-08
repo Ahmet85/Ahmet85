@@ -201,3 +201,67 @@ describe('örnek profil', () => {
     }
   });
 });
+
+describe('randevu + çakışma çözümü tek işlemde', () => {
+  const D = '2026-03-03';
+  const appt: EventItem = {
+    id: 'doc', profileId: 'p1', title: 'Doktor', startDate: D, startTime: '20:15', endDate: D, endTime: '20:45', status: 'planned',
+  };
+  const target = (routineId: string) =>
+    ({ key: `r:${routineId}@${D}`, kind: 'routine', routineId, originalDate: D, date: D }) as never;
+
+  it('taşı: yalnızca o tarih değişir, şablon aynı kalır, bilinçli değişiklik işaretlenir', async () => {
+    await repo.putRoutine(routine({ id: 'piano', startTime: '20:00' }));
+    await repo.saveWithResolutions('p1', 'history.saveEvent', { table: 'events', row: appt }, [
+      { target: target('piano'), resolution: { action: 'move', startTime: '21:00' } },
+    ]);
+    expect((await db.routines.get('piano'))!.startTime).toBe('20:00');
+    const rec = await db.occurrences.get(`piano@${D}`);
+    expect(rec).toMatchObject({ date: D, startTime: '21:00', consciousChange: true });
+    const d = await repo.loadProfileData('p1');
+    const tue = expandRange(d.routines, d.records, D, D)[0];
+    expect(tue.startTime).toBe('21:00');
+    const wed = expandRange(d.routines, d.records, '2026-03-04', '2026-03-04')[0];
+    expect(wed.startTime).toBe('20:00');
+  });
+
+  it('tek "Geri al" hem randevuyu hem taşımayı geri alır', async () => {
+    await repo.putRoutine(routine({ id: 'piano', startTime: '20:00' }));
+    await repo.saveWithResolutions('p1', 'history.saveEvent', { table: 'events', row: appt }, [
+      { target: target('piano'), resolution: { action: 'postpone', date: '2026-03-05', startTime: '18:00' } },
+    ]);
+    expect(await db.events.count()).toBe(1);
+    await repo.undoLast('p1');
+    expect(await db.events.count()).toBe(0);
+    expect(await db.occurrences.count()).toBe(0);
+  });
+
+  it('atla ve bilerek koru: koru hiçbir şeyi değiştirmez, blok silinmez', async () => {
+    await repo.putRoutine(routine({ id: 'a', startTime: '20:00' }));
+    await repo.putRoutine(routine({ id: 'b', startTime: '20:30' }));
+    await repo.saveWithResolutions('p1', 'history.saveEvent', { table: 'events', row: appt }, [
+      { target: target('a'), resolution: { action: 'skip' } },
+      { target: target('b'), resolution: { action: 'keep' } },
+    ]);
+    expect(await db.routines.count()).toBe(2);
+    expect((await db.occurrences.get(`a@${D}`))!.status).toBe('skipped');
+    expect(await db.occurrences.get(`b@${D}`)).toBeUndefined();
+  });
+
+  it('başka bir randevuyu taşırken süresi korunur', async () => {
+    const other: EventItem = { ...appt, id: 'other', title: 'Ders', startTime: '20:00', endTime: '21:30' };
+    await repo.putEvent(other);
+    await repo.saveWithResolutions('p1', 'history.saveEvent', { table: 'events', row: appt }, [
+      { target: { key: 'e:other', kind: 'event', eventId: 'other' } as never, resolution: { action: 'move', startTime: '17:00' } },
+    ]);
+    expect(await db.events.get('other')).toMatchObject({ startTime: '17:00', endTime: '18:30', startDate: D });
+  });
+
+  it('randevu iptal edilince hatırlatmaları silinir', async () => {
+    await repo.putEvent(appt);
+    await repo.addReminder('p1', { kind: 'event', eventId: 'doc' }, 15);
+    await repo.cancelEvent(appt);
+    expect((await db.events.get('doc'))!.status).toBe('cancelled');
+    expect(await db.reminders.count()).toBe(0);
+  });
+});

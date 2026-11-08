@@ -14,6 +14,8 @@ import { DayView } from './views/DayView';
 import { WeekView, weekDays } from './views/WeekView';
 import { MonthView, monthGrid } from './views/MonthView';
 import { YearView } from './views/YearView';
+import { SheetHost, useSheets } from './sheets/SheetHost';
+import { clock } from '../domain/time';
 
 export const LEVELS = ['day', 'week', 'month', 'year'] as const;
 export type Level = (typeof LEVELS)[number];
@@ -167,6 +169,7 @@ export function Calendar() {
   const containsToday = periodKey(level, date, s.weekStart) === periodKey(level, now.date, s.weekStart);
 
   return (
+    <SheetHost goDay={(d) => go('day', d)}>
     <div className={`calendar level-${level}${table && level === 'week' ? ' with-table' : ''}`}>
       <div className="cal-top">
         <div className="levels" role="tablist" aria-label={t('level.zoomHint')}>
@@ -227,6 +230,25 @@ export function Calendar() {
           </motion.div>
         </AnimatePresence>
       </div>
+      <AddButton date={level === 'day' ? date : now.date} isToday={level !== 'day' || date === now.date} nowMin={now.minutes} />
     </div>
+    </SheetHost>
+  );
+}
+
+/** Her ekranda kolay ulaşılan "+" düğmesi. */
+function AddButton({ date, isToday, nowMin }: { date: PlainDateStr; isToday: boolean; nowMin: number }) {
+  const { t } = useT();
+  const { openAdd } = useSheets();
+  const start = isToday ? Math.min(Math.ceil((nowMin + 1) / 30) * 30, 23 * 60) : 9 * 60;
+  return (
+    <motion.button
+      className="fab"
+      aria-label={t('add.fab')}
+      whileTap={{ scale: 0.92 }}
+      onClick={() => openAdd({ date, start: clock(start), end: clock(Math.min(start + 60, 1439)) })}
+    >
+      <Icon name="plus" size={26} />
+    </motion.button>
   );
 }

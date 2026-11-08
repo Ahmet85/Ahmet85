@@ -8,6 +8,8 @@ import type { PlainDateStr } from '../../domain/types';
 import { formatClock, formatPercent, formatWeekdayShort } from '../format';
 import { useCategories, useNow } from '../hooks';
 import { catStyle } from './DayView';
+import { useSheets } from '../sheets/SheetHost';
+import { clock } from '../../domain/time';
 
 const HOUR_PX = 44;
 
@@ -85,6 +87,7 @@ interface Props {
 /** Büyük haftalık tablo. Sütunlar kâğıt gibi açılarak gelir. */
 function Table({ days, byDay, onOpenDay }: Props) {
   const { profile } = useStore();
+  const { openAdd, openItem } = useSheets();
   const cats = useCategories();
   const s = profile!.settings;
   const now = useNow(s.timeZone);
@@ -124,6 +127,12 @@ function Table({ days, byDay, onOpenDay }: Props) {
               animate={{ rotateX: 0, opacity: 1 }}
               transition={{ delay: i * 0.045, type: 'spring', stiffness: 170, damping: 22 }}
               style={{ transformOrigin: 'top center' }}
+              onClick={(e) => {
+                // Boş bir saate dokununca o saate randevu ekle (yarım saate yuvarlanır)
+                const y = e.clientY - e.currentTarget.getBoundingClientRect().top;
+                const start = Math.min(Math.max(0, Math.floor((y / HOUR_PX) * 2) * 30), 23 * 60 + 30);
+                openAdd({ date: d, start: clock(start), end: clock(Math.min(start + 60, 1439)) });
+              }}
             >
               {assignLanes(items.map((x) => { const c = clampDay(x); return { ...x, startMin: c.start, endMin: c.end }; })).map(
                 ({ item, lane, lanes }) => {
@@ -140,7 +149,10 @@ function Table({ days, byDay, onOpenDay }: Props) {
                         insetInlineStart: `${(lane / lanes) * 100}%`,
                         width: `${100 / lanes}%`,
                       }}
-                      onClick={() => onOpenDay(d)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openItem(item);
+                      }}
                       title={item.title}
                     >
                       <span className="wt-title">{item.title}</span>
@@ -166,7 +178,7 @@ export function WeekView({ date, table, onOpenDay }: { date: PlainDateStr; table
   return (
     <div className="stack">
       {table ? <Table days={days} byDay={byDay} onOpenDay={onOpenDay} /> : <Strips days={days} byDay={byDay} onOpenDay={onOpenDay} />}
-      {!table && <p className="muted small center">{t('week.rotateHint')}</p>}
+      <p className="muted small center">{t(table ? 'week.tapToAdd' : 'week.rotateHint')}</p>
     </div>
   );
 }

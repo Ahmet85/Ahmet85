@@ -60,17 +60,44 @@ const Sound = {
       try {
         this.ctx = new (window.AudioContext || window.webkitAudioContext)();
         try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch {}
-        for (let i = 1; i <= 3; i++) {
-          const T = TIERS[i], c = this.ctx, inp = c.createGain(), lp = c.createBiquadFilter(), dl = c.createDelay(1), fb = c.createGain(), wet = c.createGain();
-          lp.type = 'lowpass'; lp.frequency.value = T.lp; dl.delayTime.value = T.delay; fb.gain.value = T.echo; wet.gain.value = T.echo * 0.9;
-          inp.connect(lp).connect(c.destination); inp.connect(dl); dl.connect(fb).connect(dl); dl.connect(wet).connect(c.destination);
-          this.buses[i] = inp;
-        }
+        this.buildBuses(this.ctx);
       } catch {}
     }
     if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
   },
+  buildBuses(c) {
+    for (let i = 1; i <= 3; i++) {
+      const T = TIERS[i], inp = c.createGain(), lp = c.createBiquadFilter(), dl = c.createDelay(1), fb = c.createGain(), wet = c.createGain();
+      lp.type = 'lowpass'; lp.frequency.value = T.lp; dl.delayTime.value = T.delay; fb.gain.value = T.echo; wet.gain.value = T.echo * 0.9;
+      inp.connect(lp).connect(c.destination); inp.connect(dl); dl.connect(fb).connect(dl); dl.connect(wet).connect(c.destination);
+      this.buses[i] = inp;
+    }
+  },
   get out() { return this.buses[this.tier] || this.ctx.destination; },
+  // ---- dalgıç sesleri ----
+  blip(delay = 0, vol = 0.05) { // tek kabarcık: hızla yükselen kısa "blup"
+    if (this.muted || !this.ctx) return;
+    const k = TIERS[this.tier].pitch, t = this.ctx.currentTime + delay, f0 = rand(160, 380) * k, o = this.ctx.createOscillator(), g = this.ctx.createGain();
+    o.type = 'sine'; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f0 * rand(2.6, 4), t + rand(0.03, 0.06));
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol, t + 0.006); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.07);
+    o.connect(g).connect(this.out); o.start(t); o.stop(t + 0.09);
+  },
+  filtered(dur, vol, type, freq, q, delay = 0, attack = 0.1) { // şekillendirilmiş gürültü (nefes / köpük)
+    if (this.muted || !this.ctx) return;
+    const c = this.ctx, t = c.currentTime + delay, len = Math.floor(c.sampleRate * dur);
+    const buf = c.createBuffer(1, len, c.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    const src = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
+    f.type = type; f.frequency.value = freq * TIERS[this.tier].pitch; f.Q.value = q;
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol, t + attack); g.gain.linearRampToValueAtTime(vol * 0.7, t + dur * 0.7); g.gain.linearRampToValueAtTime(0.0001, t + dur);
+    src.buffer = buf; src.connect(f).connect(g).connect(this.out); src.start(t); src.stop(t + dur + 0.02);
+  },
+  inhale(delay = 0, vol = 0.05) { this.filtered(0.75, vol, 'highpass', 2800, 0.7, delay, 0.25); this.filtered(0.75, vol * 0.6, 'bandpass', 1400, 1.2, delay, 0.3); },
+  exhale(delay = 0, vol = 1) { // regülatörden çıkan kabarcık patlaması
+    this.filtered(0.9, 0.05 * vol, 'lowpass', 520, 0.8, delay, 0.05);
+    let tt = delay;
+    for (let i = 0; i < 16; i++) { tt += rand(0.025, 0.07); this.blip(tt, (0.05 + Math.random() * 0.04) * vol * (1 - i / 22)); }
+  },
   tone(freq, dur, type = 'sine', vol = 0.15, slide = 0, delay = 0, raw = false) {
     if (this.muted || !this.ctx) return;
     const k = raw ? 1 : TIERS[this.tier].pitch;
@@ -174,7 +201,7 @@ const Missions = {
 let state = 'menu';           // menu | play | pause | over
 let player, entities, particles, floaters, inkClouds, rings, banners, slams, shots;
 let depth, score, pearls, lives, combo, comboTimer, spawnTimer, inkCharge, shieldTime, invuln, time, shake, flash, winkT;
-let tier, boss, bossNext, bossesBeaten, bonusPearls;
+let tier, boss, bossNext, bossesBeaten, bonusPearls, breathT, blipT;
 const snow = Array.from({ length: 70 }, () => ({ x: Math.random(), y: Math.random(), r: Math.random() * 1.8 + 0.4, s: Math.random() * 0.5 + 0.3 }));
 const bgBubbles = [];
 const keys = {};
@@ -188,7 +215,7 @@ function reset() {
   entities = []; particles = []; floaters = []; inkClouds = []; rings = []; banners = []; slams = []; shots = [];
   depth = 0; score = 0; pearls = 0; lives = 3; combo = 0; comboTimer = 0; bonusPearls = 0;
   spawnTimer = 0.5; inkCharge = 0.5; shieldTime = 0; invuln = 1.5; time = 0; shake = 0; flash = 0; winkT = 0;
-  tier = 1; Sound.tier = 1; boss = null; bossNext = 250; bossesBeaten = 0;
+  tier = 1; Sound.tier = 1; boss = null; bossNext = 250; bossesBeaten = 0; breathT = 1.2; blipT = 0;
 }
 
 // ---------- Girdi ----------
@@ -547,6 +574,22 @@ function update(dt) {
   const v = Math.hypot(p.vx, p.vy);
   p.blink -= dt; if (p.blink < -3.5) p.blink = 0.15;
   if (v > 120 * S && Math.random() < dt * 14) bgBubbles.push({ x: p.x + rand(-6, 6) * S, y: p.y + p.r * 0.2, r: rand(2, 5) * S, vy: -rand(30, 70) * S, life: 1 });
+  // dalgıç gibi nefes: tıslayarak nefes al, sonra kabarcık bulutu halinde ver
+  breathT -= dt;
+  if (breathT <= 0) {
+    const moving = clamp(v / (260 * S), 0, 1);
+    Sound.inhale(0, 0.035 + moving * 0.02);
+    Sound.exhale(0.95, 0.75 + moving * 0.35);
+    p.exhaleAt = time + 0.95;
+    breathT = rand(3.6, 4.6) - moving * 0.8;
+  }
+  if (p.exhaleAt && time >= p.exhaleAt) { // ses ile aynı anda görünen kabarcık bulutu
+    p.exhaleAt = 0;
+    for (let i = 0; i < 14; i++) bgBubbles.push({ x: p.x + rand(-10, 10) * S, y: p.y - p.r * 0.7 - rand(0, 12) * S, r: rand(2, 7) * S, vy: -rand(50, 130) * S, life: rand(0.8, 1.2) });
+  }
+  // hızlı yüzerken ara ara küçük kabarcık sesleri
+  blipT -= dt;
+  if (blipT <= 0 && v > 140 * S) { Sound.blip(0, 0.03 + clamp(v / (520 * S), 0, 1) * 0.03); blipT = rand(0.22, 0.5) * (1.6 - clamp(v / (520 * S), 0, 1)); }
 
   if (invuln > 0) invuln -= dt;
   if (winkT > 0) winkT -= dt;
@@ -1148,7 +1191,7 @@ requestAnimationFrame(frame);
 window.__okto = {
   get state() { return state; }, get score() { return score; }, get depth() { return depth; }, set depth(v) { depth = v; },
   get lives() { return lives; }, set lives(v) { lives = v; }, get boss() { return boss; }, get tier() { return tier; },
-  startGame, useInk, lightBomb: () => lightBomb(player.x, player.y), get entities() { return entities; }, get player() { return player; }, get target() { return target; },
+  Sound, TIERS, startGame, useInk, lightBomb: () => lightBomb(player.x, player.y), get entities() { return entities; }, get player() { return player; }, get target() { return target; },
   Profile, Missions, spawnGlow: () => entities.push({ type: 'glow', x: player.x, y: player.y + 80 * S, r: 15 * S, t: 0 }),
 };
 })();

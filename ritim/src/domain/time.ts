@@ -12,19 +12,61 @@ export const parseTime = (t: PlainTimeStr) => Temporal.PlainTime.from(t);
 export const fmtTime = (t: Temporal.PlainTime): PlainTimeStr =>
   `${String(t.hour).padStart(2, '0')}:${String(t.minute).padStart(2, '0')}`;
 
-export const weekdayOf = (d: PlainDateStr): Weekday => parseDate(d).dayOfWeek as Weekday;
+// ---- Hızlı takvim hesabı ----
+// Takvim tarihleri (saat dilimsiz) için tam sayı "gün numarası" kullanılır.
+// Temporal'den çok daha hızlıdır; Yıl görünümü 365 günü bir anda hesaplar.
+// Algoritma: H. Hinnant, "days_from_civil" / "civil_from_days".
+export function toDayNumber(d: PlainDateStr): number {
+  let y = +d.slice(0, 4);
+  const m = +d.slice(5, 7);
+  const day = +d.slice(8, 10);
+  y -= m <= 2 ? 1 : 0;
+  const era = Math.floor(y / 400);
+  const yoe = y - era * 400;
+  const doy = Math.floor((153 * (m + (m > 2 ? -3 : 9)) + 2) / 5) + day - 1;
+  const doe = yoe * 365 + Math.floor(yoe / 4) - Math.floor(yoe / 100) + doy;
+  return era * 146097 + doe - 719468;
+}
 
-export const addDays = (d: PlainDateStr, n: number): PlainDateStr =>
-  parseDate(d).add({ days: n }).toString();
+export function fromDayNumber(z: number): PlainDateStr {
+  z += 719468;
+  const era = Math.floor(z / 146097);
+  const doe = z - era * 146097;
+  const yoe = Math.floor((doe - Math.floor(doe / 1460) + Math.floor(doe / 36524) - Math.floor(doe / 146096)) / 365);
+  const doy = doe - (365 * yoe + Math.floor(yoe / 4) - Math.floor(yoe / 100));
+  const mp = Math.floor((5 * doy + 2) / 153);
+  const d = doy - Math.floor((153 * mp + 2) / 5) + 1;
+  const m = mp + (mp < 10 ? 3 : -9);
+  const y = yoe + era * 400 + (m <= 2 ? 1 : 0);
+  return `${String(y).padStart(4, '0')}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+}
 
-export const daysBetween = (a: PlainDateStr, b: PlainDateStr): number =>
-  parseDate(a).until(parseDate(b), { largestUnit: 'days' }).days;
+/** ISO hafta günü (1 = Pazartesi). 1970-01-01 bir Perşembe'dir. */
+export const weekdayOf = (d: PlainDateStr): Weekday => ((((toDayNumber(d) + 3) % 7) + 7) % 7 + 1) as Weekday;
+
+export const addDays = (d: PlainDateStr, n: number): PlainDateStr => fromDayNumber(toDayNumber(d) + n);
+
+export const daysBetween = (a: PlainDateStr, b: PlainDateStr): number => toDayNumber(b) - toDayNumber(a);
+
+export const daysInMonth = (year: number, month: number) =>
+  toDayNumber(month === 12 ? `${year + 1}-01-01` : `${year}-${String(month + 1).padStart(2, '0')}-01`) -
+  toDayNumber(`${year}-${String(month).padStart(2, '0')}-01`);
+
+export const monthKey = (d: PlainDateStr) => d.slice(0, 7);
+
+/** Ay ekle (gün, hedef ayın son gününe sıkıştırılır). */
+export function addMonths(d: PlainDateStr, n: number): PlainDateStr {
+  let y = +d.slice(0, 4);
+  let m = +d.slice(5, 7) - 1 + n;
+  y += Math.floor(m / 12);
+  m = ((m % 12) + 12) % 12 + 1;
+  const day = Math.min(+d.slice(8, 10), daysInMonth(y, m));
+  return `${String(y).padStart(4, '0')}-${String(m).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
 
 /** Tarihin içinde bulunduğu haftanın ilk günü (weekStart'a göre). */
 export function startOfWeek(d: PlainDateStr, weekStart: Weekday = 1): PlainDateStr {
-  const date = parseDate(d);
-  const diff = (date.dayOfWeek - weekStart + 7) % 7;
-  return date.subtract({ days: diff }).toString();
+  return addDays(d, -((weekdayOf(d) - weekStart + 7) % 7));
 }
 
 /**
@@ -38,9 +80,15 @@ export function localEnd(
   start: PlainTimeStr,
   durationMin: number,
 ): { date: PlainDateStr; time: PlainTimeStr } {
-  const end = parseDate(date).toPlainDateTime(parseTime(start)).add({ minutes: durationMin });
-  return { date: end.toPlainDate().toString(), time: fmtTime(end.toPlainTime()) };
+  const total = minutesOfDay(start) + durationMin;
+  const days = Math.floor(total / 1440);
+  const rest = total - days * 1440;
+  return { date: addDays(date, days), time: clock(rest) };
 }
+
+/** Dakika → "HH:MM" */
+export const clock = (min: number): PlainTimeStr =>
+  `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
 
 /**
  * Yerel tarih+saati gerçek ana çevirir. Yaz saatinde var olmayan bir saat
@@ -76,10 +124,7 @@ export function nowLocal(timeZone: string, now: Temporal.Instant = Temporal.Now.
   return { date: z.toPlainDate().toString(), time: fmtTime(z.toPlainTime()), zoned: z };
 }
 
-export const minutesOfDay = (t: PlainTimeStr) => {
-  const p = parseTime(t);
-  return p.hour * 60 + p.minute;
-};
+export const minutesOfDay = (t: PlainTimeStr) => +t.slice(0, 2) * 60 + +t.slice(3, 5);
 
 /** Cihazın varsayılan bölge ayarları (tarif bölüm 3). */
 export function deviceDefaults() {

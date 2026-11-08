@@ -7,6 +7,7 @@ import type {
   DatedTask,
   EventItem,
   HistoryEntry,
+  MonthTheme,
   OccurrenceRecord,
   Profile,
   Project,
@@ -15,6 +16,7 @@ import type {
   ReminderTarget,
   Routine,
   TableName,
+  YearGoals,
 } from '../domain/types';
 import { makeReminder, remindersFor } from '../domain/reminders';
 import { occurrenceId } from '../domain/recurrence';
@@ -38,6 +40,8 @@ export class Repo {
       this.db.projects,
       this.db.notes,
       this.db.reminders,
+      this.db.monthThemes,
+      this.db.yearGoals,
       this.db.history,
     ];
   }
@@ -187,6 +191,15 @@ export class Repo {
     return this.apply(n.profileId, 'history.addNote', [{ table: 'notes', put: n }]);
   }
 
+  // ---- Ay teması ve yıl hedefleri ----
+  putMonthTheme(m: MonthTheme) {
+    return this.apply(m.profileId, 'history.saveMonthTheme', [{ table: 'monthThemes', put: m }]);
+  }
+
+  putYearGoals(y: YearGoals) {
+    return this.apply(y.profileId, 'history.saveYearGoals', [{ table: 'yearGoals', put: y }]);
+  }
+
   // ---- Hatırlatmalar ----
   /** Aynı hedef+ofset zaten varsa yeniden eklenmez (çift hatırlatma olmaz). */
   async addReminder(profileId: string, target: ReminderTarget, offsetMin: number): Promise<Reminder> {
@@ -212,7 +225,7 @@ export class Repo {
   // ---- Okuma ----
   async loadProfileData(profileId: string) {
     const by = <T>(t: TableName) => this.db.table<T>(t).where('profileId').equals(profileId).toArray();
-    const [categories, routines, records, events, tasks, projects, notes, reminders] = await Promise.all([
+    const [categories, routines, records, events, tasks, projects, notes, reminders, monthThemes, yearGoals] = await Promise.all([
       by<Category>('categories'),
       by<Routine>('routines'),
       by<OccurrenceRecord>('occurrences'),
@@ -221,8 +234,10 @@ export class Repo {
       by<Project>('projects'),
       by<ProgressNote>('notes'),
       by<Reminder>('reminders'),
+      by<MonthTheme>('monthThemes'),
+      by<YearGoals>('yearGoals'),
     ]);
-    return { categories, routines, records, events, tasks, projects, notes, reminders };
+    return { categories, routines, records, events, tasks, projects, notes, reminders, monthThemes, yearGoals };
   }
 }
 

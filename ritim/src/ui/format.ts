@@ -58,3 +58,24 @@ export function timeZones(current: string): string[] {
 export const REGIONS = [
   'TR', 'DE', 'NL', 'FR', 'GB', 'US', 'CA', 'AU', 'AT', 'CH', 'BE', 'SE', 'NO', 'DK', 'IT', 'ES', 'AZ', 'SA', 'AE', 'JP',
 ];
+
+const fmt = (s: ProfileSettings, o: Intl.DateTimeFormatOptions) =>
+  new Intl.DateTimeFormat(formatLocale(s), { ...o, timeZone: 'UTC' });
+
+export const formatMonthYear = (d: PlainDateStr, s: ProfileSettings) => fmt(s, { month: 'long', year: 'numeric' }).format(utcDate(d));
+export const formatMonthName = (d: PlainDateStr, s: ProfileSettings) => fmt(s, { month: 'long' }).format(utcDate(d));
+export const formatWeekdayShort = (d: PlainDateStr, s: ProfileSettings) => fmt(s, { weekday: 'short' }).format(utcDate(d));
+export const formatWeekdayNarrow = (d: PlainDateStr, s: ProfileSettings) => fmt(s, { weekday: 'narrow' }).format(utcDate(d));
+export const formatDayMonth = (d: PlainDateStr, s: ProfileSettings) => fmt(s, { day: 'numeric', month: 'long' }).format(utcDate(d));
+
+/** "9–15 Kasım 2026" */
+export function formatRange(a: PlainDateStr, b: PlainDateStr, s: ProfileSettings): string {
+  const f = fmt(s, { day: 'numeric', month: 'long', year: 'numeric' }) as Intl.DateTimeFormat & {
+    formatRange?: (x: Date, y: Date) => string;
+  };
+  return f.formatRange ? f.formatRange(utcDate(a), utcDate(b)) : `${f.format(utcDate(a))} – ${f.format(utcDate(b))}`;
+}
+
+export function formatPercent(r: number, s: ProfileSettings) {
+  return new Intl.NumberFormat(formatLocale(s), { style: 'percent', maximumFractionDigits: 0 }).format(r);
+}

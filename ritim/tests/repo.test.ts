@@ -159,7 +159,7 @@ describe('yedekleme', () => {
 
 describe('örnek profil', () => {
   it('Ahmet profili yüklenir ve günleri tarife uyar', async () => {
-    const s = buildSampleProfile('ahmet', { ...SETTINGS });
+    const s = buildSampleProfile('ahmet', { ...SETTINGS }, '2026-11-01');
     await repo.createProfile(s.profile, s.categories);
     await repo.bulkInsert('ahmet', 'history.loadSample', [
       { table: 'projects', rows: s.projects },

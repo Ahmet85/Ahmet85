@@ -1,7 +1,7 @@
 {
   "name": "ritim",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "scripts": {
     "dev": "vite --host",
@@ -14,6 +14,7 @@
     "@fontsource/caveat": "^5.3.0",
     "@fontsource/nunito": "^5.3.0",
     "dexie": "^4.4.7",
+    "motion": "^12.43.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "react-intl": "^8.1.4",

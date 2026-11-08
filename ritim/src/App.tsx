@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { I18nProvider, useT } from './i18n/i18n';
 import { StoreProvider, useStore } from './ui/store';
-import { Today } from './ui/Today';
+import { Calendar } from './ui/Calendar';
+import { MotionConfig } from 'motion/react';
 import { Settings } from './ui/Settings';
 import { Welcome } from './ui/Welcome';
 import { Icon } from './ui/Icon';
@@ -24,7 +25,7 @@ function Shell() {
   return (
     <div className="app">
       <main className="content">
-        {tab === 'today' && (profile ? <Today key={profile.id} /> : <Welcome />)}
+        {tab === 'today' && (profile ? <Calendar key={profile.id} /> : <Welcome />)}
         {tab === 'settings' && <Settings />}
       </main>
 
@@ -64,7 +65,10 @@ function WithIntl() {
   const s = profile?.settings ?? defaults;
   return (
     <I18nProvider language={s.language} region={s.region} timeZone={s.timeZone}>
-      <Shell />
+      {/* Sistemde "hareketi azalt" açıksa animasyonlar sade geçişe döner */}
+      <MotionConfig reducedMotion="user">
+        <Shell />
+      </MotionConfig>
     </I18nProvider>
   );
 }

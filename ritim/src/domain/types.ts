@@ -188,6 +188,23 @@ export interface Reminder {
   offsetMin: number;
 }
 
+/** Ayın teması ve 2–4 ölçülebilir hedef (tarif bölüm 13). Kimlik: profil:YYYY-MM */
+export interface MonthTheme {
+  id: ID;
+  profileId: ID;
+  month: string; // "2026-11"
+  theme: string;
+  goals: string[];
+}
+
+/** Yıl hedefleri (1–3). Kimlik: profil:YYYY */
+export interface YearGoals {
+  id: ID;
+  profileId: ID;
+  year: number;
+  goals: string[];
+}
+
 export type TableName =
   | 'profiles'
   | 'categories'
@@ -197,7 +214,9 @@ export type TableName =
   | 'tasks'
   | 'projects'
   | 'notes'
-  | 'reminders';
+  | 'reminders'
+  | 'monthThemes'
+  | 'yearGoals';
 
 export interface Change {
   table: TableName;

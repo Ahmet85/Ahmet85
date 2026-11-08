@@ -53,3 +53,28 @@ describe('haftanın ilk günü', () => {
     expect(startOfWeek('2026-03-05', 6)).toBe('2026-02-28');
   });
 });
+
+describe('hızlı takvim hesabı Temporal ile aynı sonucu verir', () => {
+  it('1900–2100 arası her 37. gün', async () => {
+    const { Temporal, toDayNumber, fromDayNumber, weekdayOf, addDays } = await import('../src/domain/time');
+    let d = Temporal.PlainDate.from('1900-01-01');
+    const end = Temporal.PlainDate.from('2100-12-31');
+    while (Temporal.PlainDate.compare(d, end) <= 0) {
+      const s = d.toString();
+      expect(fromDayNumber(toDayNumber(s))).toBe(s);
+      expect(weekdayOf(s)).toBe(d.dayOfWeek);
+      expect(addDays(s, 400)).toBe(d.add({ days: 400 }).toString());
+      d = d.add({ days: 37 });
+    }
+  });
+
+  it('artık yıl ve ay ekleme', async () => {
+    const { daysInMonth, addMonths } = await import('../src/domain/time');
+    expect(daysInMonth(2028, 2)).toBe(29);
+    expect(daysInMonth(2026, 2)).toBe(28);
+    expect(daysInMonth(2100, 2)).toBe(28);
+    expect(addMonths('2026-01-31', 1)).toBe('2026-02-28');
+    expect(addMonths('2026-11-15', 2)).toBe('2027-01-15');
+    expect(addMonths('2026-01-15', -1)).toBe('2025-12-15');
+  });
+});

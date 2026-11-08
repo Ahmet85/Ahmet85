@@ -5,6 +5,7 @@ import type {
   DatedTask,
   EventItem,
   HistoryEntry,
+  MonthTheme,
   OccurrenceRecord,
   Profile,
   ProgressNote,
@@ -12,6 +13,7 @@ import type {
   Reminder,
   Routine,
   TableName,
+  YearGoals,
 } from '../domain/types';
 
 export interface MetaRow {
@@ -29,6 +31,8 @@ export class RitimDB extends Dexie {
   projects!: Table<Project, string>;
   notes!: Table<ProgressNote, string>;
   reminders!: Table<Reminder, string>;
+  monthThemes!: Table<MonthTheme, string>;
+  yearGoals!: Table<YearGoals, string>;
   history!: Table<HistoryEntry, number>;
   meta!: Table<MetaRow, string>;
 
@@ -47,6 +51,11 @@ export class RitimDB extends Dexie {
       history: '++id, profileId',
       meta: 'key',
     });
+    // 2. adım: ay temaları ve yıl hedefleri
+    this.version(2).stores({
+      monthThemes: 'id, profileId, month',
+      yearGoals: 'id, profileId, year',
+    });
   }
 }
 
@@ -61,6 +70,8 @@ export const DATA_TABLES: TableName[] = [
   'projects',
   'notes',
   'reminders',
+  'monthThemes',
+  'yearGoals',
 ];
 
 /** Profile bağlı tablolar (profil silinince temizlenir). */
@@ -73,6 +84,8 @@ export const PROFILE_TABLES: Exclude<TableName, 'profiles'>[] = [
   'projects',
   'notes',
   'reminders',
+  'monthThemes',
+  'yearGoals',
 ];
 
 export const uid = () =>

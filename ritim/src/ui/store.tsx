@@ -3,14 +3,14 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { RitimDB, uid } from '../db/db';
 import { Repo, type ProfileData } from '../db/repo';
 import type { Category, Profile, ProfileSettings } from '../domain/types';
-import { deviceDefaults } from '../domain/time';
+import { deviceDefaults, nowLocal } from '../domain/time';
 import { buildSampleProfile } from '../sample/ahmetProfile';
 
 export const db = new RitimDB();
 export const repo = new Repo(db);
 
 const EMPTY: ProfileData = {
-  categories: [], routines: [], records: [], events: [], tasks: [], projects: [], notes: [], reminders: [],
+  categories: [], routines: [], records: [], events: [], tasks: [], projects: [], notes: [], reminders: [], monthThemes: [], yearGoals: [],
 };
 
 export interface Toast {
@@ -35,6 +35,8 @@ interface Store {
   loadSample: () => Promise<void>;
   reload: () => Promise<void>;
   dismissToast: () => void;
+  /** Yalnızca bilgi notu göster (Geri al olmadan). */
+  notify: (key: string) => void;
 }
 
 const Ctx = createContext<Store | null>(null);
@@ -100,13 +102,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const loadSample = async () => {
     const id = uid();
-    const s = buildSampleProfile(id, { ...defaults });
+    const s = buildSampleProfile(id, { ...defaults }, nowLocal(defaults.timeZone).date);
     // Tek işlem: "Geri al" örnek profili tamamen kaldırır.
     await repo.bulkInsert(id, 'history.loadSample', [
       { table: 'profiles', rows: [s.profile] },
       { table: 'categories', rows: s.categories },
       { table: 'projects', rows: s.projects },
       { table: 'routines', rows: s.routines },
+      { table: 'occurrences', rows: s.records },
+      { table: 'events', rows: s.events },
+      { table: 'tasks', rows: s.tasks },
+      { table: 'monthThemes', rows: s.monthThemes },
+      { table: 'yearGoals', rows: s.yearGoals },
     ]);
     await db.meta.put({ key: 'activeProfileId', value: id });
     setUndoScope('profile');
@@ -122,6 +129,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         ready, profiles, profile, data, toast, defaults, run, undo, switchProfile, createProfile, loadSample,
         reload: () => reload(),
         dismissToast: () => setToast(null),
+        notify: (key: string) => showToast(key, false),
       }}
     >
       {children}

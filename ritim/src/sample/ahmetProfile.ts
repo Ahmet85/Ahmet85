@@ -4,6 +4,12 @@
 // yalnızca bu profile aittir.
 import type {
   Category,
+  DatedTask,
+  EventItem,
+  MonthTheme,
+  OccurrenceRecord,
+  Status,
+  YearGoals,
   Flexibility,
   Profile,
   ProfileSettings,
@@ -12,7 +18,8 @@ import type {
   ShortVersion,
   Weekday,
 } from '../domain/types';
-import { minutesOfDay } from '../domain/time';
+import { addDays, addMonths, minutesOfDay } from '../domain/time';
+import { expandRange } from '../domain/recurrence';
 import { PALETTE } from '../domain/palette';
 
 const WD: Weekday[] = [1, 2, 3, 4, 5];
@@ -25,7 +32,11 @@ const FLEX: Flexibility = { timing: 'flexible', priority: 'medium', shortenable:
 const ROUTINE: Flexibility = { timing: 'flexible', priority: 'medium', shortenable: false, movable: false, protected: false };
 const LIGHT: Flexibility = { timing: 'flexible', priority: 'low', shortenable: false, movable: false, protected: false };
 
-export function buildSampleProfile(id: string, settings: ProfileSettings, now = new Date()) {
+/**
+ * @param today Profilin saat dilimindeki bugünün tarihi. Örnek randevular,
+ * ay teması ve geçmiş günlerin durumları buna göre üretilir.
+ */
+export function buildSampleProfile(id: string, settings: ProfileSettings, today: string, now = new Date()) {
   const profile: Profile = { id, name: 'Ahmet', createdAt: now.toISOString(), settings, isSample: true };
 
   const cat = (key: string, name: string, color: keyof typeof PALETTE, icon: string, order: number): Category => ({
@@ -143,5 +154,47 @@ export function buildSampleProfile(id: string, settings: ProfileSettings, now = 
   R('Serbest', 'rest', '13:30', '19:00', [7], LIGHT);
   R('Karne ve haftalık plan', 'daily', '20:00', '21:45', [7], ROUTINE);
 
-  return { profile, categories, projects, routines };
+  // ---- Deneme için örnek takvim verisi (bugüne göre) ----
+  const month = today.slice(0, 7);
+  const monthThemes: MonthTheme[] = [-1, 0, 1].map((k) => {
+    const m = addMonths(`${month}-01`, k).slice(0, 7);
+    const themes = [
+      ['Temeli sağlamlaştır', ['Haftada 3 güç antrenmanı', 'Her gün 15 dk piyano']],
+      ['Düzenli pratik', ['Gitar repertuarına 2 parça', '4 hafta boyunca pazar karnesi', 'Ayda 2 kitap']],
+      ['Üretim ayı', ['1 beste taslağı', '2 video yayını']],
+    ] as const;
+    const [theme, goals] = themes[k + 1];
+    return { id: `${id}:${m}`, profileId: id, month: m, theme, goals: [...goals] };
+  });
+  const year = Number(today.slice(0, 4));
+  const yearGoals: YearGoals[] = [
+    { id: `${id}:${year}`, profileId: id, year, goals: ['Bir EP kaydı tamamlamak', 'Haftada 3 gün hareket', 'Ailemle her hafta sonu kaliteli zaman'] },
+  ];
+  const events: EventItem[] = [
+    { id: `${id}-e-1`, profileId: id, title: 'Diş hekimi', startDate: addDays(today, 2), startTime: '18:00', endDate: addDays(today, 2), endTime: '18:45', status: 'planned', location: 'Merkez klinik' },
+    { id: `${id}-e-2`, profileId: id, title: 'Konser', startDate: addDays(today, 9), startTime: '20:30', endDate: addDays(today, 9), endTime: '23:00', categoryId: C('music'), status: 'planned' },
+    { id: `${id}-e-3`, profileId: id, title: 'Aile ziyareti', startDate: addDays(today, 24), endDate: addDays(today, 25), categoryId: C('family'), status: 'planned' },
+  ];
+  const tasks: DatedTask[] = [
+    { id: `${id}-t-1`, profileId: id, title: 'Elektrik faturası son gün', date: today, status: 'planned' },
+    { id: `${id}-t-2`, profileId: id, title: 'Annemin doğum günü', date: addDays(today, 5), status: 'planned', categoryId: C('family') },
+  ];
+
+  // Son 21 günün durumları (tekrarlanabilir sözde rastgele): karne ve ay görünümü dolu görünsün
+  let seed = 7;
+  const rnd = () => ((seed = (seed * 9301 + 49297) % 233280) / 233280);
+  const records: OccurrenceRecord[] = expandRange(routines, [], addDays(today, -21), addDays(today, -1)).map((o) => {
+    const x = rnd();
+    const status: Status = x < 0.62 ? 'done' : x < 0.77 ? 'done_short' : x < 0.88 ? 'postponed' : 'skipped';
+    return {
+      id: `${o.routineId}@${o.originalDate}`,
+      profileId: id,
+      routineId: o.routineId,
+      originalDate: o.originalDate,
+      status,
+      actualMin: status === 'done' ? o.durationMin : status === 'done_short' ? Math.min(15, o.durationMin) : undefined,
+    };
+  });
+
+  return { profile, categories, projects, routines, monthThemes, yearGoals, events, tasks, records };
 }

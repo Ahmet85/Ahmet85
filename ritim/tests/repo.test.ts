@@ -265,3 +265,28 @@ describe('randevu + çakışma çözümü tek işlemde', () => {
     expect(await db.reminders.count()).toBe(0);
   });
 });
+
+import { latestNote, notesFor } from '../src/domain/notes';
+describe('Kaldığım yer notları', () => {
+  it('not çalışmaya bağlıdır; aynı kategorideki farklı çalışmalar karışmaz', async () => {
+    await repo.putProject({ id: 'guitar', profileId: 'p1', name: 'Gitar', categoryId: 'music' });
+    await repo.putProject({ id: 'piano', profileId: 'p1', name: 'Piyano', categoryId: 'music' });
+    await repo.addNote({ id: 'n1', profileId: 'p1', projectId: 'guitar', createdAt: '2026-03-02T20:00:00Z', text: 'İlk iki parça tamam' });
+    await repo.addNote({ id: 'n2', profileId: 'p1', projectId: 'piano', createdAt: '2026-03-03T20:00:00Z', text: 'Gam çalışması' });
+    await repo.addNote({ id: 'n3', profileId: 'p1', projectId: 'guitar', createdAt: '2026-03-04T20:00:00Z', text: 'Sırada üçüncü parça' });
+    const d = await repo.loadProfileData('p1');
+    expect(latestNote(d.notes, 'guitar')!.text).toBe('Sırada üçüncü parça');
+    expect(latestNote(d.notes, 'piano')!.text).toBe('Gam çalışması');
+    expect(notesFor(d.notes, 'guitar').map((n) => n.id)).toEqual(['n3', 'n1']);
+    expect(latestNote(d.notes, undefined)).toBeUndefined();
+  });
+
+  it('not silinip geri alınabilir', async () => {
+    const n = { id: 'n1', profileId: 'p1', projectId: 'g', createdAt: '2026-03-02T20:00:00Z', text: 'x' };
+    await repo.addNote(n);
+    await repo.deleteNote(n);
+    expect(await db.notes.count()).toBe(0);
+    await repo.undoLast('p1');
+    expect(await db.notes.count()).toBe(1);
+  });
+});

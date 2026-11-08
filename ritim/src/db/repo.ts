@@ -418,6 +418,10 @@ export class Repo {
     return this.apply(n.profileId, 'history.addNote', [{ table: 'notes', put: n }]);
   }
 
+  deleteNote(n: ProgressNote) {
+    return this.apply(n.profileId, 'history.deleteNote', [{ table: 'notes', del: n.id }]);
+  }
+
   // ---- Ay teması ve yıl hedefleri ----
   putMonthTheme(m: MonthTheme) {
     return this.apply(m.profileId, 'history.saveMonthTheme', [{ table: 'monthThemes', put: m }]);

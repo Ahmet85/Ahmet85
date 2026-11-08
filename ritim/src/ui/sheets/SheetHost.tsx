@@ -8,6 +8,7 @@ import { ItemSheet } from './ItemSheet';
 import { MoveFlow, type MoveTo } from './MoveFlow';
 import { RoutineForm } from './RoutineForm';
 import { ReplanFlow } from './ReplanFlow';
+import { NoteSheet, ProjectSheet, type NoteInit } from './Notes';
 import { Sheet } from '../Sheet';
 import { useT } from '../../i18n/i18n';
 import { useStore } from '../store';
@@ -28,6 +29,8 @@ type Open =
   | { kind: 'move'; item: AgendaItem; to?: MoveTo; n: number }
   | { kind: 'routine'; routineId: string; n: number }
   | { kind: 'replan'; n: number }
+  | { kind: 'note'; init: NoteInit; n: number }
+  | { kind: 'project'; projectId: string; n: number }
   | null;
 
 interface Sheets {
@@ -36,15 +39,17 @@ interface Sheets {
   openMove: (item: AgendaItem, to?: MoveTo) => void;
   openRoutine: (routineId: string) => void;
   openReplan: () => void;
+  openNote: (init: NoteInit) => void;
+  openProject: (projectId: string) => void;
   close: () => void;
   goDay?: (d: PlainDateStr) => void;
 }
 
 const noop = () => {};
-const Ctx = createContext<Sheets>({ openAdd: noop, openItem: noop, openMove: noop, openRoutine: noop, openReplan: noop, close: noop });
+const Ctx = createContext<Sheets>({ openAdd: noop, openItem: noop, openMove: noop, openRoutine: noop, openReplan: noop, openNote: noop, openProject: noop, close: noop });
 export const useSheets = () => useContext(Ctx);
 
-export function SheetHost({ children, goDay }: { children: ReactNode; goDay: (d: PlainDateStr) => void }) {
+export function SheetHost({ children, goDay }: { children: ReactNode; goDay?: (d: PlainDateStr) => void }) {
   const [open, setOpen] = useState<Open>(null);
   const close = useCallback(() => setOpen(null), []);
   const value: Sheets = {
@@ -53,6 +58,8 @@ export function SheetHost({ children, goDay }: { children: ReactNode; goDay: (d:
     openMove: (item, to) => setOpen({ kind: 'move', item, to, n: Date.now() }),
     openRoutine: (routineId) => setOpen({ kind: 'routine', routineId, n: Date.now() }),
     openReplan: () => setOpen({ kind: 'replan', n: Date.now() }),
+    openNote: (init) => setOpen({ kind: 'note', init, n: Date.now() }),
+    openProject: (projectId) => setOpen({ kind: 'project', projectId, n: Date.now() }),
     close,
     goDay,
   };
@@ -64,6 +71,15 @@ export function SheetHost({ children, goDay }: { children: ReactNode; goDay: (d:
         {open?.kind === 'item' && <ItemSheet key={open.n} item={open.item} onClose={close} />}
         {open?.kind === 'move' && <MoveFlow key={open.n} item={open.item} to={open.to} onClose={close} />}
         {open?.kind === 'replan' && <ReplanFlow key={open.n} onClose={close} />}
+        {open?.kind === 'note' && <NoteSheet key={open.n} init={open.init} onClose={close} />}
+        {open?.kind === 'project' && (
+          <ProjectSheet
+            key={open.n}
+            projectId={open.projectId}
+            onClose={close}
+            onAddNote={() => setOpen({ kind: 'note', init: { projectId: open.projectId }, n: Date.now() })}
+          />
+        )}
         {open?.kind === 'routine' && <RoutineSheet key={open.n} routineId={open.routineId} onClose={close} />}
       </AnimatePresence>
     </Ctx.Provider>

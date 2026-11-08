@@ -10,7 +10,7 @@ Yayın adresi: https://ahmet85.github.io/Ahmet85/ritim/ (telefonda açıp "Ana e
 - [x] 3. Randevu ekleme, hatırlatma teklifi ve çakışma yönetimi (önizleme, onay, geri al)
 - [x] 4. Haftalık tabloda sürükle-bırak, süre değiştirme, "Gün ve saati değiştir", rutin blok oluşturma/düzenleme
 - [x] 5. "Günüm değişti" (neden, müsait saat, öneri, tek tek değiştirme, onay, geri al) ve kısa sürümler
-- [ ] 6. "Kaldığım yer" notları
+- [x] 6. "Kaldığım yer" notları (tamamlayınca isteğe bağlı not, çalışmaya bağlı, sonraki oturumda görünür, geçmiş listesi)
 - [ ] 7. Alarmlar ve kutlamalar
 - [ ] 8. Karne
 - [ ] 9. Ayarlar ve dışa aktarma

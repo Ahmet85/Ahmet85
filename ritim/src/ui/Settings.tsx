@@ -9,6 +9,8 @@ import { nowLocal } from '../domain/time';
 import { REGIONS, formatClock, formatLongDate, regionName, timeZones, weekdayName } from './format';
 import { Icon, ICON_NAMES } from './Icon';
 import { Welcome } from './Welcome';
+import { useSheets } from './sheets/SheetHost';
+import { latestNote, notesFor } from '../domain/notes';
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -160,6 +162,7 @@ export function Settings() {
       )}
 
       {profile && <Categories />}
+      {profile && <Projects />}
 
       <Section title={t('settings.backup')}>
         <p className="muted">{t('settings.backupBody')}</p>
@@ -315,6 +318,65 @@ function Categories() {
       ) : (
         <button className="btn" onClick={() => open('new')}>
           <Icon name="plus" size={18} /> {t('settings.addCategory')}
+        </button>
+      )}
+    </Section>
+  );
+}
+
+function Projects() {
+  const { t } = useT();
+  const { profile, data, run } = useStore();
+  const { openProject } = useSheets();
+  const [name, setName] = useState('');
+  const [adding, setAdding] = useState(false);
+  const projects = [...data.projects].filter((p) => !p.archived).sort((a, b) => a.name.localeCompare(b.name, profile!.settings.language));
+
+  const add = async () => {
+    if (!name.trim()) return;
+    await run('history.saveProject', () => repo.putProject({ id: uid(), profileId: profile!.id, name: name.trim() }));
+    setName('');
+    setAdding(false);
+  };
+
+  return (
+    <Section title={t('project.title')}>
+      <p className="muted small">{t('project.intro')}</p>
+      {projects.length > 0 && (
+        <ul className="project-list">
+          {projects.map((p) => {
+            const last = latestNote(data.notes, p.id);
+            const count = notesFor(data.notes, p.id).length;
+            return (
+              <li key={p.id}>
+                <button onClick={() => openProject(p.id)}>
+                  <span className="project-name">{p.name}</span>
+                  <span className="small muted">{t('project.noteCount', { count })}</span>
+                  {last && <span className="hand project-last">{last.text}</span>}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      {adding ? (
+        <div className="field-row align-end">
+          <label className="field">
+            <span>{t('project.name')}</span>
+            <input value={name} onChange={(e) => setName(e.target.value)} autoFocus placeholder={t('project.placeholder')} />
+          </label>
+          <div className="row-btns">
+            <button className="btn primary" onClick={add}>
+              {t('common.add')}
+            </button>
+            <button className="btn ghost" onClick={() => setAdding(false)}>
+              {t('common.cancel')}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button className="btn" onClick={() => setAdding(true)}>
+          <Icon name="plus" size={18} /> {t('project.add')}
         </button>
       )}
     </Section>

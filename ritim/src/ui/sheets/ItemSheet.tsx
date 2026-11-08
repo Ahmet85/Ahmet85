@@ -10,6 +10,7 @@ import { Icon } from '../Icon';
 import { Sheet } from '../Sheet';
 import { useSetStatus } from '../views/DayView';
 import { useSheets } from './SheetHost';
+import { latestNote } from '../../domain/notes';
 
 export function ItemSheet({ item: initial, onClose }: { item: AgendaItem; onClose: () => void }) {
   const { t } = useT();
@@ -30,6 +31,7 @@ export function ItemSheet({ item: initial, onClose }: { item: AgendaItem; onClos
   const routine = item.routineId ? data.routines.find((r) => r.id === item.routineId) : undefined;
   const project = item.projectId ? data.projects.find((p) => p.id === item.projectId) : undefined;
   const c = item.categoryId ? cats.get(item.categoryId) : undefined;
+  const lastNote = latestNote(data.notes, project?.id);
 
   const target: ReminderTarget | null = event ? { kind: 'event', eventId: event.id } : task ? { kind: 'task', taskId: task.id } : null;
   const reminders = target
@@ -73,10 +75,31 @@ export function ItemSheet({ item: initial, onClose }: { item: AgendaItem; onClos
           </p>
         )}
         {project && (
-          <p>
-            <span className="muted small">{t('item.project')}: </span>
-            {project.name}
-          </p>
+          <section className="project-box">
+            <div className="card-head">
+              <span>
+                <span className="muted small">{t('item.project')}: </span>
+                <strong>{project.name}</strong>
+              </span>
+              <button className="btn ghost small-btn" onClick={() => sheets.openProject(project.id)}>
+                {t('note.allNotes')}
+              </button>
+            </div>
+            {lastNote ? (
+              <div className="left-off quiet">
+                <span className="small muted">{t('day.leftOff')}</span>
+                <p className="hand mid">{lastNote.text}</p>
+              </div>
+            ) : (
+              <p className="small muted">{t('note.none')}</p>
+            )}
+            <button
+              className="btn small-btn"
+              onClick={() => sheets.openNote({ projectId: project.id, routineId: item.routineId, originalDate: item.originalDate })}
+            >
+              <Icon name="plus" size={16} /> {t('note.add')}
+            </button>
+          </section>
         )}
         {routine && routine.shortVersions.length > 0 && (
           <div>

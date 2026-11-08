@@ -4,7 +4,8 @@ import { useT } from '../../i18n/i18n';
 import { repo, useStore } from '../store';
 import { buildDay, isDone, nowAndNext, type AgendaItem } from '../../domain/agenda';
 import { monthKey } from '../../domain/time';
-import type { Category, PlainDateStr, ProfileSettings, ShortVersion, Status } from '../../domain/types';
+import type { Category, OccurrenceRecord, PlainDateStr, ProfileSettings, ShortVersion, Status } from '../../domain/types';
+import { latestNote } from '../../domain/notes';
 import { formatClock } from '../format';
 import { useCategories, useNow } from '../hooks';
 import { Icon } from '../Icon';
@@ -25,7 +26,8 @@ export const catStyle = (c?: Category) =>
 /** Öğenin durumunu değiştir (rutin: yalnızca o tarih; şablon bozulmaz). */
 export function useSetStatus() {
   const { profile, data, run } = useStore();
-  return (item: AgendaItem, status: Status, toastKey: string, sv?: ShortVersion) => {
+  const { openNote } = useSheets();
+  return async (item: AgendaItem, status: Status, toastKey: string, sv?: ShortVersion) => {
     if (status === 'done' && item.plannedShort) toastKey = 'day.shortToast';
     const pid = profile!.id;
     if (item.kind === 'routine') {
@@ -35,13 +37,17 @@ export function useSetStatus() {
         status = 'done_short';
         sv = item.plannedShort;
       }
-      return run(toastKey, () =>
-        repo.patchOccurrence(pid, item.routineId!, item.originalDate!, {
-          status,
-          shortVersionId: sv?.id,
-          actualMin: status === 'done' ? dur : sv ? sv.durationMin : undefined,
-        }),
-      );
+      // Planlanmış kısa sürüm bilgisi korunur; yalnızca tamamlanınca süre yazılır
+      const patch: Partial<OccurrenceRecord> = {
+        status,
+        actualMin: status === 'done' ? dur : status === 'done_short' ? sv?.durationMin : undefined,
+      };
+      if (sv) patch.shortVersionId = sv.id;
+      await run(toastKey, () => repo.patchOccurrence(pid, item.routineId!, item.originalDate!, patch));
+      // Çalışmaya bağlı blok tamamlandıysa "Kaldığım yer" notu sor (isteğe bağlı)
+      if (isDone(status) && item.projectId)
+        openNote({ projectId: item.projectId, routineId: item.routineId, originalDate: item.originalDate, afterDone: true });
+      return;
     }
     if (item.kind === 'event') {
       const e = data.events.find((x) => x.id === item.eventId)!;
@@ -139,9 +145,7 @@ function NowCard({ items, nowMin }: { items: AgendaItem[]; nowMin: number }) {
     );
   }
   const c = current.categoryId ? cats.get(current.categoryId) : undefined;
-  const note = current.projectId
-    ? [...data.notes].filter((n) => n.projectId === current.projectId).sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0]
-    : undefined;
+  const note = latestNote(data.notes, current.projectId);
   const sealed = isDone(current.status);
 
   return (

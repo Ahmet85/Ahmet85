@@ -1591,3 +1591,94 @@ button.replan-head:focus-visible {
   align-items: center;
   gap: 4px;
 }
+
+/* ================= 6. adım: Kaldığım yer ================= */
+.left-off.quiet {
+  border-inline-start-color: var(--accent);
+  background: var(--card);
+  border-radius: 0 12px 12px 0;
+  padding: 8px 12px;
+  margin: 0;
+}
+.project-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-radius: var(--r-row);
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+.project-box .btn {
+  align-self: flex-start;
+}
+.note-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.note-list li {
+  position: relative;
+  padding: 10px 48px 10px 14px;
+  border-radius: var(--r-row);
+  background: var(--card);
+  border: 1px solid var(--border);
+}
+.note-list li.latest {
+  border-color: var(--accent);
+}
+.note-list li .icon-btn {
+  position: absolute;
+  inset-inline-end: 2px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+.note-list .hand {
+  margin-top: 2px;
+}
+.project-list {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.project-list button {
+  all: unset;
+  box-sizing: border-box;
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 8px;
+  padding: 10px 14px;
+  min-height: 44px;
+  border-radius: var(--r-row);
+  background: var(--bg);
+  cursor: pointer;
+}
+.project-list button:focus-visible {
+  outline: 3px solid var(--accent);
+}
+.project-name {
+  font-weight: 700;
+}
+.project-last {
+  grid-column: 1 / -1;
+  font-size: 1.15rem;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

@@ -153,6 +153,16 @@ const Sound = {
     for (let i = 0; i < 24; i++) this.blip(rand(0.1, 1.5), 0.05);
     [523, 784, 1047].forEach((f, i) => this.tone(f, 0.5, 'triangle', 0.08, 0, 1.6 + i * 0.08, true));
   },
+  giftOpen() { [660, 880, 1100, 1320].forEach((f, i) => this.tone(f, 0.16, 'triangle', 0.08, 0, i * 0.05, true)); this.filtered(0.25, 0.08, 'highpass', 3000, 0.7, 0, 0.01); },
+  chomp() { [0, 0.12, 0.24].forEach(d => { this.tone(180, 0.08, 'square', 0.07, -80, d); this.filtered(0.07, 0.1, 'lowpass', 900, 1, d, 0.005); }); },
+  grow() { this.tone(160, 0.8, 'sawtooth', 0.06, 500, 0.3, true); [523, 659, 784, 1047].forEach((f, i) => this.tone(f, 0.25, 'triangle', 0.07, 0, 0.35 + i * 0.08, true)); },
+  shrink() { this.tone(700, 0.5, 'triangle', 0.07, -500, 0, true); },
+  crush() { this.tone(120, 0.18, 'square', 0.09, -60); this.filtered(0.15, 0.12, 'lowpass', 1500, 1, 0, 0.005); },
+  giggle() { // kıkırdama: hızlı, inen-çıkan minik sesler
+    [0, 0.11, 0.22, 0.31].forEach((d, i) => this.tone(880 + i * 90, 0.09, 'sine', 0.09, -260, d, true));
+    this.tone(1320, 0.12, 'triangle', 0.04, 300, 0.36, true);
+  },
+  splash() { this.filtered(0.35, 0.18, 'bandpass', 1800, 0.9, 0, 0.01); for (let i = 0; i < 5; i++) this.blip(0.03 + i * 0.05, 0.06); },
   mission() { [880, 1175].forEach((f, i) => this.tone(f, 0.18, 'sine', 0.1, 0, i * 0.09, true)); },
   coin() { [988, 1319].forEach((f, i) => this.tone(f, 0.12, 'square', 0.06, 0, i * 0.07, true)); },
   over() { [440, 370, 311, 262].forEach((f, i) => this.tone(f, 0.25, 'triangle', 0.12, 0, i * 0.16)); },
@@ -227,7 +237,7 @@ const drag = { active: false, id: null, ax: 0, ay: 0, px: 0, py: 0, lx: 0, ly: 0
 const SENS = 1.5; // parmak hareketi → Okto hareketi oranı
 
 function reset() {
-  player = { x: W / 2, y: H * 0.3, vx: 0, vy: 0, r: 22 * S, blink: 0 };
+  player = { x: W / 2, y: H * 0.3, vx: 0, vy: 0, r: 22 * S, blink: 0, big: 0, bigT: 0, bossBumpT: 0 };
   target.x = player.x; target.y = player.y;
   entities = []; particles = []; floaters = []; inkClouds = []; rings = []; banners = []; slams = []; shots = [];
   depth = 0; score = 0; pearls = 0; lives = 3; combo = 0; comboTimer = 0; bonusPearls = 0;
@@ -240,13 +250,19 @@ function reset() {
 const bounds = () => ({ x0: player.r, x1: W - player.r, y0: player.r + 50 * S + safeTop, y1: H - player.r });
 cvs.addEventListener('pointerdown', e => {
   Sound.init();
-  if (state === 'menu') { if (hitPlay(e.clientX, e.clientY)) startGame(); return; }
+  if (state === 'menu') {
+    if (hitPlay(e.clientX, e.clientY)) { startGame(); return; }
+    const r = window.OktoTitle && OktoTitle.tap && OktoTitle.tap(e.clientX, e.clientY, time);
+    if (r === 'okto') { Sound.giggle(); vibrate(15); }
+    else if (r === 'fish') { Sound.splash(); setTimeout(() => Sound.giggle(), 180); }
+    return;
+  }
   if (state !== 'play') return;
   drag.active = true; drag.id = e.pointerId; drag.ax = drag.lx = e.clientX; drag.ay = drag.ly = e.clientY; drag.px = target.x; drag.py = target.y;
   cvs.setPointerCapture && cvs.setPointerCapture(e.pointerId);
 });
 cvs.addEventListener('pointermove', e => {
-  if (state === 'menu') { cvs.style.cursor = hitPlay(e.clientX, e.clientY) ? 'pointer' : 'default'; return; }
+  if (state === 'menu') { cvs.style.cursor = hitPlay(e.clientX, e.clientY) ? 'pointer' : 'default'; window.OktoTitle && OktoTitle.pointer && OktoTitle.pointer(e.clientX, e.clientY, time); return; }
   cvs.style.cursor = 'default';
   if (!drag.active || e.pointerId !== drag.id) return;
   drag.lx = e.clientX; drag.ly = e.clientY;
@@ -268,19 +284,21 @@ window.addEventListener('keydown', e => {
 });
 window.addEventListener('keyup', e => { keys[e.key] = false; });
 // Arka plana geçince (uygulama değiştirici, ana ekran, kilit): oyunu duraklat, TÜM sesleri sustur
-let bgAway = false;
+let bgAway = false, musicWasOn = false;
 function goBackground() {
   if (bgAway) return; bgAway = true;
   if (state === 'play') togglePause();
   drag.active = false;
-  if (Sound.ctx && Sound.ctx.state === 'running') Sound.ctx.suspend().catch(() => {});
-  window.OktoMusic && OktoMusic.sleep();
+  const M = window.OktoMusic;
+  musicWasOn = !!(M && M.playing);
+  if (musicWasOn) M.stop(0.04); // ses motorunu dondurmadan, çok kısa kısarak sustur
 }
 function goForeground() {
   if (!bgAway) return; bgAway = false;
   last = performance.now();
   if (Sound.ctx && Sound.ctx.state !== 'running') Sound.ctx.resume().catch(() => {});
-  window.OktoMusic && OktoMusic.wake();
+  if (musicWasOn && state === 'menu' && !Sound.muted) setTimeout(() => { if (state === 'menu' && !bgAway) menuMusic(); }, 250);
+  musicWasOn = false;
 }
 document.addEventListener('visibilitychange', () => { if (document.hidden) goBackground(); else goForeground(); });
 window.addEventListener('pagehide', goBackground);
@@ -355,7 +373,7 @@ function startGame(n = startLevel()) {
   show(ui.ink, true); show(ui.pauseBtn, true); show(ui.mute, true);
 }
 function toMenu() {
-  state = 'menu'; Missions.ensure(); refreshMenu();
+  state = 'menu'; shake = 0; flash = 0; Missions.ensure(); refreshMenu();
   if (Sound.ctx && !Sound.muted) menuMusic();
   refreshMute();
   show(ui.menu, true); show(ui.over, false); show(ui.pause, false);
@@ -452,6 +470,36 @@ function pushTarget(dx, dy) { // hedefi it, sürüklemeyi parmağın son konumun
   drag.px = target.x; drag.py = target.y; drag.ax = drag.lx; drag.ay = drag.ly;
 }
 
+// ---------- Hediyeler ve Dev Okto ----------
+const BIG_TIME = 6;
+function maybeGift(x, y, chance) {
+  if (Math.random() > chance) return;
+  if (entities.filter(e => e.type === 'gift' || e.type === 'treat').length >= 2) return;
+  entities.push({ type: 'gift', x: clamp(x, 24 * S, W - 24 * S), y, r: 14 * S, t: 0, hue: [330, 200, 45, 140][Math.floor(Math.random() * 4)] });
+}
+function openGift(e) {
+  Sound.giftOpen(); burst(e.x, e.y, `hsl(${e.hue},90%,65%)`, 16, 160); burst(e.x, e.y, '#fff3a0', 10, 120);
+  if (Math.random() < 0.72) {
+    entities.push({ type: 'treat', x: e.x, y: e.y - 6 * S, r: 14 * S, t: 0 });
+    addFloater(e.x, e.y - 30 * S, 'Altın Karides!', '#ffd23f');
+  } else {
+    for (let i = 0; i < 8; i++) entities.push({ type: 'pearl', x: clamp(e.x + Math.cos(i / 8 * TAU) * 40 * S, 16, W - 16), y: e.y + Math.sin(i / 8 * TAU) * 40 * S, r: 8 * S, t: Math.random() * 9 });
+    addFloater(e.x, e.y - 30 * S, 'İnci yağmuru!', '#fff7d6');
+  }
+}
+function eatTreat(e) {
+  player.bigT = BIG_TIME; invuln = 0;
+  Sound.chomp(); Sound.grow(); vibrate([30, 40, 60]); shake = 8; winkT = 1.2;
+  burst(e.x, e.y, '#ffd23f', 20, 200);
+  banner('DEV OKTO!', 'Dokunduğun düşmanları ez!', '#ffd23f', 2);
+}
+function crush(e) {
+  e.dead = true; score += 25;
+  burst(e.x, e.y, '#ffffff', 10, 180); burst(e.x, e.y, '#ffd23f', 8, 140);
+  addFloater(e.x, e.y, '+25 ezildi!', '#ffd23f'); Sound.crush(); shake = Math.max(shake, 5);
+  maybeGift(e.x, e.y, 0.12);
+}
+
 function useInk() {
   if (state !== 'play' || inkCharge < 1) return;
   inkCharge = 0; Sound.ink(); vibrate(30); shake = 6;
@@ -465,7 +513,7 @@ function useInk() {
   for (const e of entities) {
     if (ENEMIES.has(e.type) && !e.stunned && Math.hypot(e.x - player.x, e.y - player.y) < R + e.r) {
       if (e.type === 'blob' || e.type === 'spike') { e.dead = true; burst(e.x, e.y, '#6b3fa0', 8, 90); continue; }
-      e.stunned = true; stunned++;
+      e.stunned = true; stunned++; maybeGift(e.x, e.y, 0.12);
       if (e.type === 'shark') { e.warn = 0; e.sp *= 0.35; }
     }
   }
@@ -485,7 +533,7 @@ function lightBomb(x, y) {
     if (!ENEMIES.has(e.type) || e.dead) continue;
     if (e.type === 'shark' && e.warn > 0) { e.dead = true; continue; }
     if (e.y < -60 * S || e.y > H + 60 * S || e.x < -100 * S || e.x > W + 100 * S) continue;
-    e.dead = true; n++;
+    e.dead = true; n++; maybeGift(e.x, e.y, 0.25);
     burst(e.x, e.y, '#fff3a0', 14, 160); burst(e.x, e.y, '#ffffff', 6, 80);
   }
   for (const s of slams) s.cancel = true;
@@ -497,7 +545,7 @@ function lightBomb(x, y) {
 }
 
 function hurt() {
-  if (invuln > 0) return;
+  if (invuln > 0 || player.bigT > 0) return; // dev Okto'ya hiçbir şey işlemez
   if (shieldTime > 0) { shieldTime = 0; invuln = 1; burst(player.x, player.y, '#9ee8ff', 22, 200); Sound.tone(500, 0.2, 'triangle', 0.12, -300); addFloater(player.x, player.y - 40 * S, 'Kalkan!', '#9ee8ff'); return; }
   lives--; levelHits++; invuln = 1.6; shake = 14; combo = 0;
   Sound.hit(); vibrate(120);
@@ -522,6 +570,8 @@ function collect(e) {
     case 'star': inkCharge = 1; score += 20; Sound.power(); addFloater(e.x, e.y, 'Mürekkep dolu!', '#ffe066'); break;
     case 'heart': lives = Math.min(lives + 1, 3); Sound.power(); addFloater(e.x, e.y, '+1 can', '#ff6b8a'); break;
     case 'glow': lightBomb(e.x, e.y); break;
+    case 'gift': openGift(e); break;
+    case 'treat': eatTreat(e); break;
   }
 }
 
@@ -800,6 +850,9 @@ function update(dt) {
   if (blipT <= 0 && v > 140 * S) { Sound.blip(0, 0.03 + clamp(v / (520 * S), 0, 1) * 0.03); blipT = rand(0.22, 0.5) * (1.6 - clamp(v / (520 * S), 0, 1)); }
 
   if (invuln > 0) invuln -= dt;
+  if (p.bigT > 0) { p.bigT -= dt; if (p.bigT <= 0) { Sound.shrink(); addFloater(p.x, p.y - 50 * S, 'küçüldü!', '#fff'); } }
+  p.big = lerp(p.big, p.bigT > 0 ? 1 : 0, 1 - Math.pow(0.002, dt));
+  if (p.bossBumpT > 0) p.bossBumpT -= dt;
   if (winkT > 0) winkT -= dt;
   if (shieldTime > 0) shieldTime -= dt;
   if (flash > 0) flash = Math.max(0, flash - dt * 2.2);
@@ -847,10 +900,14 @@ function update(dt) {
     if (e.type === 'shark' && e.warn > 0) continue;
     const d = Math.hypot(e.x - p.x, e.y - p.y);
     if (ENEMIES.has(e.type)) {
-      if (!e.stunned && d < e.r * 0.85 + p.r * 0.7) hurt();
-    } else if (d < e.r + p.r * 0.9) { e.dead = true; collect(e); }
+      const pr = p.r * (0.7 + 0.85 * p.big);
+      if (p.bigT > 0 && d < e.r * 0.9 + pr && !(e.type === 'shark' && e.warn > 0)) crush(e);
+      else if (!e.stunned && d < e.r * 0.85 + pr) hurt();
+    } else if (d < e.r + p.r * (0.9 + 0.8 * p.big) && !(e.type === 'treat' && e.t < 0.35)) { e.dead = true; collect(e); }
   }
-  if (boss && boss.phase === 'fight') { const cy = boss.y - boss.r * (boss.kind === 'puffer' ? 0 : boss.kind === 'jelly' ? 0.3 : 0.2); if (Math.hypot(boss.x - p.x, cy - p.y) < bossContactR() + p.r * 0.6) hurt(); }
+  if (boss && boss.phase === 'fight') { const cy = boss.y - boss.r * (boss.kind === 'puffer' ? 0 : boss.kind === 'jelly' ? 0.3 : 0.2); if (Math.hypot(boss.x - p.x, cy - p.y) < bossContactR() + p.r * (0.6 + 0.85 * p.big)) {
+    if (p.bigT > 0) { if (p.bossBumpT <= 0) { p.bossBumpT = 1; damageBoss(1); pushTarget(0, -90 * S); } } else hurt();
+  } }
   entities = entities.filter(e => !e.dead && Number.isFinite(e.x) && Number.isFinite(e.y) && e.y > -120 * S && e.y < H + 400 * S && e.x > -200 * S && e.x < W + 200 * S);
 
   // Efektler
@@ -944,6 +1001,38 @@ function drawEntity(e) {
       pg.addColorStop(0, '#ffffff'); pg.addColorStop(1, '#ffe46b');
       ctx.fillStyle = pg; ctx.beginPath(); ctx.arc(0, -r * 0.05, r * 0.5, 0, TAU); ctx.fill();
       shell(1);
+      break;
+    }
+    case 'gift': {
+      const wob = Math.sin(e.t * 6) * 0.12, bob = Math.sin(e.t * 3) * 3 * S;
+      ctx.translate(0, bob); ctx.rotate(wob);
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      const gl = ctx.createRadialGradient(0, 0, 0, 0, 0, r * 2.2); gl.addColorStop(0, `hsla(${e.hue},100%,75%,.45)`); gl.addColorStop(1, `hsla(${e.hue},100%,75%,0)`);
+      ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(0, 0, r * 2.2, 0, TAU); ctx.fill(); ctx.restore();
+      ctx.lineJoin = 'round'; ctx.lineWidth = 1.6 * S; ctx.strokeStyle = `hsl(${e.hue},70%,30%)`;
+      ctx.fillStyle = `hsl(${e.hue},85%,58%)`; ctx.beginPath(); ctx.roundRect(-r, -r * 0.55, r * 2, r * 1.5, 3 * S); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = `hsl(${e.hue},85%,66%)`; ctx.beginPath(); ctx.roundRect(-r * 1.12, -r * 0.85, r * 2.24, r * 0.45, 3 * S); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#fff3a0'; ctx.fillRect(-r * 0.18, -r * 0.85, r * 0.36, r * 1.8);
+      ctx.beginPath(); ctx.ellipse(-r * 0.38, -r * 1.05, r * 0.38, r * 0.22, -0.4, 0, TAU); ctx.ellipse(r * 0.38, -r * 1.05, r * 0.38, r * 0.22, 0.4, 0, TAU); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#ffffff'; ctx.font = `700 ${r * 0.9}px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('?', 0, r * 0.25);
+      break;
+    }
+    case 'treat': { // Altın Karides: belirir, parlar
+      const pop = Math.min(1, e.t / 0.35), sc = pop < 1 ? 0.3 + pop * 0.9 : 1 + Math.sin(e.t * 5) * 0.06;
+      ctx.scale(sc, sc); ctx.rotate(Math.sin(e.t * 3) * 0.2);
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      const gl = ctx.createRadialGradient(0, 0, 0, 0, 0, r * 2.6); gl.addColorStop(0, 'rgba(255,220,90,.7)'); gl.addColorStop(1, 'rgba(255,220,90,0)');
+      ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(0, 0, r * 2.6, 0, TAU); ctx.fill(); ctx.restore();
+      ctx.lineJoin = 'round'; ctx.strokeStyle = '#8a4b00'; ctx.lineWidth = 1.5 * S;
+      for (let i = 4; i >= 0; i--) { // kıvrık gövde boğumları
+        const a = -0.6 + i * 0.42, x = Math.cos(a) * r * 0.75, y = Math.sin(a) * r * 0.75, rr = r * (0.48 - i * 0.06);
+        ctx.fillStyle = i % 2 ? '#ffb000' : '#ffd23f'; ctx.beginPath(); ctx.ellipse(x, y, rr, rr * 0.8, a, 0, TAU); ctx.fill(); ctx.stroke();
+      }
+      ctx.fillStyle = '#ffb000'; ctx.beginPath(); ctx.moveTo(-r * 0.2, r * 0.95); ctx.lineTo(-r * 0.75, r * 1.25); ctx.lineTo(-r * 0.45, r * 0.75); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = '#ffcf6b'; ctx.lineWidth = 1.2 * S; ctx.beginPath(); ctx.moveTo(r * 0.75, -r * 0.5); ctx.quadraticCurveTo(r * 1.4, -r * 1.2, r * 1.6, -r * 0.6); ctx.moveTo(r * 0.7, -r * 0.55); ctx.quadraticCurveTo(r * 1.1, -r * 1.4, r * 1.5, -r * 1.2); ctx.stroke();
+      ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(r * 0.72, -r * 0.42, r * 0.09, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#fff'; for (let i = 0; i < 3; i++) { const a = e.t * 2 + i * 2.1; ctx.globalAlpha = 0.5 + 0.5 * Math.sin(e.t * 6 + i); ctx.beginPath(); ctx.arc(Math.cos(a) * r * 1.4, Math.sin(a) * r * 1.4, 1.6 * S, 0, TAU); ctx.fill(); }
+      ctx.globalAlpha = 1;
       break;
     }
     case 'spike': {
@@ -1232,7 +1321,14 @@ function drawPlayer() {
     blink: p.blink > 0 ? 1 : 0, wink: winkT > 0 ? 1 : 0,
     ouch: state === 'play' && invuln > 1.15 ? 1 : 0, dizzy: state === 'over' ? 1 : 0,
   };
-  let R = p.r, spin = 0;
+  let R = p.r * (1 + 0.85 * p.big), spin = 0;
+  if (p.big > 0.02) { // dev Okto parıltısı; bitmeye yakın yanıp söner
+    const blinkOut = p.bigT > 0 && p.bigT < 1.5 && Math.floor(p.bigT * 8) % 2 === 0;
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = p.big * (blinkOut ? 0.3 : 0.7);
+    const g = ctx.createRadialGradient(p.x, p.y, R * 0.4, p.x, p.y, R * 2.4);
+    g.addColorStop(0, 'rgba(255,215,80,.6)'); g.addColorStop(1, 'rgba(255,215,80,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, R * 2.4, 0, TAU); ctx.fill(); ctx.restore();
+  }
   if (trans) { const a = trans.t < 1.5 ? trans.t / 1.5 : 1 - clamp((trans.t - 1.5) / 0.6, 0, 1); R = p.r * (1 - a * 0.85); spin = trans.t * (trans.t < 1.5 ? 9 : 3) * a; }
   OktoChar.draw(ctx, p.x, p.y, R, time, Object.assign(look(), {
     expr, trailX: clamp(-p.vx / (400 * S), -1, 1), trailY: clamp(-p.vy / (400 * S), -1, 1),
@@ -1284,7 +1380,7 @@ function drawFx() {
   if (flash > 0) { ctx.fillStyle = `rgba(255,250,215,${flash * 0.75})`; ctx.fillRect(0, 0, W, H); }
 }
 function drawBanners() {
-  let y = H * 0.3, ys = safeTop + 96;
+  let y = Math.max(safeTop + 150, H * 0.2), ys = safeTop + 106; // Okto'nun başlangıç yerinin üstünde kalsın
   for (const b of banners) {
     const age = b.dur - b.life, a = clamp(Math.min(age * 4, b.life * 2), 0, 1), sc = 0.7 + 0.3 * Math.min(1, age * 5);
     ctx.save(); ctx.globalAlpha = a; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
@@ -1449,6 +1545,7 @@ function frame(now) {
   try { drawFrame(); } catch (err) { reportError('çizim', err); try { ctx.restore(); } catch {} }
 }
 function stepFrame(now, dt) {
+  if (shake > 0 && state !== 'play') shake = Math.max(0, shake - dt * 40); // ölünce/menüde sarsıntı sönsün
   if ((sizeCheckT += dt) > 0.5) { sizeCheckT = 0; setEdgeColor(sceneBottomColor()); }
   if (state === 'play') update(dt);
   else if (state === 'transition') { updateTransition(dt); updateFx(dt); for (const q of particles) { q.x += q.vx * dt; q.y += q.vy * dt; q.life -= q.decay * dt; } particles = particles.filter(q => q.life > 0); }
@@ -1466,7 +1563,7 @@ function stepFrame(now, dt) {
 function drawFrame() {
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   ctx.save();
-  if (shake > 0) ctx.translate(rand(-shake, shake), rand(-shake, shake));
+  if (shake > 0 && (state === 'play' || state === 'transition')) ctx.translate(rand(-shake, shake), rand(-shake, shake));
   if (state === 'menu' && window.OktoTitle) OktoTitle.draw(ctx, W, H, time, Object.assign(look(), { top: safeTop }));
   else {
     drawBackground();
@@ -1497,8 +1594,8 @@ requestAnimationFrame(frame);
 // Test/hata ayıklama için
 window.__okto = {
   get state() { return state; }, get score() { return score; }, get depth() { return depth; }, set depth(v) { depth = v; },
-  get lives() { return lives; }, set lives(v) { lives = v; }, set invuln(v) { invuln = v; }, get boss() { return boss; }, get tier() { return tier; }, get levelN() { return levelN; }, get phase() { return phase; }, damageBoss, startTransition,
+  get lives() { return lives; }, get shake() { return shake; }, set lives(v) { lives = v; }, set invuln(v) { invuln = v; }, get boss() { return boss; }, get tier() { return tier; }, get levelN() { return levelN; }, get phase() { return phase; }, damageBoss, startTransition,
   Sound, TIERS, startGame, useInk, lightBomb: () => lightBomb(player.x, player.y), get entities() { return entities; }, get player() { return player; }, get target() { return target; },
-  Profile, Missions, spawnGlow: () => entities.push({ type: 'glow', x: player.x, y: player.y + 80 * S, r: 15 * S, t: 0 }),
+  Profile, Missions, spawnGift: () => entities.push({ type: 'gift', x: player.x, y: player.y + 70 * S, r: 14 * S, t: 0, hue: 330 }), spawnGlow: () => entities.push({ type: 'glow', x: player.x, y: player.y + 80 * S, r: 15 * S, t: 0 }),
 };
 })();

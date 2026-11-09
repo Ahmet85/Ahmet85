@@ -24,4 +24,6 @@ Oyun yayında: https://ahmet85.github.io/Ahmet85/ (GitHub Pages, dal: `claude/oc
 - [x] Günlük görevler (her gün 3 görev) + günlük giriş hediyesi (seri büyür)
 - [x] Bölüm sistemi: Bölüm 1 (0–150 m) Dev Balon Balığı · Bölüm 2 (150–400 m) Elektrikli Denizanası · Bölüm 3 (400–700 m) Dev Kalamar · sonra her 300 m sonsuz bölümler
 - [x] Bölüm sonu: yıldızlı özet kartı (inci hedefi, az hasar), bölüm ödülü, girdap geçiş animasyonu, yeni bölüm tanıtımı
+- [x] Açılış ekranında etkileşim: Okto'ya dokununca tepkiler, gözleriyle parmağı izler, balıklar kaçar ve Okto güler
+- [x] Hediye kutuları ve Altın Karides: 6 sn Dev Okto (dokunulmaz, düşmanları ezer, canavara çarparak hasar verir)
 - [x] Kayıt noktası: yanınca bölüm başından devam; menüde "Bölüm N'den başla" seçici

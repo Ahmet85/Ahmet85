@@ -12,7 +12,58 @@ const win = (t, a, b, f = 0.18) => smooth((t - a) / f) * (1 - smooth((t - (b - f
 const rnd = (seed => () => (seed = (seed * 16807) % 2147483647) / 2147483647);
 
 // ---------- Ahtapot (çizim okto.js'de) ----------
-function drawOkto(ctx, cx, cy, R, t, look) {
+// ---------- Etkileşim: dokunma, parmağı gözle takip, kaçan balıklar ----------
+const I = { px: 0, py: 0, pt: -99, react: null, reactT: -99, lastReact: '', laughT: -99, fish: [{ escT: -99, dx: 1, dy: 0 }, { escT: -99, dx: -1, dy: 0 }], parts: [], hits: { okto: null, fish: [] }, now: 0, lastT: 0 };
+const REACT_DUR = { spin: 1.1, jump: 1.0, giggle: 1.2, hearts: 1.4 };
+const easeOut = x => 1 - Math.pow(1 - clamp(x, 0, 1), 3);
+function pointer(x, y, t) { I.px = x; I.py = y; I.pt = t; }
+function tap(x, y, t) {
+  pointer(x, y, t);
+  for (let i = 0; i < I.hits.fish.length; i++) { // balık mı?
+    const f = I.hits.fish[i], st = I.fish[i];
+    if (f && t - st.escT > 3.8 && Math.hypot(x - f.x, y - f.y) < f.r) {
+      const d = Math.hypot(f.x - x, f.y - y) || 1;
+      st.escT = t; st.dx = (f.x - x) / d || (Math.random() < 0.5 ? -1 : 1); st.dy = (f.y - y) / d - 0.4;
+      I.laughT = t; addPart('text', I.hits.okto ? I.hits.okto.x + I.hits.okto.r * 0.6 : x, I.hits.okto ? I.hits.okto.y - I.hits.okto.r * 0.9 : y, 'hihi!');
+      for (let k = 0; k < 6; k++) addPart('bubble', f.x, f.y);
+      return 'fish';
+    }
+  }
+  const o = I.hits.okto;
+  if (o && Math.hypot(x - o.x, y - o.y) < o.r) {
+    const kinds = Object.keys(REACT_DUR).filter(k => k !== I.lastReact);
+    const k = kinds[Math.floor(Math.random() * kinds.length)];
+    I.react = k; I.lastReact = k; I.reactT = t;
+    if (k === 'hearts') for (let n = 0; n < 7; n++) addPart('heart', o.x + (Math.random() - 0.5) * o.r, o.y - o.r * 0.5);
+    else if (k === 'giggle') addPart('text', o.x + o.r * 0.7, o.y - o.r * 0.9, 'kıkır!');
+    else if (k === 'spin') addPart('text', o.x - o.r * 0.9, o.y - o.r, 'vüüü!');
+    return 'okto';
+  }
+  return null;
+}
+function addPart(kind, x, y, text) {
+  I.parts.push({ kind, x, y, text, vx: (Math.random() - 0.5) * 60, vy: kind === 'bubble' ? -60 - Math.random() * 80 : -50 - Math.random() * 40, life: kind === 'text' ? 1.3 : 1.6, s: 0.7 + Math.random() * 0.6 });
+}
+function drawParts(ctx, dt, u) {
+  for (const p of I.parts) { p.life -= dt; p.x += p.vx * dt * u; p.y += p.vy * dt * u; }
+  I.parts = I.parts.filter(p => p.life > 0);
+  for (const p of I.parts) {
+    const a = clamp(p.life, 0, 1);
+    ctx.save(); ctx.globalAlpha = a; ctx.translate(p.x, p.y);
+    if (p.kind === 'heart') {
+      ctx.scale(p.s * u, p.s * u); ctx.fillStyle = '#ff4d8d'; ctx.strokeStyle = '#a3123a'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(0, 10); ctx.bezierCurveTo(-18, -3, -9, -16, 0, -6); ctx.bezierCurveTo(9, -16, 18, -3, 0, 10); ctx.fill(); ctx.stroke();
+    } else if (p.kind === 'bubble') {
+      ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 1.5 * u; ctx.beginPath(); ctx.arc(0, 0, 4 * p.s * u, 0, TAU); ctx.stroke();
+    } else {
+      ctx.font = `700 ${20 * u}px Fredoka, "Trebuchet MS", sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
+      ctx.rotate(-0.12); ctx.lineWidth = 5 * u; ctx.strokeStyle = '#0f3d8c'; ctx.strokeText(p.text, 0, 0); ctx.fillStyle = '#fff'; ctx.fillText(p.text, 0, 0);
+    }
+    ctx.restore();
+  }
+}
+
+function drawOkto(ctx, cx, cy, R, t, look, abs) {
   const tc = ((t % LOOP) + LOOP) % LOOP;
   // muzip ifade zaman çizelgesi (6 sn döngü)
   const expr = {
@@ -22,7 +73,30 @@ function drawOkto(ctx, cx, cy, R, t, look) {
     blink: Math.max(win(tc, 5.05, 5.3, 0.1), win(tc, 0.35, 0.55, 0.08)),
     wave: win(tc, 2.6, 4.4, 0.35),
   };
-  OktoChar.draw(ctx, cx, cy, R, tc, { palette: look.palette, accessory: look.accessory, expr, bob: Math.sin(tc * W0 * 3), rot: Math.sin(tc * W0) * 0.04 });
+  let x = cx, y = cy, rot = Math.sin(tc * W0) * 0.04;
+  // parmak yakınlarda gezinirken gözleriyle takip eder
+  if (abs - I.pt < 2.5) { expr.look = clamp((I.px - cx) / (R * 2.5), -1, 1); expr.lookY = clamp((I.py - cy) / (R * 2.5), -1, 1); expr.sly = 0; }
+  // dokunma tepkileri
+  const k = (abs - I.reactT) / (REACT_DUR[I.react] || 1);
+  if (k >= 0 && k < 1) {
+    expr.wink = 1; expr.blink = 0; expr.sly = 0;
+    if (I.react === 'spin') { rot += easeOut(k) * TAU; y -= Math.sin(Math.PI * k) * R * 0.45; expr.wave = 1; }
+    else if (I.react === 'jump') { y -= Math.abs(Math.sin(k * TAU)) * R * 0.4 * (1 - k * 0.4); expr.wave = Math.sin(Math.PI * k); }
+    else if (I.react === 'giggle') { x += Math.sin(abs * 45) * R * 0.06 * (1 - k); rot += Math.sin(abs * 30) * 0.06 * (1 - k); }
+    else if (I.react === 'hearts') { y -= Math.sin(Math.PI * k) * R * 0.15; expr.wave = 1; }
+  }
+  // balık kaçırınca güler
+  const lk = (abs - I.laughT) / 1.2;
+  if (lk >= 0 && lk < 1) { expr.wink = 1; expr.sly = 0; x += Math.sin(abs * 40) * R * 0.04 * (1 - lk); }
+  OktoChar.draw(ctx, x, y, R, tc, { palette: look.palette, accessory: look.accessory, expr, bob: Math.sin(tc * W0 * 3), rot });
+  I.hits.okto = { x: cx, y: cy + R * 0.3, r: R * 1.35 };
+}
+// kaçan balık: hızla uzaklaşır, sonra yolunda yavaşça yeniden belirir
+function fishFx(i, bx, by, baseDir, abs, u) {
+  const st = I.fish[i], e = abs - st.escT;
+  if (e < 0 || e > 3.8) return { x: bx, y: by, dir: baseDir, a: 1 };
+  if (e < 2.6) { const d = (e * e * 700 + e * 260) * u; return { x: bx + st.dx * d, y: by + st.dy * d * 0.6, dir: st.dx >= 0 ? 1 : -1, a: 1 }; }
+  return { x: bx, y: by, dir: baseDir, a: (e - 2.6) / 1.2 };
 }
 
 // ---------- Deniz canlıları ----------
@@ -296,13 +370,18 @@ function draw(ctx, W, H, t, opts = {}) {
 
   // balıklar
   const p1 = tc / LOOP;
-  clownfish(ctx, -60 * u + p1 * (W + 120 * u), H * 0.3 + Math.sin(tc * W0 * 2) * 10 * u, 1.0 * u, 1, tc);
-  blueTang(ctx, W + 60 * u - ((p1 + 0.45) % 1) * (W + 120 * u), H * 0.62 + Math.sin(tc * W0 * 2 + 2) * 8 * u, 0.95 * u, -1, tc);
+  const abs = t, dtp = clamp(abs - I.lastT, 0, 0.1); I.lastT = abs;
+  const f1 = fishFx(0, -60 * u + p1 * (W + 120 * u), H * 0.3 + Math.sin(tc * W0 * 2) * 10 * u, 1, abs, u);
+  const f2 = fishFx(1, W + 60 * u - ((p1 + 0.45) % 1) * (W + 120 * u), H * 0.62 + Math.sin(tc * W0 * 2 + 2) * 8 * u, -1, abs, u);
+  ctx.save(); ctx.globalAlpha = f1.a; clownfish(ctx, f1.x, f1.y, 1.0 * u, f1.dir, f1.a < 1 || abs - I.fish[0].escT > 3.8 ? tc : tc * 3); ctx.restore();
+  ctx.save(); ctx.globalAlpha = f2.a; blueTang(ctx, f2.x, f2.y, 0.95 * u, f2.dir, f2.a < 1 || abs - I.fish[1].escT > 3.8 ? tc : tc * 3); ctx.restore();
+  I.hits.fish = [{ x: f1.x, y: f1.y, r: 34 * u }, { x: f2.x, y: f2.y, r: 34 * u }];
 
   // OKTO
-  drawOkto(ctx, W / 2, oy, R, tc, look);
+  drawOkto(ctx, W / 2, oy, R, tc, look, abs);
 
   drawBubbles(true);
+  drawParts(ctx, dtp, u);
 
   // başlık
   const ty = (opts.top || 0) + Math.max(H * 0.13, 114 * u); // üstteki düğmeler ve çentik için pay
@@ -321,5 +400,5 @@ function draw(ctx, W, H, t, opts = {}) {
   ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
 }
 
-window.OktoTitle = { draw, LOOP, playRect: null };
+window.OktoTitle = { draw, LOOP, playRect: null, pointer, tap };
 })();

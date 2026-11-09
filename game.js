@@ -83,7 +83,7 @@ const Sound = {
         this.buildBuses(this.ctx);
       } catch {}
     }
-    if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+    if (this.ctx && this.ctx.state !== 'running' && !document.hidden) this.ctx.resume().catch(() => {});
   },
   buildBuses(c) {
     for (let i = 1; i <= 3; i++) {
@@ -96,14 +96,14 @@ const Sound = {
   get out() { return this.buses[this.tier] || this.ctx.destination; },
   // ---- dalgıç sesleri ----
   blip(delay = 0, vol = 0.05) { // tek kabarcık: hızla yükselen kısa "blup"
-    if (this.muted || !this.ctx) return;
+    if (this.muted || !this.ctx || this.ctx.state !== 'running') return; // duraklatılmışken ses biriktirme
     const k = TIERS[this.tier].pitch, t = this.ctx.currentTime + delay, f0 = rand(160, 380) * k, o = this.ctx.createOscillator(), g = this.ctx.createGain();
     o.type = 'sine'; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f0 * rand(2.6, 4), t + rand(0.03, 0.06));
     g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol, t + 0.006); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.07);
     o.connect(g).connect(this.out); o.start(t); o.stop(t + 0.09);
   },
   filtered(dur, vol, type, freq, q, delay = 0, attack = 0.1) { // şekillendirilmiş gürültü (nefes / köpük)
-    if (this.muted || !this.ctx) return;
+    if (this.muted || !this.ctx || this.ctx.state !== 'running') return; // duraklatılmışken ses biriktirme
     const c = this.ctx, t = c.currentTime + delay, len = Math.floor(c.sampleRate * dur);
     const buf = c.createBuffer(1, len, c.sampleRate), d = buf.getChannelData(0);
     for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
@@ -119,7 +119,7 @@ const Sound = {
     for (let i = 0; i < 16; i++) { tt += rand(0.025, 0.07); this.blip(tt, (0.05 + Math.random() * 0.04) * vol * (1 - i / 22)); }
   },
   tone(freq, dur, type = 'sine', vol = 0.15, slide = 0, delay = 0, raw = false) {
-    if (this.muted || !this.ctx) return;
+    if (this.muted || !this.ctx || this.ctx.state !== 'running') return; // duraklatılmışken ses biriktirme
     const k = raw ? 1 : TIERS[this.tier].pitch;
     const t = this.ctx.currentTime + delay, o = this.ctx.createOscillator(), g = this.ctx.createGain();
     o.type = type; o.frequency.setValueAtTime(freq * k, t);
@@ -128,7 +128,7 @@ const Sound = {
     o.connect(g).connect(this.out); o.start(t); o.stop(t + dur + 0.05);
   },
   noise(dur, vol = 0.2, freq = 800, delay = 0) {
-    if (this.muted || !this.ctx) return;
+    if (this.muted || !this.ctx || this.ctx.state !== 'running') return; // duraklatılmışken ses biriktirme
     const t = this.ctx.currentTime + delay, len = Math.floor(this.ctx.sampleRate * dur);
     const buf = this.ctx.createBuffer(1, len, this.ctx.sampleRate), d = buf.getChannelData(0);
     for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
@@ -276,7 +276,26 @@ window.addEventListener('keydown', e => {
   if (e.key === 'Enter' && (state === 'menu' || state === 'over') && !anyPanelOpen()) startGame();
 });
 window.addEventListener('keyup', e => { keys[e.key] = false; });
-document.addEventListener('visibilitychange', () => { if (document.hidden && state === 'play') togglePause(); });
+// Arka plana geçince (uygulama değiştirici, ana ekran, kilit): oyunu duraklat, TÜM sesleri sustur
+let bgAway = false;
+function goBackground() {
+  if (bgAway) return; bgAway = true;
+  if (state === 'play') togglePause();
+  drag.active = false;
+  if (Sound.ctx && Sound.ctx.state === 'running') Sound.ctx.suspend().catch(() => {});
+  window.OktoMusic && OktoMusic.sleep();
+}
+function goForeground() {
+  if (!bgAway) return; bgAway = false;
+  last = performance.now();
+  if (Sound.ctx && Sound.ctx.state !== 'running') Sound.ctx.resume().catch(() => {});
+  window.OktoMusic && OktoMusic.wake();
+}
+document.addEventListener('visibilitychange', () => { if (document.hidden) goBackground(); else goForeground(); });
+window.addEventListener('pagehide', goBackground);
+window.addEventListener('pageshow', () => { if (!document.hidden) goForeground(); });
+window.addEventListener('blur', () => { if (document.hidden || state === 'play') goBackground(); });
+window.addEventListener('focus', () => { if (!document.hidden) goForeground(); });
 document.addEventListener('contextmenu', e => e.preventDefault());
 
 // ---------- Arayüz ----------

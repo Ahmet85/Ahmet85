@@ -123,7 +123,30 @@ async function checkCustom() {
   return customOk;
 }
 function tick() {
+  if (sleeping || ac.state !== 'running') return;
+  // geride kaldıysak (sayaç yavaşladıysa) kaçan notaları üst üste çalma, ritmi şimdiden yeniden başlat
+  if (nextTime < ac.currentTime - 0.05) nextTime = ac.currentTime + 0.05;
   while (nextTime < ac.currentTime + 0.25) { scheduleStep(ac, synthOut, nextStep, nextTime); nextStep++; nextTime += EIGHTH; }
+}
+// ---- Arka plana geçince tamamen sus, dönünce temizce devam et ----
+let sleeping = false;
+function sleep() {
+  if (sleeping) return; sleeping = true;
+  clearInterval(timer); timer = null;
+  if (customAudio && !customAudio.paused) { customAudio.pause(); customAudio._resume = true; }
+  if (ac && ac.state === 'running') ac.suspend().catch(() => {});
+}
+function wake() {
+  if (!sleeping) return; sleeping = false;
+  if (!playing) return;
+  if (customAudio && customAudio._resume) { customAudio._resume = false; customAudio.play().catch(() => {}); return; }
+  if (ac) {
+    ac.resume().then(() => {
+      if (!playing || sleeping || !synthOut) return;
+      nextTime = ac.currentTime + 0.1;
+      clearInterval(timer); timer = setInterval(tick, 50); tick();
+    }).catch(() => {});
+  }
 }
 let synthOut = null;
 async function start() {
@@ -146,6 +169,7 @@ async function start() {
 function stop(fade = 0.6) {
   if (!playing) return;
   playing = false;
+  if (sleeping && ac) { clearInterval(timer); timer = null; bus.gain.setValueAtTime(0, ac.currentTime); if (customAudio) customAudio.pause(); return; }
   if (customAudio) {
     const a = customAudio, v0 = a.volume, t0 = performance.now();
     const f = () => { const k = Math.min(1, (performance.now() - t0) / (fade * 1000)); a.volume = v0 * (1 - k); if (k < 1) requestAnimationFrame(f); else a.pause(); };
@@ -180,5 +204,5 @@ async function renderWav(seconds = STEPS * EIGHTH * 2) {
   return new Uint8Array(data.buffer);
 }
 
-window.OktoMusic = { start, stop, setMuted, renderWav, get playing() { return playing; }, LOOP_SECONDS: STEPS * EIGHTH };
+window.OktoMusic = { start, stop, setMuted, renderWav, sleep, wake, get playing() { return playing; }, LOOP_SECONDS: STEPS * EIGHTH };
 })();

@@ -12,6 +12,8 @@ Her bölüm rastgele birleşen bölgelerden oluşsun, araya sakin "dinlenme" par
 1. Kayalık Geçit (çarpınca can gider) · 2. Güçlü Akıntı · 3. Karanlık Mağara · 4. Batık Gemi (gizli oda)
 5. Sıcak Bacalar (uyarılı püskürme) · 6. Yosun Ormanı (yavaşlatır, saklar) · 7. Mayın Tarlası (mürekkeple zincirleme patlatma)
 8. Kaçış Sahnesi (dev canlı kovalar)
+9. Resif Adacıkları ✅ (s13) · 10. Mercan Kanyonu ✅ (s13): kullanıcının 19 referans görseline göre, `reef.js`
+Sıradaki: Karanlık Mağara, Sıcak Bacalar, sonra Akıntı / Batık Gemi / Yosun Ormanı / Mayın Tarlası / Kaçış Sahnesi
 
 ## Fikir havuzu
 - App Store / Google Play için Capacitor ile paketleme

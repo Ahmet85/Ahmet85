@@ -1,7 +1,7 @@
 // Çevrimdışı oynanabilmesi için önbellek. Önce ağ (her seferinde sunucuya 'değişti mi?' diye sorulur),
 // ağ yoksa önbellek. Böylece güncellemeler hemen gelir, internet yokken de oyun açılır.
-const CACHE = 'okto-v12';
-const FILES = ['./', './index.html', './game.js', './manifest.json', './icon.svg', './apple-touch-icon.png', './okto.js', './title.js', './music.js', './fonts/fredoka-700-latin.woff2', './fonts/fredoka-700-latin-ext.woff2'];
+const CACHE = 'okto-v13';
+const FILES = ['./', './index.html', './game.js', './manifest.json', './icon.svg', './apple-touch-icon.png', './okto.js', './reef.js', './title.js', './music.js', './fonts/fredoka-700-latin.woff2', './fonts/fredoka-700-latin-ext.woff2'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES.map(f => new Request(f, { cache: 'reload' }))))); self.skipWaiting(); });
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))));

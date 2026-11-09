@@ -149,6 +149,8 @@ const SCENES = {
     label('8 · Kaçış Sahnesi', 'Dev bir canlı yukarıdan kovalar, ekran hızlanır. 20 saniye hayatta kal; aşağı daldıkça uzaklaşır.', '#ffe14d');
   },
 };
+// oyundan alınmış görüntüyü panoya kart olarak yerleştir
+window.drawShot = (url, title, sub, accent) => new Promise(res => { const im = new Image(); im.onload = () => { ctx.clearRect(0, 0, W, H); const sc = W / im.width; ctx.drawImage(im, 0, -im.height * sc * 0.12, W, im.height * sc); label(title, sub, accent); res(); }; im.src = url; });
 window.drawScene = name => { seed = 3; ctx.clearRect(0, 0, W, H); SCENES[name](); };
 document.fonts.load('700 20px Fredoka', 'ŞşİıĞğ').then(() => { window.ready = true; });
 </script></body></html>

@@ -113,13 +113,19 @@ function bow(ctx, R, lw) {
   ctx.fillStyle = '#ff3d6e'; ctx.beginPath(); ctx.arc(0, 0, 0.08 * R, 0, TAU); ctx.fill(); ctx.stroke();
   ctx.restore();
 }
-function sunglasses(ctx, R, lw) {
+function sunglasses(ctx, R, lw, wink = 0) {
   const y = 0.06 * R;
   ctx.fillStyle = '#16131f'; ctx.strokeStyle = '#000'; ctx.lineWidth = lw * 0.9;
-  for (const sx of [-1, 1]) { ctx.beginPath(); ctx.roundRect(sx * 0.36 * R - 0.25 * R, y - 0.17 * R, 0.5 * R, 0.32 * R, 0.13 * R); ctx.fill(); ctx.stroke(); }
-  ctx.beginPath(); ctx.moveTo(-0.12 * R, y - 0.08 * R); ctx.quadraticCurveTo(0, y - 0.14 * R, 0.12 * R, y - 0.08 * R); ctx.lineWidth = lw * 1.4; ctx.stroke();
-  ctx.fillStyle = 'rgba(255,255,255,.55)';
-  for (const sx of [-1, 1]) { ctx.beginPath(); ctx.ellipse(sx * 0.36 * R - 0.09 * R, y - 0.07 * R, 0.08 * R, 0.035 * R, -0.5, 0, TAU); ctx.fill(); }
+  for (const sx of [-1, 1]) {
+    // göz kırpınca sol cam hafifçe yukarı kalkar (gözlüğün üstünden göz kırpma)
+    const lift = sx < 0 ? wink * 0.06 * R : 0;
+    ctx.save(); ctx.translate(sx * 0.36 * R, y - lift); ctx.rotate(sx < 0 ? -wink * 0.12 : 0);
+    ctx.beginPath(); ctx.roundRect(-0.29 * R, -0.25 * R, 0.58 * R, 0.46 * R, 0.16 * R); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,.5)'; ctx.beginPath(); ctx.ellipse(-0.1 * R, -0.12 * R, 0.09 * R, 0.04 * R, -0.5, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#16131f';
+    ctx.restore();
+  }
+  ctx.beginPath(); ctx.moveTo(-0.08 * R, y - 0.1 * R); ctx.quadraticCurveTo(0, y - 0.16 * R, 0.08 * R, y - 0.1 * R); ctx.lineWidth = lw * 1.4; ctx.stroke();
 }
 function pirate(ctx, R, lw) {
   ctx.save(); ctx.translate(0, -0.78 * R); ctx.rotate(-0.08);
@@ -237,8 +243,10 @@ function draw(ctx, cx, cy, R, t, o = {}) {
   // gözler
   const ey = 0.06 * R;
   ctx.lineCap = 'round';
+  const shades = acc === 'sunglasses' && e.dizzy < 0.5 && e.ouch < 0.5;
   for (const sx of [-1, 1]) {
     const ex = sx * 0.36 * R;
+    if (shades) continue; // gözler camın arkasında
     if (e.dizzy > 0.5) { // sersem: sarmal gözler
       ctx.strokeStyle = P.line; ctx.lineWidth = lw * 0.9; ctx.beginPath();
       for (let a = 0; a < TAU * 2.2; a += 0.3) { const r = a / (TAU * 2.2) * 0.2 * R, aa = a * sx + t * 6; ctx.lineTo(ex + Math.cos(aa) * r, ey + Math.sin(aa) * r); }
@@ -277,7 +285,7 @@ function draw(ctx, cx, cy, R, t, o = {}) {
     ctx.strokeStyle = P.line; ctx.lineWidth = lw * 0.7;
     ctx.beginPath(); ctx.moveTo(ex + sx * 0.2 * R, ey - 0.2 * R); ctx.lineTo(ex + sx * 0.29 * R, ey - 0.27 * R); ctx.stroke();
   }
-  if (acc === 'sunglasses' && e.dizzy < 0.5) sunglasses(ctx, R, lw);
+  if (shades) sunglasses(ctx, R, lw, e.wink);
   // kaşlar
   ctx.strokeStyle = P.line; ctx.lineWidth = lw * 1.15;
   for (const sx of [-1, 1]) {

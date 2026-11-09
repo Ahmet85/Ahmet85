@@ -23,16 +23,25 @@ const FONT = 'Fredoka, "Trebuchet MS", sans-serif';
 const cvs = $('c'), ctx = cvs.getContext('2d');
 let W = 0, H = 0, DPR = 1, S = 1, safeTop = 0; // S: ekran boyutuna göre ölçek birimi
 function resize() {
+  // Boyutu tuvalin ekrandaki gerçek alanından al: iPhone'da innerHeight bazen yanlış (kısa) gelir
   DPR = Math.min(window.devicePixelRatio || 1, 2);
-  W = window.innerWidth; H = window.innerHeight;
+  const r = cvs.getBoundingClientRect();
+  W = Math.round(r.width) || window.innerWidth; H = Math.round(r.height) || window.innerHeight;
   cvs.width = Math.round(W * DPR); cvs.height = Math.round(H * DPR);
-  cvs.style.width = W + 'px'; cvs.style.height = H + 'px';
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   S = clamp(Math.min(W, H) / 400, 0.75, 1.6);
   safeTop = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sat')) || 0;
   layoutMenuButtons();
 }
+function checkSize() { // olay gelmese bile boyut değiştiyse yakala
+  const r = cvs.getBoundingClientRect();
+  if (Math.abs(r.width - W) > 1 || Math.abs(r.height - H) > 1) resize();
+}
 window.addEventListener('resize', resize);
+window.addEventListener('orientationchange', () => setTimeout(resize, 300));
+window.addEventListener('pageshow', () => setTimeout(resize, 50));
+if (window.visualViewport) visualViewport.addEventListener('resize', () => setTimeout(checkSize, 50));
+window.addEventListener('scroll', () => { if (window.scrollY || window.scrollX) window.scrollTo(0, 0); });
 
 // ---------- Profil (cüzdan, kostümler, günlük görevler) ----------
 const Profile = {
@@ -1399,8 +1408,10 @@ $('missionClose').onclick = () => { show(ui.missions, false); refreshMenu(); };
 
 // ---------- Ana döngü ----------
 let last = performance.now();
+let sizeCheckT = 0;
 function frame(now) {
   const dt = Math.min((now - last) / 1000, 1 / 20); last = now;
+  if ((sizeCheckT += dt) > 0.5) { sizeCheckT = 0; checkSize(); }
   if (state === 'play') update(dt);
   else if (state === 'transition') { updateTransition(dt); updateFx(dt); for (const q of particles) { q.x += q.vx * dt; q.y += q.vy * dt; q.life -= q.decay * dt; } particles = particles.filter(q => q.life > 0); }
   else if (state === 'clear') { time += dt; updateFx(dt); }

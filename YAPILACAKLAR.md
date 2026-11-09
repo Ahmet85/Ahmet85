@@ -7,6 +7,12 @@ Oyun yayında: https://ahmet85.github.io/Ahmet85/ (GitHub Pages, dal: `claude/oc
 - [ ] **Kol fırlatma yerine yeni bir hareket:** karar verilecek (fikirler: hızlı atılma/dash, mürekkep kalkanı, kabarcık tuzağı).
 - [ ] Oyunu gerçek telefonda deneyip zorluk ayarı (dev kalamar canı, düşman sıklığı, mağaza fiyatları).
 
+## Bölge fikirleri (konsept: preview/concepts.html)
+Her bölüm rastgele birleşen bölgelerden oluşsun, araya sakin "dinlenme" parçaları girsin:
+1. Kayalık Geçit (çarpınca can gider) · 2. Güçlü Akıntı · 3. Karanlık Mağara · 4. Batık Gemi (gizli oda)
+5. Sıcak Bacalar (uyarılı püskürme) · 6. Yosun Ormanı (yavaşlatır, saklar) · 7. Mayın Tarlası (mürekkeple zincirleme patlatma)
+8. Kaçış Sahnesi (dev canlı kovalar)
+
 ## Fikir havuzu
 - App Store / Google Play için Capacitor ile paketleme
 - Yeni kostümler (şapkalar, desenler), başarımlar/rozetler

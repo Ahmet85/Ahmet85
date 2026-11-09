@@ -1,0 +1,154 @@
+<!DOCTYPE html><html><head><meta charset="utf-8">
+<style>
+@font-face{font-family:Fredoka;font-weight:700;src:url(../fonts/fredoka-700-latin.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+20AC,U+2122,U+2212,U+FEFF,U+FFFD}
+@font-face{font-family:Fredoka;font-weight:700;src:url(../fonts/fredoka-700-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+1E00-1E9F,U+2020,U+20A0-20AB,U+2C60-2C7F,U+A720-A7FF}
+html,body{margin:0}canvas{display:block}
+</style></head><body><canvas id="c"></canvas>
+<script src="../okto.js"></script>
+<script>
+// Okto bölge fikirleri için konsept çizimleri (390x560 dikey kare)
+const W = 390, H = 560, TAU = Math.PI * 2;
+const c = document.getElementById('c'), ctx = c.getContext('2d');
+c.width = W * 2; c.height = H * 2; c.style.width = W + 'px'; c.style.height = H + 'px'; ctx.scale(2, 2);
+let seed = 3; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+const R = (a, b) => a + rnd() * (b - a);
+
+function sea(top, bot) { const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, top); g.addColorStop(1, bot); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); }
+function snow(n, col) { for (let i = 0; i < n; i++) { ctx.fillStyle = col; ctx.beginPath(); ctx.arc(R(0, W), R(0, H), R(0.6, 2), 0, TAU); ctx.fill(); } }
+function okto(x, y, r, o = {}) { OktoChar.draw(ctx, x, y, r, 1.3, Object.assign({ palette: 'pink', accessory: 'goggles' }, o)); }
+function pearl(x, y) { const g = ctx.createRadialGradient(x - 2, y - 2, 1, x, y, 13); g.addColorStop(0, '#fff'); g.addColorStop(0.45, '#fff2d9'); g.addColorStop(0.55, 'rgba(255,240,210,.35)'); g.addColorStop(1, 'rgba(255,240,210,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, 13, 0, TAU); ctx.fill(); }
+function rockWall(side, pts, col1, col2) { // yandan uzanan kayalık
+  ctx.save(); const g = ctx.createLinearGradient(side < 0 ? 0 : W, 0, side < 0 ? 160 : W - 160, 0); g.addColorStop(0, col1); g.addColorStop(1, col2);
+  ctx.fillStyle = g; ctx.strokeStyle = '#1d2a3a'; ctx.lineWidth = 3; ctx.lineJoin = 'round';
+  ctx.beginPath(); ctx.moveTo(side < 0 ? -10 : W + 10, -10);
+  for (const [y, d] of pts) ctx.lineTo(side < 0 ? d : W - d, y);
+  ctx.lineTo(side < 0 ? -10 : W + 10, H + 10); ctx.closePath(); ctx.fill(); ctx.stroke();
+  // çatlaklar ve yosun lekeleri
+  ctx.strokeStyle = 'rgba(0,0,0,.25)'; ctx.lineWidth = 2;
+  for (const [y, d] of pts) { const x = side < 0 ? d * 0.5 : W - d * 0.5; ctx.beginPath(); ctx.moveTo(x, y - 10); ctx.lineTo(x + side * 8, y + 6); ctx.stroke(); }
+  ctx.fillStyle = 'rgba(90,200,120,.5)';
+  for (const [y, d] of pts) { const x = side < 0 ? d - 6 : W - d + 6; ctx.beginPath(); ctx.ellipse(x, y, 7, 3, 0.5, 0, TAU); ctx.fill(); }
+  ctx.restore();
+}
+function boulder(x, y, r, col = '#5d6b7d') {
+  ctx.fillStyle = col; ctx.strokeStyle = '#1d2a3a'; ctx.lineWidth = 3; ctx.beginPath();
+  for (let i = 0; i < 9; i++) { const a = i / 9 * TAU, rr = r * (0.82 + ((i * 37) % 7) / 25); ctx.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); }
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,.18)'; ctx.beginPath(); ctx.ellipse(x - r * 0.3, y - r * 0.35, r * 0.35, r * 0.18, -0.5, 0, TAU); ctx.fill();
+}
+function label(title, sub, accent) {
+  ctx.fillStyle = 'rgba(4,20,40,.72)'; ctx.beginPath(); ctx.roundRect(12, H - 104, W - 24, 94, 16); ctx.fill();
+  ctx.font = '700 24px Fredoka, sans-serif'; ctx.fillStyle = accent; ctx.textBaseline = 'top'; ctx.fillText(title, 26, H - 94);
+  ctx.font = '700 14px Fredoka, sans-serif'; ctx.fillStyle = '#eaf6ff';
+  const words = sub.split(' '); let line = '', y = H - 62;
+  for (const w of words) { const t = line ? line + ' ' + w : w; if (ctx.measureText(t).width > W - 52) { ctx.fillText(line, 26, y); line = w; y += 18; } else line = t; }
+  ctx.fillText(line, 26, y);
+}
+function arrowStreak(x, y, len, ang, a) { ctx.strokeStyle = `rgba(220,250,255,${a})`; ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(ang) * len, y + Math.sin(ang) * len); ctx.stroke(); ctx.beginPath(); const ex = x + Math.cos(ang) * len, ey = y + Math.sin(ang) * len; ctx.moveTo(ex, ey); ctx.lineTo(ex - Math.cos(ang - 0.5) * 9, ey - Math.sin(ang - 0.5) * 9); ctx.moveTo(ex, ey); ctx.lineTo(ex - Math.cos(ang + 0.5) * 9, ey - Math.sin(ang + 0.5) * 9); ctx.stroke(); }
+function heart(x, y, s, col = '#ff4d6d') { ctx.save(); ctx.translate(x, y); ctx.scale(s, s); ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(0, 10); ctx.bezierCurveTo(-18, -3, -9, -16, 0, -6); ctx.bezierCurveTo(9, -16, 18, -3, 0, 10); ctx.fill(); ctx.restore(); }
+function warn(x, y) { ctx.fillStyle = '#ff3b3b'; ctx.beginPath(); ctx.arc(x, y, 15, 0, TAU); ctx.fill(); ctx.fillStyle = '#fff'; ctx.font = '700 22px Fredoka'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('!', x, y + 1); ctx.textAlign = 'left'; }
+function fishShape(x, y, s, col, dir = 1) { ctx.save(); ctx.translate(x, y); ctx.scale(dir * s, s); ctx.fillStyle = col; ctx.beginPath(); ctx.ellipse(0, 0, 14, 8, 0, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.moveTo(-12, 0); ctx.lineTo(-22, -8); ctx.lineTo(-22, 8); ctx.fill(); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(7, -2, 3, 0, TAU); ctx.fill(); ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(8, -2, 1.6, 0, TAU); ctx.fill(); ctx.restore(); }
+
+const SCENES = {
+  kayalik() { // 1. Kayalık Geçit
+    sea('#3cc7f0', '#0b5d8f'); snow(40, 'rgba(255,255,255,.4)');
+    rockWall(-1, [[0, 60], [80, 130], [150, 95], [230, 175], [300, 120], [380, 70], [460, 140], [560, 90]], '#4a5668', '#7d8ca0');
+    rockWall(1, [[0, 110], [70, 60], [150, 150], [230, 80], [310, 165], [390, 120], [470, 70], [560, 130]], '#4a5668', '#7d8ca0');
+    boulder(205, 205, 22); boulder(170, 350, 18, '#6b5d52');
+    for (const [x, y] of [[200, 120], [205, 150], [230, 260], [215, 290], [195, 410], [215, 440]]) pearl(x, y);
+    okto(205, 330, 20); heart(330, 40, 0.9); heart(355, 40, 0.9); heart(380, 40, 0.9, 'rgba(255,255,255,.25)');
+    label('1 · Kayalık Geçit', 'Daralan kaya duvarları ve yuvarlanan kayalar. Çarpınca can gider; inciler güvenli yolu gösterir.', '#ffd23f');
+  },
+  akinti() { // 2. Güçlü Akıntı
+    sea('#47c9ee', '#0e6aa5'); snow(30, 'rgba(255,255,255,.35)');
+    ctx.fillStyle = 'rgba(180,240,255,.13)'; ctx.fillRect(0, 150, W, 230);
+    for (let i = 0; i < 18; i++) arrowStreak(R(-20, W - 40), R(160, 370), R(40, 80), 0.05, R(0.35, 0.8));
+    fishShape(120, 230, 1, '#ffb347'); fishShape(250, 300, 0.9, '#7be35a'); fishShape(60, 330, 0.8, '#ff7eb6');
+    okto(210, 265, 20, { trailX: -0.9 });
+    for (const [x, y] of [[90, 110], [150, 110], [210, 110], [300, 420], [330, 450]]) pearl(x, y);
+    ctx.font = '700 15px Fredoka'; ctx.fillStyle = '#eaffff'; ctx.fillText('AKINTI  ››››', 20, 140);
+    label('2 · Güçlü Akıntı', 'Su Okto\'yu yana sürükler. Akıntıya karşı yüzmek zor; akıntıyla gidince hızlanırsın ve balıklar da sürüklenir.', '#9fe7ff');
+  },
+  magara() { // 3. Karanlık Mağara
+    sea('#06182b', '#01070f');
+    rockWall(-1, [[0, 50], [120, 80], [240, 60], [360, 95], [560, 70]], '#0d1622', '#1a2738'); rockWall(1, [[0, 70], [130, 55], [250, 90], [380, 60], [560, 80]], '#0d1622', '#1a2738');
+    for (let i = 0; i < 26; i++) { ctx.fillStyle = `rgba(120,255,230,${R(0.2, 0.8)})`; ctx.beginPath(); ctx.arc(R(70, 320), R(20, 450), R(1, 2.5), 0, TAU); ctx.fill(); }
+    // ışık halkası
+    const g = ctx.createRadialGradient(195, 300, 20, 195, 300, 120); g.addColorStop(0, 'rgba(255,240,190,.32)'); g.addColorStop(1, 'rgba(255,240,190,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(195, 300, 120, 0, TAU); ctx.fill();
+    okto(195, 300, 20);
+    // fener balığı ışığı
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; const lg = ctx.createRadialGradient(295, 170, 1, 295, 170, 30); lg.addColorStop(0, 'rgba(180,255,240,1)'); lg.addColorStop(1, 'rgba(80,255,220,0)'); ctx.fillStyle = lg; ctx.beginPath(); ctx.arc(295, 170, 30, 0, TAU); ctx.fill(); ctx.restore();
+    ctx.fillStyle = '#1b2a3a'; ctx.beginPath(); ctx.ellipse(265, 200, 26, 19, 0, 0, TAU); ctx.fill(); ctx.fillStyle = '#d6ff6b'; ctx.beginPath(); ctx.arc(256, 194, 4, 0, TAU); ctx.fill();
+    for (const [x, y] of [[150, 380], [170, 410], [190, 440]]) pearl(x, y);
+    label('3 · Karanlık Mağara', 'Ekran kararır, sadece Okto\'nun etrafı aydınlıktır. Parlayan planktonlar yolu gösterir, fener balıkları pusuda bekler.', '#7dffd8');
+  },
+  gemi() { // 4. Batık Gemi
+    sea('#2a8fc4', '#08385e'); snow(30, 'rgba(255,255,255,.3)');
+    // gövde
+    ctx.save(); ctx.translate(195, 300); ctx.rotate(-0.12);
+    ctx.fillStyle = '#6b4325'; ctx.strokeStyle = '#2d1a0c'; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.moveTo(-200, -60); ctx.quadraticCurveTo(-160, 110, 0, 120); ctx.quadraticCurveTo(160, 110, 200, -60); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = '#4a2c15'; ctx.lineWidth = 2; for (let y = -30; y < 110; y += 26) { ctx.beginPath(); ctx.moveTo(-190, y); ctx.lineTo(190, y); ctx.stroke(); }
+    ctx.fillStyle = '#0a2238'; ctx.beginPath(); ctx.ellipse(-40, 30, 46, 34, 0, 0, TAU); ctx.fill(); // delik (geçit)
+    ctx.fillStyle = '#3b2412'; for (const x of [-140, 120]) { ctx.beginPath(); ctx.arc(x, 0, 12, 0, TAU); ctx.fill(); }
+    ctx.fillStyle = '#5b3a1e'; ctx.fillRect(60, -260, 14, 200); // direk
+    ctx.fillStyle = 'rgba(240,230,200,.75)'; ctx.beginPath(); ctx.moveTo(74, -250); ctx.quadraticCurveTo(150, -200, 74, -130); ctx.closePath(); ctx.fill();
+    ctx.restore();
+    // sandık
+    ctx.fillStyle = '#9a5a24'; ctx.strokeStyle = '#3a1d05'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.roundRect(255, 330, 60, 34, 4); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#ffcf33'; for (const [x, y] of [[265, 326], [280, 322], [295, 326], [305, 330]]) { ctx.beginPath(); ctx.ellipse(x, y, 7, 4, 0, 0, TAU); ctx.fill(); }
+    okto(160, 330, 18);
+    ctx.font = '700 13px Fredoka'; ctx.fillStyle = '#ffe28a'; ctx.fillText('gizli oda', 270, 380);
+    label('4 · Batık Gemi', 'Gövdedeki delikten içeri gir: gizli hazine odası. Çürük tahtaları Dev Okto kırar; eski toplar ara ara gülle atar.', '#ffcf6b');
+  },
+  baca() { // 5. Sıcak Bacalar
+    sea('#14496e', '#060f1c'); snow(25, 'rgba(255,200,150,.3)');
+    ctx.fillStyle = '#2b2b33'; ctx.beginPath(); ctx.moveTo(0, 470); for (let x = 0; x <= W; x += 30) ctx.lineTo(x, 450 + Math.sin(x * 0.05) * 14); ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.fill();
+    for (const [x, on] of [[80, true], [200, false], [320, true]]) {
+      ctx.fillStyle = '#3a3a44'; ctx.strokeStyle = '#111'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x - 26, 470); ctx.lineTo(x - 12, 400); ctx.lineTo(x + 12, 400); ctx.lineTo(x + 26, 470); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#ff7a2f'; ctx.beginPath(); ctx.ellipse(x, 401, 11, 4, 0, 0, TAU); ctx.fill();
+      if (on) { const g = ctx.createLinearGradient(0, 400, 0, 40); g.addColorStop(0, 'rgba(255,140,60,.75)'); g.addColorStop(1, 'rgba(255,220,160,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(x - 12, 400); ctx.lineTo(x - 34, 40); ctx.lineTo(x + 34, 40); ctx.lineTo(x + 12, 400); ctx.fill();
+        for (let i = 0; i < 14; i++) { ctx.strokeStyle = 'rgba(255,240,220,.7)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x + R(-22, 22), R(60, 390), R(3, 8), 0, TAU); ctx.stroke(); } }
+      else { ctx.fillStyle = 'rgba(255,200,60,.25)'; ctx.fillRect(x - 14, 60, 28, 340); warn(x, 360); }
+    }
+    okto(200, 230, 20); for (const [x, y] of [[140, 150], [260, 150], [200, 120]]) pearl(x, y);
+    label('5 · Sıcak Bacalar', 'Bacalar sırayla kaynar su püskürtür. Önce titrer ve uyarı verir: ritmi yakala, aradan geç.', '#ffa24a');
+  },
+  yosun() { // 6. Yosun Ormanı
+    sea('#2fb7b0', '#0b4f5e'); snow(30, 'rgba(255,255,255,.3)');
+    for (let i = 0; i < 11; i++) { const x = 10 + i * 36 + R(-8, 8), h = R(260, 470); const g = ctx.createLinearGradient(0, H, 0, H - h); g.addColorStop(0, '#11663a'); g.addColorStop(1, '#5fd17a'); ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(x - 9, H); for (let s = 0; s <= 1; s += 0.1) ctx.lineTo(x - 9 * (1 - s * 0.7) + Math.sin(s * 6 + i) * 12, H - s * h); for (let s = 1; s >= 0; s -= 0.1) ctx.lineTo(x + 9 * (1 - s * 0.7) + Math.sin(s * 6 + i) * 12, H - s * h); ctx.fill(); }
+    okto(180, 300, 20, { expr: { sly: 1, look: 0.8 } });
+    // gizlenen Okto, dışarıda köpekbalığı
+    ctx.fillStyle = '#5d7487'; ctx.save(); ctx.translate(330, 150); ctx.scale(-1, 1); ctx.beginPath(); ctx.moveTo(60, 0); ctx.quadraticCurveTo(30, -26, -40, -8); ctx.lineTo(-66, -26); ctx.lineTo(-58, 0); ctx.lineTo(-66, 24); ctx.lineTo(-40, 8); ctx.quadraticCurveTo(30, 22, 60, 0); ctx.fill(); ctx.restore();
+    ctx.font = '700 13px Fredoka'; ctx.fillStyle = '#fff'; ctx.fillText('?', 300, 120);
+    for (const [x, y] of [[120, 200], [250, 380], [90, 420]]) pearl(x, y);
+    label('6 · Yosun Ormanı', 'Yosunlar Okto\'yu yavaşlatır ama gizler: köpekbalıkları seni göremez. Yosunların arasında saklı inciler.', '#8dff9d');
+  },
+  mayin() { // 7. Deniz Mayınları
+    sea('#2a7fb0', '#082a49'); snow(25, 'rgba(255,255,255,.3)');
+    const mine = (x, y) => { ctx.strokeStyle = '#555'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, H); ctx.stroke(); ctx.fillStyle = '#2e3138'; ctx.strokeStyle = '#0d0e12'; ctx.lineWidth = 3; for (let i = 0; i < 8; i++) { const a = i / 8 * TAU; ctx.beginPath(); ctx.moveTo(x + Math.cos(a) * 16, y + Math.sin(a) * 16); ctx.lineTo(x + Math.cos(a) * 25, y + Math.sin(a) * 25); ctx.stroke(); } ctx.beginPath(); ctx.arc(x, y, 18, 0, TAU); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#ff3b3b'; ctx.beginPath(); ctx.arc(x, y - 4, 4, 0, TAU); ctx.fill(); };
+    for (const [x, y] of [[70, 180], [170, 260], [300, 200], [110, 380], [250, 400], [340, 330]]) mine(x, y);
+    // mürekkep zinciri patlatma
+    ctx.fillStyle = 'rgba(23,10,38,.55)'; ctx.beginPath(); ctx.arc(250, 400, 48, 0, TAU); ctx.fill();
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(340, 330, 2, 340, 330, 50); g.addColorStop(0, 'rgba(255,230,140,1)'); g.addColorStop(1, 'rgba(255,120,40,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(340, 330, 50, 0, TAU); ctx.fill(); ctx.restore();
+    okto(200, 120, 19);
+    label('7 · Mayın Tarlası', 'Zincirli mayınlar dalgalanır. Değersen patlar; mürekkeple uzaktan patlatırsan zincirleme reaksiyon ve bonus puan.', '#ff8a8a');
+  },
+  kovalama() { // 8. Kaçış Sahnesi
+    sea('#3cc7f0', '#0b4f86');
+    // üstten gelen dev balina gölgesi
+    ctx.fillStyle = 'rgba(10,30,60,.75)'; ctx.beginPath(); ctx.ellipse(195, -40, 260, 150, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#0a1f3a'; ctx.beginPath(); ctx.moveTo(40, 70); ctx.quadraticCurveTo(195, 150, 350, 70); ctx.quadraticCurveTo(195, 110, 40, 70); ctx.fill();
+    ctx.fillStyle = '#fff'; for (let i = 0; i < 9; i++) { ctx.beginPath(); ctx.moveTo(70 + i * 30, 82 + Math.sin(i / 8 * Math.PI) * 20); ctx.lineTo(80 + i * 30, 100 + Math.sin(i / 8 * Math.PI) * 22); ctx.lineTo(90 + i * 30, 82 + Math.sin(i / 8 * Math.PI) * 20); ctx.fill(); }
+    ctx.fillStyle = '#ffe14d'; ctx.beginPath(); ctx.arc(110, 30, 9, 0, TAU); ctx.arc(280, 30, 9, 0, TAU); ctx.fill();
+    for (let i = 0; i < 16; i++) arrowStreak(R(20, 370), R(200, 470), R(30, 60), Math.PI / 2, R(0.3, 0.7));
+    okto(195, 300, 21, { expr: { ouch: 0, look: 0, lookY: -1 }, trailY: 1 });
+    ctx.font = '700 22px Fredoka'; ctx.fillStyle = '#ff5d5d'; ctx.textAlign = 'center'; ctx.fillText('KAÇ!', 195, 210); ctx.textAlign = 'left';
+    for (const [x, y] of [[195, 380], [195, 410], [195, 440]]) pearl(x, y);
+    label('8 · Kaçış Sahnesi', 'Dev bir canlı yukarıdan kovalar, ekran hızlanır. 20 saniye hayatta kal; aşağı daldıkça uzaklaşır.', '#ffe14d');
+  },
+};
+window.drawScene = name => { seed = 3; ctx.clearRect(0, 0, W, H); SCENES[name](); };
+document.fonts.load('700 20px Fredoka', 'ŞşİıĞğ').then(() => { window.ready = true; });
+</script></body></html>

@@ -27,3 +27,7 @@ Oyun yayında: https://ahmet85.github.io/Ahmet85/ (GitHub Pages, dal: `claude/oc
 - [x] Açılış ekranında etkileşim: Okto'ya dokununca tepkiler, gözleriyle parmağı izler, balıklar kaçar ve Okto güler
 - [x] Hediye kutuları ve Altın Karides: 6 sn Dev Okto (dokunulmaz, düşmanları ezer, canavara çarparak hasar verir)
 - [x] Kayıt noktası: yanınca bölüm başından devam; menüde "Bölüm N'den başla" seçici
+
+## Notlar
+- Sürüm numarası menünün sağ alt köşesinde (ör. `s11`). Her güncellemede `index.html` içindeki `?v=` ve `sw.js` içindeki `okto-v` birlikte artırılır.
+- iPhone açılış görselleri `splash/` klasöründe; `preview/splash-gen.html` ile yeniden üretilebilir.

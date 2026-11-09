@@ -1,0 +1,13 @@
+<!DOCTYPE html><html><head><meta charset="utf-8">
+<style>
+@font-face{font-family:Fredoka;font-weight:700;src:url(../fonts/fredoka-700-latin.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+20AC,U+2122,U+2212,U+FEFF,U+FFFD}
+@font-face{font-family:Fredoka;font-weight:700;src:url(../fonts/fredoka-700-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+1E00-1E9F,U+2020,U+20A0-20AB,U+2C60-2C7F,U+A720-A7FF}
+html,body{margin:0;overflow:hidden}canvas{display:block}
+</style></head><body><canvas id="c"></canvas>
+<script src="../okto.js"></script><script src="../title.js"></script>
+<script>
+const q = new URLSearchParams(location.search), top0 = +q.get('top') || 0;
+const c = document.getElementById('c'), ctx = c.getContext('2d'), W = innerWidth, H = innerHeight, D = devicePixelRatio;
+c.width = W * D; c.height = H * D; c.style.width = W + 'px'; c.style.height = H + 'px';
+document.fonts.load('700 40px Fredoka', 'ŞşİıĞğ').then(() => { ctx.setTransform(D, 0, 0, D, 0, 0); OktoTitle.draw(ctx, W, H, 0, { palette: 'pink', accessory: 'goggles', top: top0 }); window.ready = true; });
+</script></body></html>

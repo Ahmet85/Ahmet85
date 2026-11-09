@@ -75,6 +75,7 @@
   .stars span.on { color:#ffd73a; text-shadow:0 0 18px rgba(255,215,58,.8), 0 3px 0 #b07d00; }
   @keyframes starPop { 60% { transform:scale(1.25); } 100% { transform:scale(1); } }
   #clStats { text-align:center; font-size:16px; } #clStats .rw { margin-top:6px; color:#ffd73a; font-weight:bold; font-size:18px; }
+  .errinfo { font-size:11px; opacity:.6; max-width:360px; word-break:break-word; user-select:text; -webkit-user-select:text; }
   .earned { color:#fff7d6; font-weight:bold; font-size:16px; }
   .panel { justify-content:flex-start; overflow-y:auto; padding-top:max(16px,env(safe-area-inset-top)); background:linear-gradient(180deg,#0e5c93,#06223f); gap:10px; }
   .phead { display:flex; align-items:center; gap:10px; width:100%; max-width:420px; }
@@ -154,6 +155,7 @@
     <button id="resumeBtn" class="btn">Devam</button>
     <button id="quitBtn" class="btn alt">Ana Menü</button>
   </div>
+  <p id="errInfo" class="errinfo hidden"></p>
 </div>
 
 <div id="clear" class="overlay hidden">

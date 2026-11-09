@@ -25,8 +25,8 @@ let W = 0, H = 0, DPR = 1, S = 1, safeTop = 0; // S: ekran boyutuna göre ölçe
 function resize() {
   // Boyutu tuvalin ekrandaki gerçek alanından al: iPhone'da innerHeight bazen yanlış (kısa) gelir
   DPR = Math.min(window.devicePixelRatio || 1, 2);
-  const r = cvs.getBoundingClientRect();
-  W = Math.round(r.width) || window.innerWidth; H = Math.round(r.height) || window.innerHeight;
+  const v = viewSize(); W = v.w; H = v.h;
+  cvs.style.height = H + 'px';
   cvs.width = Math.round(W * DPR); cvs.height = Math.round(H * DPR);
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   S = clamp(Math.min(W, H) / 400, 0.75, 1.6);
@@ -36,9 +36,20 @@ function resize() {
 // Olay gelmeden boyut değişirse yakala; ama titremesin diye temkinli:
 // fark belirgin (>4 px) olmalı, üst üste 3 kontrolde (1,5 sn) sürmeli ve son boyutlandırmadan 3 sn geçmiş olmalı.
 let sizeMiss = 0, lastResizeAt = 0;
+// iPhone ana ekran uygulamasında (standalone) en alttaki ana ekran çubuğu bölgesi bazen oyuna verilmez;
+// o zaman gerçek ekran yüksekliğini kullan ki altta koyu şerit kalmasın.
+function viewSize() {
+  const w = Math.round(document.documentElement.clientWidth || window.innerWidth);
+  let h = Math.round(Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0));
+  if (navigator.standalone && window.screen) {
+    const portrait = h >= w, full = portrait ? Math.max(screen.width, screen.height) : Math.min(screen.width, screen.height);
+    if (full > h && full - h < 140) h = full;
+  }
+  return { w, h };
+}
 function checkSize(now) {
-  const r = cvs.getBoundingClientRect();
-  if (Math.abs(r.width - W) > 4 || Math.abs(r.height - H) > 4) sizeMiss++; else sizeMiss = 0;
+  const v = viewSize();
+  if (Math.abs(v.w - W) > 4 || Math.abs(v.h - H) > 4) sizeMiss++; else sizeMiss = 0;
   if (sizeMiss >= 3 && now - lastResizeAt > 3000) { sizeMiss = 0; lastResizeAt = now; resize(); }
 }
 window.addEventListener('resize', resize);
@@ -216,7 +227,7 @@ let state = 'menu';           // menu | play | pause | clear | transition | over
 let player, entities, particles, floaters, inkClouds, rings, banners, slams, shots;
 let depth, score, pearls, lives, combo, comboTimer, spawnTimer, inkCharge, shieldTime, invuln, time, shake, flash, winkT;
 let tier, boss, bossesBeaten, bonusPearls, breathT, blipT, banked;
-let levelN = 1, phase = 'dive', levelHits = 0, levelPearls = 0;
+let levelN = 1, phase = 'dive', levelHits = 0, levelPearls = 0, lastDepthMark = -1;
 const snow = Array.from({ length: 70 }, () => ({ x: Math.random(), y: Math.random(), r: Math.random() * 1.8 + 0.4, s: Math.random() * 0.5 + 0.3 }));
 const bgBubbles = [];
 const keys = {};
@@ -341,7 +352,12 @@ function toMenu() {
   show(ui.ink, false); show(ui.pauseBtn, false); show(ui.mute, false);
 }
 function togglePause() {
-  if (state === 'play') { state = 'pause'; show(ui.pause, true); }
+  if (state === 'play') {
+    state = 'pause'; show(ui.pause, true);
+    const e = store.get('okto_lasterr', null), el = $('errInfo');
+    el.textContent = e ? `Son hata (${e.at}, bölüm ${e.level}, ${e.where}): ${e.msg} — ${e.line}` : '';
+    show(el, !!e);
+  }
   else if (state === 'pause') { state = 'play'; show(ui.pause, false); last = performance.now(); }
 }
 function bankRun() { // dalıştan kazanılan incileri cüzdana bir kez ekle
@@ -600,8 +616,8 @@ function updateBoss(dt) {
     if (b.attackT <= 0) {
       b.attackT = interval;
       if (Math.random() < 0.6) {
-        const n = 1 + Math.min(2, Math.floor(b.lv / 2) + 1), xs = [clamp(player.x, 30 * S, W - 30 * S)];
-        while (xs.length < n) { const x = rand(30 * S, W - 30 * S); if (xs.every(o => Math.abs(o - x) > 90 * S)) xs.push(x); }
+        const n = 1 + Math.min(2, Math.floor(b.lv / 2) + 1), xs = [Number.isFinite(player.x) ? clamp(player.x, 30 * S, W - 30 * S) : W / 2];
+        for (let tries = 0; xs.length < n && tries < 30; tries++) { const x = rand(30 * S, W - 30 * S); if (xs.every(o => !(Math.abs(o - x) <= 90 * S))) xs.push(x); } // en fazla 30 deneme
         for (const x of xs) slams.push({ kind: 'zap', x, t: 0, warn: 1.0, w: 24 * S });
         Sound.tone(900, 0.12, 'square', 0.05, 0, 0, true); Sound.tone(900, 0.12, 'square', 0.05, 0, 0.3, true);
       } else {
@@ -780,7 +796,7 @@ function update(dt) {
   if (comboTimer > 0) { comboTimer -= dt; if (comboTimer <= 0) combo = 0; }
   if (inkCharge < 1) inkCharge = Math.min(1, inkCharge + dt / (boss ? 4 : 7));
   if (shake > 0) shake = Math.max(0, shake - dt * 40);
-  if (Math.floor(depth) % 5 === 0) Missions.track('depth_run', Math.floor(depth));
+  if (Math.floor(depth / 5) !== lastDepthMark) { lastDepthMark = Math.floor(depth / 5); Missions.track('depth_run', Math.floor(depth)); }
 
   // Doğurma
   spawnTimer -= dt;
@@ -825,7 +841,7 @@ function update(dt) {
     } else if (d < e.r + p.r * 0.9) { e.dead = true; collect(e); }
   }
   if (boss && boss.phase === 'fight') { const cy = boss.y - boss.r * (boss.kind === 'puffer' ? 0 : boss.kind === 'jelly' ? 0.3 : 0.2); if (Math.hypot(boss.x - p.x, cy - p.y) < bossContactR() + p.r * 0.6) hurt(); }
-  entities = entities.filter(e => !e.dead && e.y > -120 * S && e.y < H + 400 * S && e.x > -200 * S && e.x < W + 200 * S);
+  entities = entities.filter(e => !e.dead && Number.isFinite(e.x) && Number.isFinite(e.y) && e.y > -120 * S && e.y < H + 400 * S && e.x > -200 * S && e.x < W + 200 * S);
 
   // Efektler
   for (const q of particles) { q.x += q.vx * dt; q.y += q.vy * dt; q.vx *= Math.pow(0.1, dt); q.vy *= Math.pow(0.1, dt); q.life -= q.decay * dt; }
@@ -1409,9 +1425,20 @@ $('missionClose').onclick = () => { show(ui.missions, false); refreshMenu(); };
 
 // ---------- Ana döngü ----------
 let last = performance.now();
-let sizeCheckT = 0;
+let sizeCheckT = 0, errCount = 0;
+function reportError(where, err) {
+  errCount++;
+  const info = { where, msg: String(err && err.message || err), line: String(err && err.stack || '').split('\n').slice(0, 3).join(' / '), state, level: levelN, at: new Date().toLocaleString('tr-TR') };
+  try { console.error('[Okto]', info); } catch {}
+  if (errCount < 20) store.set('okto_lasterr', info);
+}
 function frame(now) {
+  requestAnimationFrame(frame); // önce sıradaki kareyi iste: bir hata döngüyü asla durdurmasın
   const dt = Math.min((now - last) / 1000, 1 / 20); last = now;
+  try { stepFrame(now, dt); } catch (err) { reportError('güncelleme', err); }
+  try { drawFrame(); } catch (err) { reportError('çizim', err); try { ctx.restore(); } catch {} }
+}
+function stepFrame(now, dt) {
   if ((sizeCheckT += dt) > 0.5) { sizeCheckT = 0; checkSize(now); }
   if (state === 'play') update(dt);
   else if (state === 'transition') { updateTransition(dt); updateFx(dt); for (const q of particles) { q.x += q.vx * dt; q.y += q.vy * dt; q.life -= q.decay * dt; } particles = particles.filter(q => q.life > 0); }
@@ -1425,7 +1452,9 @@ function frame(now) {
   } else if (state === 'menu') time += dt;
   const scroll = state === 'play' ? (70 + Math.min(depth, 900) * 0.18) * S : 20 * S;
   if (state !== 'pause' && state !== 'menu') updateAmbient(dt, scroll);
-
+}
+function drawFrame() {
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   ctx.save();
   if (shake > 0) ctx.translate(rand(-shake, shake), rand(-shake, shake));
   if (state === 'menu' && window.OktoTitle) OktoTitle.draw(ctx, W, H, time, Object.assign(look(), { top: safeTop }));
@@ -1433,7 +1462,7 @@ function frame(now) {
     drawBackground();
     if (boss) drawBoss();
     drawSlams();
-    for (const e of entities) drawEntity(e);
+    for (const e of entities) { try { drawEntity(e); } catch (err) { e.dead = true; reportError('nesne çizimi ' + e.type, err); try { ctx.restore(); } catch {} } }
     drawParticles();
     drawPlayer();
     drawFx();
@@ -1448,7 +1477,6 @@ function frame(now) {
     c.scale(w / 200, h / 160);
     OktoChar.draw(c, 100, 58, 36, time, Object.assign(previewLook(), { expr: { wink: Math.sin(time * 1.3) > 0.85 ? 1 : 0, blink: (time % 4) < 0.12 ? 1 : 0 }, bob: Math.sin(time * 3) }));
   }
-  requestAnimationFrame(frame);
 }
 
 resize();

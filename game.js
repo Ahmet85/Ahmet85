@@ -33,15 +33,16 @@ function resize() {
   safeTop = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sat')) || 0;
   layoutMenuButtons();
 }
-function checkSize() { // olay gelmese bile boyut değiştiyse yakala
+// Olay gelmeden boyut değişirse yakala; ama titremesin diye temkinli:
+// fark belirgin (>4 px) olmalı, üst üste 3 kontrolde (1,5 sn) sürmeli ve son boyutlandırmadan 3 sn geçmiş olmalı.
+let sizeMiss = 0, lastResizeAt = 0;
+function checkSize(now) {
   const r = cvs.getBoundingClientRect();
-  if (Math.abs(r.width - W) > 1 || Math.abs(r.height - H) > 1) resize();
+  if (Math.abs(r.width - W) > 4 || Math.abs(r.height - H) > 4) sizeMiss++; else sizeMiss = 0;
+  if (sizeMiss >= 3 && now - lastResizeAt > 3000) { sizeMiss = 0; lastResizeAt = now; resize(); }
 }
 window.addEventListener('resize', resize);
 window.addEventListener('orientationchange', () => setTimeout(resize, 300));
-window.addEventListener('pageshow', () => setTimeout(resize, 50));
-if (window.visualViewport) visualViewport.addEventListener('resize', () => setTimeout(checkSize, 50));
-window.addEventListener('scroll', () => { if (window.scrollY || window.scrollX) window.scrollTo(0, 0); });
 
 // ---------- Profil (cüzdan, kostümler, günlük görevler) ----------
 const Profile = {
@@ -1411,7 +1412,7 @@ let last = performance.now();
 let sizeCheckT = 0;
 function frame(now) {
   const dt = Math.min((now - last) / 1000, 1 / 20); last = now;
-  if ((sizeCheckT += dt) > 0.5) { sizeCheckT = 0; checkSize(); }
+  if ((sizeCheckT += dt) > 0.5) { sizeCheckT = 0; checkSize(now); }
   if (state === 'play') update(dt);
   else if (state === 'transition') { updateTransition(dt); updateFx(dt); for (const q of particles) { q.x += q.vx * dt; q.y += q.vy * dt; q.life -= q.decay * dt; } particles = particles.filter(q => q.life > 0); }
   else if (state === 'clear') { time += dt; updateFx(dt); }

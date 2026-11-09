@@ -23,35 +23,26 @@ const FONT = 'Fredoka, "Trebuchet MS", sans-serif';
 const cvs = $('c'), ctx = cvs.getContext('2d');
 let W = 0, H = 0, DPR = 1, S = 1, safeTop = 0; // S: ekran boyutuna göre ölçek birimi
 function resize() {
-  // Boyutu tuvalin ekrandaki gerçek alanından al: iPhone'da innerHeight bazen yanlış (kısa) gelir
+  // İlk sürümdeki basit ve kararlı ölçüm (deneysel ölçümler titremeye yol açtı, geri alındı)
   DPR = Math.min(window.devicePixelRatio || 1, 2);
-  const v = viewSize(); W = v.w; H = v.h;
-  cvs.style.height = H + 'px';
+  W = window.innerWidth; H = window.innerHeight;
   cvs.width = Math.round(W * DPR); cvs.height = Math.round(H * DPR);
+  cvs.style.width = W + 'px'; cvs.style.height = H + 'px';
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   S = clamp(Math.min(W, H) / 400, 0.75, 1.6);
   safeTop = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sat')) || 0;
   layoutMenuButtons();
 }
-// Olay gelmeden boyut değişirse yakala; ama titremesin diye temkinli:
-// fark belirgin (>4 px) olmalı, üst üste 3 kontrolde (1,5 sn) sürmeli ve son boyutlandırmadan 3 sn geçmiş olmalı.
-let sizeMiss = 0, lastResizeAt = 0;
-// iPhone ana ekran uygulamasında (standalone) en alttaki ana ekran çubuğu bölgesi bazen oyuna verilmez;
-// o zaman gerçek ekran yüksekliğini kullan ki altta koyu şerit kalmasın.
-function viewSize() {
-  const w = Math.round(document.documentElement.clientWidth || window.innerWidth);
-  let h = Math.round(Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0));
-  if (navigator.standalone && window.screen) {
-    const portrait = h >= w, full = portrait ? Math.max(screen.width, screen.height) : Math.min(screen.width, screen.height);
-    if (full > h && full - h < 140) h = full;
-  }
-  return { w, h };
+// iPhone'un oyuna vermediği en alt şerit, sayfanın zemin rengiyle boyanır: sahnenin alt rengine eşitle
+let edgeColor = '';
+function setEdgeColor(c) { if (c !== edgeColor) { edgeColor = c; document.documentElement.style.background = c; document.body.style.background = c; } }
+function sceneBottomColor() {
+  if (state === 'menu') return '#d9a95f';
+  return lerpColor('#0b5d8f', '#010a18', clamp(depth / 600, 0, 1));
 }
-function checkSize(now) {
-  const v = viewSize();
-  if (Math.abs(v.w - W) > 4 || Math.abs(v.h - H) > 4) sizeMiss++; else sizeMiss = 0;
-  if (sizeMiss >= 3 && now - lastResizeAt > 3000) { sizeMiss = 0; lastResizeAt = now; resize(); }
-}
+// Sayfanın yakınlaşmasını engelle (iki parmak / çift dokunuş): sahne kaymasın
+document.addEventListener('gesturestart', e => e.preventDefault());
+document.addEventListener('dblclick', e => e.preventDefault());
 window.addEventListener('resize', resize);
 window.addEventListener('orientationchange', () => setTimeout(resize, 300));
 
@@ -1458,7 +1449,7 @@ function frame(now) {
   try { drawFrame(); } catch (err) { reportError('çizim', err); try { ctx.restore(); } catch {} }
 }
 function stepFrame(now, dt) {
-  if ((sizeCheckT += dt) > 0.5) { sizeCheckT = 0; checkSize(now); }
+  if ((sizeCheckT += dt) > 0.5) { sizeCheckT = 0; setEdgeColor(sceneBottomColor()); }
   if (state === 'play') update(dt);
   else if (state === 'transition') { updateTransition(dt); updateFx(dt); for (const q of particles) { q.x += q.vx * dt; q.y += q.vy * dt; q.life -= q.decay * dt; } particles = particles.filter(q => q.life > 0); }
   else if (state === 'clear') { time += dt; updateFx(dt); }

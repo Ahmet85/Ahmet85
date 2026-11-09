@@ -412,8 +412,11 @@ function gameOver() {
 }
 
 // ---------- Duyurular ----------
-function banner(text, sub = '', color = '#ffe066', dur = 2.4) { banners.push({ text, sub, color, life: dur, dur }); }
-function toast(text) { banners.push({ text, sub: '', color: '#b8ffb0', life: 2.2, dur: 2.2, small: true }); }
+// Tuvale çizilen yazılarda emoji kullanma: iPhone bunların genişliğini ölçemiyor, yazı kayıyor ve taşıyor
+const plain = t => String(t).replace(/[\p{Extended_Pictographic}\uFE0F\u200D\u2600-\u27BF]/gu, '').replace(/\s+/g, ' ').trim();
+function textW(text, size) { const m = ctx.measureText(text).width, est = text.length * size * 0.56; return m > est * 0.5 ? m : est; }
+function banner(text, sub = '', color = '#ffe066', dur = 2.4) { banners.push({ text: plain(text), sub: plain(sub), color, life: dur, dur }); }
+function toast(text) { banners.push({ text: plain(text), sub: '', color: '#b8ffb0', life: 2.2, dur: 2.2, small: true }); }
 
 // ---------- Varlıklar ----------
 const ENEMIES = new Set(['jelly', 'urchin', 'puffer', 'shark', 'angler', 'blob', 'spike']);
@@ -1137,7 +1140,10 @@ function drawEntity(e) {
       const g = ctx.createRadialGradient(-r * 0.3, -r * 0.3, 1, 0, 0, r * 1.2);
       g.addColorStop(0, 'rgba(255,255,255,.9)'); g.addColorStop(0.6, 'rgba(120,220,255,.35)'); g.addColorStop(1, 'rgba(120,220,255,.8)');
       ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, Math.sin(e.t * 3) * 3 * S, r * 1.15, 0, TAU); ctx.fill();
-      ctx.font = `${r * 1.1}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('🛡️', 0, 1);
+      ctx.fillStyle = '#e8f1f7'; ctx.strokeStyle = '#5b7a90'; ctx.lineWidth = 1.5 * S; ctx.lineJoin = 'round';
+      ctx.beginPath(); ctx.moveTo(0, -r * 0.6); ctx.quadraticCurveTo(r * 0.3, -r * 0.45, r * 0.55, -r * 0.5); ctx.quadraticCurveTo(r * 0.55, r * 0.25, 0, r * 0.62);
+      ctx.quadraticCurveTo(-r * 0.55, r * 0.25, -r * 0.55, -r * 0.5); ctx.quadraticCurveTo(-r * 0.3, -r * 0.45, 0, -r * 0.6); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = '#9fb6c6'; ctx.beginPath(); ctx.moveTo(0, -r * 0.45); ctx.lineTo(0, r * 0.45); ctx.stroke();
       break;
     }
     case 'star': {
@@ -1284,7 +1290,8 @@ function drawSlams() {
       const a = 0.18 + 0.14 * Math.sin(s.t * 25);
       ctx.fillStyle = s.kind === 'zap' ? `rgba(255,240,90,${a})` : `rgba(255,60,80,${a})`; ctx.fillRect(s.x - s.w, 0, s.w * 2, H);
       ctx.fillStyle = `rgba(255,255,255,${0.6 + 0.4 * Math.sin(s.t * 25)})`; ctx.font = `700 ${26 * S}px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText(s.kind === 'zap' ? '⚡' : '!', s.x, H * 0.5);
+      if (s.kind === 'zap') { const z = 14 * S, x = s.x, y = H * 0.5; ctx.beginPath(); ctx.moveTo(x + z * 0.2, y - z); ctx.lineTo(x - z * 0.55, y + z * 0.15); ctx.lineTo(x - z * 0.05, y + z * 0.15); ctx.lineTo(x - z * 0.25, y + z); ctx.lineTo(x + z * 0.55, y - z * 0.15); ctx.lineTo(x + z * 0.05, y - z * 0.15); ctx.closePath(); ctx.fill(); }
+      else ctx.fillText('!', s.x, H * 0.5);
       continue;
     }
     if (s.kind === 'zap') { // yıldırım
@@ -1383,20 +1390,29 @@ function drawBanners() {
   let y = Math.max(safeTop + 150, H * 0.2), ys = safeTop + 106; // Okto'nun başlangıç yerinin üstünde kalsın
   for (const b of banners) {
     const age = b.dur - b.life, a = clamp(Math.min(age * 4, b.life * 2), 0, 1), sc = 0.7 + 0.3 * Math.min(1, age * 5);
-    ctx.save(); ctx.globalAlpha = a; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
+    // ortalamayı kendimiz yapıyoruz (textAlign center iPhone'da bazı yazılarda kayıyordu)
+    ctx.save(); ctx.globalAlpha = a; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
     if (b.small) {
-      ctx.font = `700 ${15 * S}px ${FONT}`;
-      const w = ctx.measureText(b.text).width + 28 * S;
-      ctx.fillStyle = 'rgba(10,40,30,.75)'; ctx.beginPath(); ctx.roundRect(W / 2 - w / 2, ys - 16 * S, w, 32 * S, 16 * S); ctx.fill();
-      ctx.fillStyle = b.color; ctx.fillText(b.text, W / 2, ys + 1); ys += 40 * S;
+      const fs = 15 * S; ctx.font = `700 ${fs}px ${FONT}`;
+      let tw = textW(b.text, fs); const k = Math.min(1, (W - 40) / (tw + 28 * S));
+      ctx.translate(W / 2, ys); ctx.scale(k, k);
+      const w = tw + 28 * S;
+      ctx.fillStyle = 'rgba(10,40,30,.75)'; ctx.beginPath(); ctx.roundRect(-w / 2, -16 * S, w, 32 * S, 16 * S); ctx.fill();
+      ctx.fillStyle = b.color; ctx.fillText(b.text, -tw / 2, 1); ys += 40 * S;
     } else {
-      ctx.translate(W / 2, y);
-      ctx.font = `700 ${38 * S}px ${FONT}`;
-      const fit = Math.min(1, (W * 0.92) / (ctx.measureText(b.text).width + 18 * S)); // ekrana sığdır
-      ctx.scale(sc * fit, sc * fit);
-      ctx.lineWidth = 9 * S; ctx.strokeStyle = 'rgba(6,20,50,.85)'; ctx.strokeText(b.text, 0, 0);
-      ctx.fillStyle = b.color; ctx.fillText(b.text, 0, 0);
-      if (b.sub) { ctx.font = `700 ${18 * S}px ${FONT}`; ctx.lineWidth = 6 * S; ctx.strokeText(b.sub, 0, 36 * S); ctx.fillStyle = '#fff'; ctx.fillText(b.sub, 0, 36 * S); }
+      const fs = 38 * S; ctx.translate(W / 2, y);
+      ctx.font = `700 ${fs}px ${FONT}`;
+      const tw = textW(b.text, fs), fit = Math.min(1, (W * 0.92) / (tw + 18 * S)); // ekrana sığdır
+      ctx.save(); ctx.scale(sc * fit, sc * fit);
+      ctx.lineWidth = 9 * S; ctx.strokeStyle = 'rgba(6,20,50,.85)'; ctx.strokeText(b.text, -tw / 2, 0);
+      ctx.fillStyle = b.color; ctx.fillText(b.text, -tw / 2, 0);
+      ctx.restore();
+      if (b.sub) {
+        const ss = 18 * S; ctx.font = `700 ${ss}px ${FONT}`;
+        const sw = textW(b.sub, ss), sf = Math.min(1, (W * 0.92) / (sw + 12 * S)) * sc;
+        ctx.translate(0, 36 * S * sc); ctx.scale(sf, sf);
+        ctx.lineWidth = 6 * S; ctx.strokeStyle = 'rgba(6,20,50,.85)'; ctx.strokeText(b.sub, -sw / 2, 0); ctx.fillStyle = '#fff'; ctx.fillText(b.sub, -sw / 2, 0);
+      }
       y += 90 * S;
     }
     ctx.restore();
@@ -1546,7 +1562,7 @@ function frame(now) {
 }
 function stepFrame(now, dt) {
   if (shake > 0 && state !== 'play') shake = Math.max(0, shake - dt * 40); // ölünce/menüde sarsıntı sönsün
-  if ((sizeCheckT += dt) > 0.5) { sizeCheckT = 0; setEdgeColor(sceneBottomColor()); }
+  if ((sizeCheckT += dt) > 0.5) { sizeCheckT = 0; edgeDue = true; }
   if (state === 'play') update(dt);
   else if (state === 'transition') { updateTransition(dt); updateFx(dt); for (const q of particles) { q.x += q.vx * dt; q.y += q.vy * dt; q.life -= q.decay * dt; } particles = particles.filter(q => q.life > 0); }
   else if (state === 'clear') { time += dt; updateFx(dt); }
@@ -1559,6 +1575,19 @@ function stepFrame(now, dt) {
   } else if (state === 'menu') time += dt;
   const scroll = state === 'play' ? (70 + Math.min(depth, 900) * 0.18) * S : 20 * S;
   if (state !== 'pause' && state !== 'menu') updateAmbient(dt, scroll);
+}
+let edgeDue = true;
+function updateEdge() { // tuvalin en alt orta pikselini oku, şeridi aynı renge boya
+  edgeDue = false;
+  const open = id => !$(id).classList.contains('hidden');
+  if (open('shop') || open('missions')) return setEdgeColor('#06223f');
+  let r, g, b;
+  try { const d = ctx.getImageData(Math.floor(cvs.width / 2), cvs.height - 2, 1, 1).data; r = d[0]; g = d[1]; b = d[2]; }
+  catch { const c = sceneBottomColor(); return setEdgeColor(c); }
+  if (open('pauseMenu') || open('over') || open('clear') || open('help')) { // koyu perdeyle aynı oranda karart
+    const k = 0.8; r = r * (1 - k) + 2 * k; g = g * (1 - k) + 12 * k; b = b * (1 - k) + 26 * k;
+  }
+  setEdgeColor(`rgb(${Math.round(r)},${Math.round(g)},${Math.round(b)})`);
 }
 function drawFrame() {
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
@@ -1584,6 +1613,7 @@ function drawFrame() {
     c.scale(w / 200, h / 160);
     OktoChar.draw(c, 100, 58, 36, time, Object.assign(previewLook(), { expr: { wink: Math.sin(time * 1.3) > 0.85 ? 1 : 0, blink: (time % 4) < 0.12 ? 1 : 0 }, bob: Math.sin(time * 3) }));
   }
+  if (edgeDue) updateEdge();
 }
 
 resize();

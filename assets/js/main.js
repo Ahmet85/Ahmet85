@@ -325,3 +325,17 @@ function sceneMarkup(key, cfg) {
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !modal.hidden) close(); });
   window.addEventListener('resize', () => current && current.resize());
 })();
+
+// Sayfa içi bağlantılar (logo, menü): Ventus sahnesinin içinden kayarak geçmek yerine
+// doğrudan hedefe atlar.
+document.querySelectorAll('a[href^="#"]').forEach((a) => {
+  a.addEventListener('click', (e) => {
+    const id = a.getAttribute('href').slice(1);
+    const target = id ? document.getElementById(id) : null;
+    if (!target) return;
+    e.preventDefault();
+    const top = id === 'ust' ? 0 : target.getBoundingClientRect().top + window.scrollY - 80;
+    window.scrollTo({ top, behavior: 'instant' });
+    history.replaceState(null, '', '#' + id);
+  });
+});

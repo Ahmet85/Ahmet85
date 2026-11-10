@@ -1,5 +1,11 @@
 # Okto müzikleri
 
-Kendi açılış müziğini koymak için dosyayı bu klasöre **`acilis.mp3`** adıyla ekle.
-Oyun önce bu dosyayı arar; bulursa onu döngüde çalar, bulamazsa `music.js` içindeki
-kodla üretilmiş geçici müziği çalar.
+Oyunda iki yerde müzik çalar. Kendi müziğini koymak için dosyayı bu klasöre şu adla ekle:
+
+| Dosya | Nerede çalar |
+|---|---|
+| `acilis.mp3` | Açılış ekranı (menü) |
+| `oyun.mp3` | Oyun sırasında (tüm kademeler) |
+
+Dosya yoksa `music.js` içindeki kodla üretilen müzikler çalar: açılış marimbası ve oyun içinde
+3 kademe (Güneşli Sular: neşeli marimba, Alacakaranlık: yankılı çanlar, Karanlık Derinlikler: bas ve sonar).

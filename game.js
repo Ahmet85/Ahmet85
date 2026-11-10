@@ -327,7 +327,7 @@ function refreshMute() {
 }
 function menuMusic() {
   const M = window.OktoMusic; if (!M || state !== 'menu') return;
-  M.setMuted(Sound.muted); if (!M.playing) M.start(); setTimeout(refreshMute, 50);
+  M.setMuted(Sound.muted); if (!M.playing || M.current !== 'menu') M.play('menu'); setTimeout(refreshMute, 50);
 }
 document.addEventListener('pointerdown', e => { if (state === 'menu' && !Sound.muted && e.target.id !== 'musicBtn') menuMusic(); }, true);
 document.addEventListener('keydown', () => { if (state === 'menu' && !Sound.muted) menuMusic(); }, true);
@@ -374,8 +374,9 @@ function startGame(n = startLevel()) {
   levelN = n; const L = levelInfo(n); plan = makePlan(L);
   depth = L.start; tier = L.tier; Sound.tier = L.tier; inkCharge = n > 1 ? 1 : 0.5;
   banner(`BÖLÜM ${n}`, L.name, '#ffe066', 2.6);
+  gameMusic();
   if (n > 1) toast(L.news);
-  window.OktoMusic && OktoMusic.stop(0.8);
+
   for (const p of [ui.menu, ui.over, ui.pause, ui.shop, ui.missions, ui.help, ui.clear]) show(p, false);
   show(ui.ink, true); show(ui.pauseBtn, true); show(ui.mute, true);
 }
@@ -388,12 +389,12 @@ function toMenu() {
 }
 function togglePause() {
   if (state === 'play') {
-    state = 'pause'; show(ui.pause, true);
+    state = 'pause'; show(ui.pause, true); window.OktoMusic && OktoMusic.stop(0.3);
     const e = store.get('okto_lasterr', null), el = $('errInfo');
     el.textContent = e ? `Son hata (${e.at}, bölüm ${e.level}, ${e.where}): ${e.msg} — ${e.line}` : '';
     show(el, !!e);
   }
-  else if (state === 'pause') { state = 'play'; show(ui.pause, false); last = performance.now(); }
+  else if (state === 'pause') { state = 'play'; show(ui.pause, false); last = performance.now(); gameMusic(); }
 }
 function bankRun() { // dalıştan kazanılan incileri cüzdana bir kez ekle
   if (banked || !player) return 0;
@@ -405,7 +406,7 @@ function bankRun() { // dalıştan kazanılan incileri cüzdana bir kez ekle
   return earned;
 }
 function gameOver() {
-  state = 'over'; Sound.over(); vibrate([80, 60, 160]); drag.active = false;
+  state = 'over'; Sound.over(); vibrate([80, 60, 160]); drag.active = false; window.OktoMusic && OktoMusic.stop(1.2);
   const D = Profile.data, isBest = score > D.best;
   const earned = bankRun();
   $('againBtn').textContent = levelN > 1 ? `Bölüm ${ablative(levelN)} devam` : 'Tekrar Dal';
@@ -417,6 +418,9 @@ function gameOver() {
   show(ui.ink, false); show(ui.pauseBtn, false);
   setTimeout(() => { if (state === 'over') show(ui.over, true); }, 700);
 }
+
+// ---------- Oyun içi müzik: kademeye göre parça ----------
+function gameMusic() { const M = window.OktoMusic; if (M) { M.setMuted(Sound.muted); M.play('g' + Math.min(3, tier)); } }
 
 // ---------- Zorluk ----------
 const DIFF = {
@@ -909,7 +913,7 @@ function updateSlams(dt) {
 // ---------- Bölüm sonu: özet kartı ve girdap geçişi ----------
 let trans = null;
 function levelClear() {
-  state = 'clear'; drag.active = false;
+  state = 'clear'; drag.active = false; window.OktoMusic && OktoMusic.stop(1.0);
   const n = levelN, goal = pearlGoal(n);
   const stars = 1 + (levelHits <= 1 ? 1 : 0) + (levelPearls >= goal ? 1 : 0);
   const reward = 10 + 5 * n + stars * 10;
@@ -946,7 +950,7 @@ function updateTransition(dt) {
     const L = levelInfo(levelN);
     depth = L.start; tier = L.tier; Sound.tier = L.tier;
     entities = []; slams = []; shots = []; inkClouds = []; particles = []; rocks = []; nearL = []; plan = makePlan(L); zone = 'open'; canyonAmt = 0; seabedAmt = 0;
-    levelHits = 0; levelPearls = 0; inkCharge = 1; phase = 'dive';
+    levelHits = 0; levelPearls = 0; inkCharge = 1; phase = 'dive'; gameMusic();
   } else { // girdaptan fırlayış
     const a = clamp((T.t - 1.5) / 1.0, 0, 1), e = 1 - Math.pow(1 - a, 3);
     player.x = cx; player.y = lerp(cy, H * 0.35, e); player.vx = 0; player.vy = -200 * S * (1 - a);

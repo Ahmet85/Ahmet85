@@ -1,5 +1,5 @@
 /* OKTO bölüm sonu canavarları ve saldırıları: game.js'ten ayrılmış çizim modülü (kodla çizilen varlıklar).
-   Kullanım: OktoBosses.draw(G), OktoBosses.drawAttacks(G)  — G = { ctx, S, W, H, time, FONT, boss, player, slams, shots } */
+   Kullanım: OktoBosses.draw(G), OktoBosses.drawAttacks(G), OktoBosses.DRAWERS (kimliğe göre çizimler; olmayanlar geçici çizimle)  — G = { ctx, S, W, H, time, FONT, boss, player, slams, shots } */
 (() => {
 'use strict';
 const TAU = Math.PI * 2;
@@ -107,13 +107,29 @@ function drawJellyBoss(b, R, hit, stunned) {
   bossEyes(R, -R * 0.35, R * 0.38, R * 0.22, '#3b1f8a', '#ffe14d', stunned, true);
   ctx.strokeStyle = '#3b1f8a'; ctx.lineWidth = 3 * S; ctx.beginPath(); ctx.moveTo(-R * 0.18, -R * 0.02); ctx.quadraticCurveTo(0, -R * 0.12, R * 0.18, -R * 0.02); ctx.stroke();
 }
+// Görseli henüz hazır olmayan (veriyle tanımlanmış) canavarlar için geçici çizim: renkli gövde, gözler, yüzgeçler
+function drawGenericBoss(b, R, hit, stunned) {
+  const L = (b.def && b.def.look) || {}, body = hit ? '#fff' : L.body || '#8a7dff', line = L.line || '#24124f';
+  ctx.strokeStyle = line; ctx.lineWidth = 3 * S;
+  for (let i = 0; i < 6; i++) { const s = i / 5 - 0.5; bossTentacle(s * R * 1.3, R * 0.5, Math.PI / 2 + s * 1.2, R * 0.9, R * 0.16, time, i * 1.7, body, line); }
+  const g = ctx.createRadialGradient(-R * 0.3, -R * 0.4, R * 0.1, 0, 0, R * 1.3);
+  g.addColorStop(0, hit ? '#fff' : 'rgba(255,255,255,.55)'); g.addColorStop(0.35, body); g.addColorStop(1, line);
+  ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(0, 0, R * 1.1, R * (0.95 + Math.sin(time * 2) * 0.03), 0, 0, TAU); ctx.fill(); ctx.stroke();
+  if (L.shape === 'crown') { // büyük canavar: taç
+    ctx.fillStyle = hit ? '#fff' : '#ffd36b'; ctx.strokeStyle = '#8a5a00'; ctx.beginPath();
+    const w = R * 0.7, y0 = -R * 0.82, h = R * 0.42;
+    ctx.moveTo(-w, y0); ctx.lineTo(-w, y0 - h * 0.6); ctx.lineTo(-w * 0.5, y0 - h * 0.25); ctx.lineTo(0, y0 - h); ctx.lineTo(w * 0.5, y0 - h * 0.25); ctx.lineTo(w, y0 - h * 0.6); ctx.lineTo(w, y0); ctx.closePath(); ctx.fill(); ctx.stroke();
+  }
+  bossEyes(R, -R * 0.2, R * 0.4, R * 0.26, line, L.iris || '#ffe14d', stunned, true);
+  ctx.strokeStyle = line; ctx.lineWidth = 3.5 * S; ctx.beginPath(); ctx.moveTo(-R * 0.25, R * 0.3); ctx.quadraticCurveTo(0, R * 0.18, R * 0.25, R * 0.3); ctx.stroke();
+}
+// Canavar çizimleri kimliğe göre; yeni canavarın çizimi buraya eklenir: DRAWERS['kimlik'] = (b, R, hit, stunned) => {...}
+const DRAWERS = { puffer: drawPufferBoss, jelly: drawJellyBoss, squid: drawSquidBoss };
 function drawBoss() {
   const b = boss;
   ctx.save(); ctx.translate(b.x, b.y);
   const hit = b.flashT > 0, stunned = b.stun > 0;
-  if (b.kind === 'puffer') drawPufferBoss(b, b.r, hit, stunned);
-  else if (b.kind === 'jelly') drawJellyBoss(b, b.r, hit, stunned);
-  else drawSquidBoss(b, b.r, hit, stunned);
+  (DRAWERS[b.kind] || drawGenericBoss)(b, b.r, hit, stunned);
   ctx.restore();
 }
 function drawSlams() {
@@ -155,5 +171,5 @@ function drawSlams() {
 }
 
 
-window.OktoBosses = { draw(G) { use(G); if (boss) drawBoss(); }, drawAttacks(G) { use(G); drawSlams(); } };
+window.OktoBosses = { DRAWERS, draw(G) { use(G); if (boss) drawBoss(); }, drawAttacks(G) { use(G); drawSlams(); } };
 })();

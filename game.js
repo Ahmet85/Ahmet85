@@ -8,9 +8,16 @@ const rand = (a, b) => a + Math.random() * (b - a);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const lerp = (a, b, t) => a + (b - a) * t;
 const TAU = Math.PI * 2;
+// Test adresi (yalnızca geliştirme): ?plan=grup  ?bolum=N  ?boss=kimlik  ?test
+// Böyle açılınca hiçbir şey kaydedilmez; normal açılışta (parametresiz) hiçbir etkisi yoktur.
+const TEST = (() => {
+  const q = new URLSearchParams(location.search), on = ['plan', 'bolum', 'boss', 'test'].some(k => q.has(k));
+  return { on, plan: q.get('plan'), level: parseInt(q.get('bolum'), 10) || 0, boss: q.get('boss') || '' };
+})();
+if (TEST.on && TEST.plan && window.OktoCampaign) OktoCampaign.setMode(TEST.plan);
 const store = {
   get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } },
-  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+  set(k, v) { if (TEST.on) return; try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
 };
 function lerpColor(c1, c2, t) {
   const a = parseInt(c1.slice(1), 16), b = parseInt(c2.slice(1), 16);
@@ -150,6 +157,9 @@ const Sound = {
   tierUp(n) { const base = n === 2 ? 392 : 262; [0, 4, 7, 12].forEach((s, i) => this.tone(base * Math.pow(2, s / 12), 0.9, 'sine', 0.08, 0, i * 0.12, true)); this.tone(base / 2, 1.6, 'sine', 0.12, -base / 4, 0, true); },
   bossWarn() { for (let i = 0; i < 3; i++) { this.tone(110, 0.5, 'sawtooth', 0.1, -30, i * 0.55); this.tone(55, 0.5, 'sine', 0.2, 0, i * 0.55); } },
   bossHit() { this.tone(160, 0.3, 'square', 0.12, -90); this.noise(0.3, 0.2, 900); },
+  cineRumble() { this.tone(45, 2.2, 'sine', 0.22, -10); this.filtered(2.0, 0.12, 'lowpass', 300, 1, 0, 0.8); },
+  cineRise() { this.tone(70, 1.8, 'sawtooth', 0.06, 120, 0, true); this.filtered(1.6, 0.1, 'bandpass', 600, 0.7, 0.2, 0.6); },
+  fanfare() { [523, 659, 784, 1047, 784, 1047, 1319].forEach((f, i) => this.tone(f, i > 4 ? 0.5 : 0.22, 'triangle', 0.11, 0, i * 0.13 + (i > 4 ? 0.1 : 0), true)); this.noise(1.5, 0.18, 3000, 0.3); },
   bossDown() { [392, 494, 587, 784, 988].forEach((f, i) => this.tone(f, 0.3, 'triangle', 0.12, 0, i * 0.1, true)); this.noise(1.2, 0.25, 2000); },
   vortex() { // girdaba dalış: alçalan uğultu + kabarcıklar + çıkışta parlama
     this.filtered(1.6, 0.12, 'lowpass', 900, 1, 0, 0.6); this.tone(420, 1.5, 'sine', 0.12, -340, 0, true);
@@ -250,13 +260,14 @@ function reset() {
   spawnTimer = 0.5; inkCharge = 0.5; shieldTime = 0; invuln = 1.5; time = 0; shake = 0; flash = 0; winkT = 0;
   if (window.OktoZones) OktoZones.exit();
   tier = 1; Sound.tier = 1; boss = null; bossesBeaten = 0; breathT = 1.2; blipT = 0; banked = false;
-  levelN = 1; phase = 'dive'; levelHits = 0; levelPearls = 0; trans = null;
+  levelN = 1; phase = 'dive'; levelHits = 0; levelPearls = 0; trans = null; cine = null; victory = null;
 }
 
 // ---------- Girdi ----------
 const bounds = () => ({ x0: player.r, x1: W - player.r, y0: player.r + 50 * S + safeTop, y1: H - player.r });
 cvs.addEventListener('pointerdown', e => {
   Sound.init();
+  if (state === 'cinema') { if (cine && cine.t > 1.2) cine.t = Math.max(cine.t, cine.dur - 0.5); return; } // sinematiği geç
   if (state === 'menu') {
     if (hitPlay(e.clientX, e.clientY)) { startGame(); return; }
     const r = window.OktoTitle && OktoTitle.tap && OktoTitle.tap(e.clientX, e.clientY, time);
@@ -294,6 +305,7 @@ window.addEventListener('keyup', e => { keys[e.key] = false; });
 let bgAway = false, musicWasOn = false;
 function goBackground() {
   if (bgAway) return; bgAway = true;
+  if (state === 'cinema') { cine.t = cine.dur; updateCinema(0); } // sinematik yarıda kalırsa savaşı başlat ve duraklat
   if (state === 'play') togglePause();
   drag.active = false;
   const M = window.OktoMusic;
@@ -332,7 +344,7 @@ function menuMusic() {
 }
 document.addEventListener('pointerdown', e => { if (state === 'menu' && !Sound.muted && e.target.id !== 'musicBtn') menuMusic(); }, true);
 document.addEventListener('keydown', () => { if (state === 'menu' && !Sound.muted) menuMusic(); }, true);
-function startLevel() { const D = Profile.data; return clamp(D.startLevel || 1, 1, D.checkpoint || 1); }
+function startLevel() { if (TEST.level) return TEST.level; const D = Profile.data; return clamp(D.startLevel || 1, 1, D.checkpoint || 1); }
 function refreshMenu() {
   const lp = $('levelPick'), cp = Profile.data.checkpoint || 1, sl = startLevel();
   lp.classList.toggle('hidden', cp < 2);
@@ -374,6 +386,7 @@ function startGame(n = startLevel()) {
   Sound.init(); reset(); state = 'play'; Missions.ensure();
   levelN = n; const L = levelInfo(n); plan = makePlan(L);
   depth = L.start; tier = L.tier; Sound.tier = L.tier; inkCharge = n > 1 ? 1 : 0.5;
+  if (TEST.boss) depth = L.end - 3; // test: canavara hemen gel
   banner(`BÖLÜM ${n}`, L.name, '#ffe066', 2.6);
   gameMusic();
   if (n > 1) toast(L.news);
@@ -421,7 +434,7 @@ function gameOver() {
 }
 
 // ---------- Oyun içi müzik: kademeye göre parça ----------
-function gameMusic() { const M = window.OktoMusic; if (M) { M.setMuted(Sound.muted); M.play('g' + Math.min(3, tier)); } }
+function gameMusic() { const M = window.OktoMusic; if (M) { M.setMuted(Sound.muted); M.play(boss && boss.big && boss.phase !== 'dying' ? 'boss' : 'g' + Math.min(3, tier)); } }
 
 // ---------- Zorluk ----------
 const DIFF = {
@@ -607,17 +620,13 @@ function collect(e) {
 }
 
 // ---------- Bölümler ----------
-const LEVELS = [
-  { name: 'Güneşli Sular', start: 0, end: 150, tier: 1, boss: 'puffer', news: '🪼 Denizanaları ve 🐡 balon balıklarına dikkat!' },
-  { name: 'Alacakaranlık Bölgesi', start: 150, end: 400, tier: 2, boss: 'jelly', news: '🦈 Köpekbalıkları geliyor: kırmızı ❗ uyarısına bak!' },
-  { name: 'Karanlık Derinlikler', start: 400, end: 700, tier: 3, boss: 'squid', news: '🏮 Fener balıkları seni takip ediyor!' },
-];
-const BOSS_NAMES = { puffer: 'DEV BALON BALIĞI', jelly: 'ELEKTRİKLİ DENİZANASI', squid: 'DEV KALAMAR' };
+// Bölüm düzeni campaign.js'te (varsayılan 'klasik' = s21). Test adresinde ?boss= ile bölüm canavarı değiştirilebilir.
 function levelInfo(n) {
-  if (n <= LEVELS.length) return Object.assign({ n }, LEVELS[n - 1]);
-  const start = 700 + (n - 4) * 300;
-  return { n, name: `Sonsuz Derinlik ${n - 3}`, start, end: start + 300, tier: 3, boss: ['puffer', 'jelly', 'squid'][(n - 4) % 3], news: '💪 Canavarlar artık daha güçlü!' };
+  const L = OktoCampaign.level(n);
+  if (TEST.boss && OktoBossAI.get(TEST.boss)) L.boss = TEST.boss;
+  return L;
 }
+const bossDef = id => OktoBossAI.get(id) || OktoBossAI.get('puffer');
 const pearlGoal = n => Math.min(15 + n * 8, 50);
 // Türkçe -den/-dan eki: "Bölüm 2'den", "Bölüm 3'ten"
 function ablative(n) {
@@ -633,7 +642,8 @@ function makePlan(L) { // bölüm: açık su ile başlar, özel bölgeler arası
   const add = (type, len) => { const b = Math.min(d + len, end); if (b > d) segs.push({ type, a: d, b }); d = b; };
   add('open', 18);
   // bölüme göre açılan bölgeler; her bölümde karışık sırayla, aynısı arka arkaya gelmez
-  const pool = L.n === 1 ? ['reefs', 'canyon', 'akinti', 'yosun']
+  if (L.zones && !L.zones.length) { segs.push({ type: 'open', a: d, b: L.end + 1000 }); return segs; } // arena: sakin açık su
+  const pool = L.zones ? L.zones : L.n === 1 ? ['reefs', 'canyon', 'akinti', 'yosun']
     : L.n === 2 ? ['reefs', 'canyon', 'akinti', 'yosun', 'baca', 'gemi', 'mayin']
     : ['reefs', 'canyon', 'akinti', 'yosun', 'baca', 'gemi', 'mayin', 'magara', 'kacis'];
   let bag = [];
@@ -814,33 +824,39 @@ function drawWorldFront() { for (const f of nearL) ctx.drawImage(f.a.img, f.x - 
 
 // ---------- Bölüm sonu canavarları ----------
 function startBoss(kind) {
-  const lv = levelN, extra = Math.max(0, lv - 3);
-  const hp = Math.max(2, { puffer: 3, jelly: 4, squid: 5 }[kind] + extra + diff().bossHp);
-  boss = { kind, x: W / 2, y: H + 170 * S, hp, maxHp: hp, lv, t: 0, phase: 'enter', attackT: 2.0, stun: 0, flashT: 0, r: { puffer: 54, jelly: 60, squid: 64 }[kind] * S, puff: 0, dash: null, puffT: 0 };
-  banner(`⚠️ ${BOSS_NAMES[kind]}!`, 'Mürekkep düğmesi ona mürekkep topu atar', '#ff8a8a', 3);
+  const def = bossDef(kind); kind = def.id;
+  const lv = levelInfo(levelN).power || levelN, extra = Math.max(0, lv - 3);
+  const hp = Math.max(2, def.hp + extra + diff().bossHp);
+  boss = { kind, def, big: def.size === 'big', x: W / 2, y: H + 170 * S, hp, maxHp: hp, lv, t: 0, phase: 'enter', attackT: 2.0, stun: 0, flashT: 0, r: def.r * S, puff: 0, dash: null, puffT: 0, act: null, ph: null };
+  if (def.size === 'big') toast('Mürekkep düğmesi ona mürekkep topu atar'); // adı sinematikte zaten göründü
+  else banner(`⚠️ ${def.name}!`, 'Mürekkep düğmesi ona mürekkep topu atar', '#ff8a8a', 3);
   Sound.bossWarn(); vibrate([100, 80, 100]); shake = 10;
   for (const e of entities) if (ENEMIES.has(e.type)) e.dead = true; // sahneyi canavara bırak
 }
 function damageBoss(n) {
   if (!boss || boss.phase !== 'fight') return;
-  boss.hp -= n; boss.flashT = 0.3; boss.stun = 1.2; boss.dash = null; boss.puffT = 0; shake = 9;
+  boss.hp -= n; boss.flashT = 0.3; boss.stun = 1.2; boss.dash = null; boss.puffT = 0; boss.act = null; shake = 9;
   Sound.bossHit(); vibrate(60);
-  burst(boss.x, boss.y - boss.r * 0.6, boss.kind === 'puffer' ? '#ffe28a' : boss.kind === 'jelly' ? '#c7a8ff' : '#ff9ab0', 20, 220);
+  burst(boss.x, boss.y - boss.r * 0.6, boss.def.color, 20, 220);
   addFloater(boss.x, boss.y - boss.r * 1.3, `-${n}`, '#ff8a8a');
   if (boss.hp <= 0) {
     boss.phase = 'dying'; boss.t = 0; slams.length = 0;
     for (const e of entities) if (ENEMIES.has(e.type)) e.dead = true;
-    score += 300 * boss.lv; bossesBeaten++;
-    banner(`🎉 ${BOSS_NAMES[boss.kind]} YENİLDİ!`, `+${300 * boss.lv} puan`, '#7dffb0', 2.2);
+    score += 300 * boss.lv * (boss.big ? 3 : 1); bossesBeaten++;
+    if (boss.big) bigVictory();
+    else banner(`🎉 ${boss.def.name} YENİLDİ!`, `+${300 * boss.lv} puan`, '#7dffb0', 2.2);
     Sound.bossDown(); Missions.track('boss_day', 1);
-    for (let i = 0; i < 14; i++) entities.push({ type: 'pearl', x: clamp(boss.x + rand(-140, 140) * S, 20, W - 20), y: boss.y - boss.r + rand(-60, 160) * S, r: 8 * S, t: Math.random() * 9 });
+    for (let i = 0; i < (boss.big ? 30 : 14); i++) entities.push({ type: 'pearl', x: clamp(boss.x + rand(-140, 140) * S, 20, W - 20), y: boss.y - boss.r + rand(-60, 160) * S, r: 8 * S, t: Math.random() * 9 });
+  } else {
+    const ph = OktoBossAI.checkPhase(boss); // canı azalınca yeni aşama (yalnızca aşaması tanımlı canavarlarda)
+    if (ph) { banner(`${boss.def.name}`, ph.name || 'Öfkelendi!', '#ff9a6b', 2); Sound.bossWarn(); shake = 12; boss.stun = 0.6; }
   }
 }
-function bossContactR() { return boss.r * (boss.kind === 'puffer' ? 0.9 + boss.puff * 0.35 : 0.85); }
+function bossContactR() { return OktoBossAI.contactR(boss); }
 function updateBoss(dt) {
   const b = boss; b.t += dt;
   if (b.flashT > 0) b.flashT -= dt;
-  const restY = H - (b.kind === 'jelly' ? 150 : 130) * S;
+  const restY = H - b.def.restY * S;
   if (b.phase === 'enter') {
     b.y = lerp(b.y, restY, dt * 1.5);
     if (Math.abs(b.y - restY) < 4) { b.phase = 'fight'; b.t = 0; }
@@ -849,79 +865,14 @@ function updateBoss(dt) {
   if (b.phase === 'dying') {
     b.y += 120 * S * dt; b.puff = Math.max(0, b.puff - dt);
     if (Math.random() < dt * 20) burst(b.x + rand(-60, 60) * S, b.y - rand(0, 80) * S, '#ffffff', 4, 120);
-    if (b.t > 2.4) { boss = null; levelClear(); }
+    if (b.t > (b.big ? 3.6 : 2.4)) { boss = null; levelClear(); }
     return;
   }
   b.puff = Math.max(0, b.puff - dt * 1.5);
   if (b.stun > 0) { b.stun -= dt; b.y = lerp(b.y, restY, dt * 3); return; }
   const interval = Math.max(1.3, 2.8 - b.lv * 0.2) * rand(0.85, 1.15);
-
-  if (b.kind === 'puffer') {
-    // dikenli balon balığı: Okto'nun altına süzülür, şişip diken atar ya da yukarı hamle yapar
-    if (b.dash) {
-      const d = b.dash; d.t += dt;
-      if (d.stage === 'tele') { b.x += Math.sin(b.t * 60) * 2 * S; if (d.t > 0.65) { d.stage = 'up'; d.t = 0; } }
-      else if (d.stage === 'up') { b.y -= 560 * S * dt; b.puff = 1; if (b.y <= d.toY) { d.stage = 'down'; d.t = 0; } }
-      else { b.y = lerp(b.y, restY, dt * 2.5); if (Math.abs(b.y - restY) < 6) b.dash = null; }
-      return;
-    }
-    b.x = lerp(b.x, clamp(player.x, b.r, W - b.r), dt * 0.9);
-    b.y = restY + Math.sin(b.t * 2) * 6 * S;
-    if (b.puffT > 0) { // şişme uyarısı, sonra diken yağmuru
-      b.puffT -= dt; b.puff = 1 - b.puffT / 0.7;
-      if (b.puffT <= 0) {
-        const n = 8 + Math.min(b.lv, 4);
-        for (let i = 0; i < n; i++) {
-          const a = -Math.PI * (0.06 + 0.88 * i / (n - 1)), sp = (210 + b.lv * 15) * S;
-          entities.push({ type: 'spike', fixed: true, x: b.x + Math.cos(a) * b.r, y: b.y + Math.sin(a) * b.r, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, r: 7 * S, t: 0 });
-        }
-        Sound.tone(700, 0.18, 'square', 0.07, -400); Sound.noise(0.2, 0.15, 2500);
-      }
-      return;
-    }
-    b.attackT -= dt;
-    if (b.attackT <= 0) {
-      b.attackT = interval;
-      if (Math.random() < 0.55) { b.puffT = 0.7; Sound.tone(200, 0.6, 'sine', 0.1, 300); }
-      else { b.dash = { stage: 'tele', t: 0, toY: Math.max(H * 0.32, player.y + 10 * S) }; Sound.tone(150, 0.5, 'sawtooth', 0.08, 120); }
-    }
-  } else if (b.kind === 'jelly') {
-    // elektrikli denizanası: uyarılı yıldırım sütunları ve yavru denizanaları
-    b.x = W / 2 + Math.sin(b.t * 0.55) * W * 0.26;
-    b.y = restY + Math.sin(b.t * 2.2) * 10 * S;
-    b.attackT -= dt;
-    if (b.attackT <= 0) {
-      b.attackT = interval;
-      if (Math.random() < 0.6) {
-        const n = 1 + Math.min(2, Math.floor(b.lv / 2) + 1), xs = [Number.isFinite(player.x) ? clamp(player.x, 30 * S, W - 30 * S) : W / 2];
-        for (let tries = 0; xs.length < n && tries < 30; tries++) { const x = rand(30 * S, W - 30 * S); if (xs.every(o => !(Math.abs(o - x) <= 90 * S))) xs.push(x); } // en fazla 30 deneme
-        for (const x of xs) slams.push({ kind: 'zap', x, t: 0, warn: 1.0, w: 24 * S });
-        Sound.tone(900, 0.12, 'square', 0.05, 0, 0, true); Sound.tone(900, 0.12, 'square', 0.05, 0, 0.3, true);
-      } else {
-        for (let i = 0; i < 3; i++) entities.push({ type: 'jelly', x: clamp(b.x + (i - 1) * 60 * S, 20, W - 20), y: b.y - b.r, r: 14 * S, t: Math.random() * 9, hue: rand(180, 220), rise: rand(60, 90) * S });
-        Sound.tone(500, 0.3, 'sine', 0.08, 400);
-      }
-    }
-  } else {
-    // dev kalamar: mürekkep lekeleri ve dokunaç darbesi
-    b.x = W / 2 + Math.sin(b.t * 0.7) * W * 0.28;
-    b.y = restY + Math.sin(b.t * 1.7) * 8 * S;
-    b.attackT -= dt;
-    if (b.attackT <= 0) {
-      b.attackT = interval;
-      if (Math.random() < 0.5) {
-        const n = 2 + Math.min(b.lv, 3);
-        for (let i = 0; i < n; i++) {
-          const a = Math.atan2(player.y - b.y, player.x - b.x) + (i - (n - 1) / 2) * 0.28, sp = (150 + b.lv * 12) * S;
-          entities.push({ type: 'blob', fixed: true, x: b.x, y: b.y - b.r * 0.8, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, r: 11 * S, t: Math.random() * 9 });
-        }
-        Sound.tone(220, 0.2, 'sine', 0.1, 220);
-      } else {
-        slams.push({ kind: 'tentacle', x: clamp(player.x + rand(-20, 20) * S, 30 * S, W - 30 * S), t: 0, warn: 1.0, w: 30 * S });
-        Sound.tone(300, 0.15, 'square', 0.06, 0, 0, true); Sound.tone(300, 0.15, 'square', 0.06, 0, 0.25, true);
-      }
-    }
-  }
+  // canavara özel hareket ve saldırılar boss-ai.js'te
+  OktoBossAI.tick(b, { W, H, S, player, entities, slams, sound: Sound, rand, clamp, lerp, interval, restY }, dt);
 }
 function updateSlams(dt) {
   for (const s of slams) {
@@ -949,6 +900,56 @@ function updateSlams(dt) {
   shots = shots.filter(s => s.life > 0);
 }
 
+// ---------- Büyük canavar: sinematik giriş ve büyük zafer ----------
+let cine = null, victory = null;
+function startCinema(L) {
+  const def = bossDef(L.boss), I = L.intro || {};
+  state = 'cinema'; drag.active = false;
+  cine = { t: 0, dur: 5.2, kind: def.id, def, title: I.title || def.name, sub: I.sub || '', color: I.color || '#ffd36b', fx: player.x, fy: player.y, cues: {} };
+  for (const e of entities) if (ENEMIES.has(e.type)) e.dead = true;
+  slams = []; shots = [];
+  window.OktoMusic && OktoMusic.stop(0.8);
+  Sound.cineRumble();
+  show(ui.ink, false); show(ui.pauseBtn, false);
+}
+function updateCinema(dt) {
+  const C = cine; C.t += dt; time += dt;
+  const a = clamp(C.t / 1.5, 0, 1), e = a * a * (3 - 2 * a); // Okto yukarıda, ortada bekler
+  player.x = lerp(C.fx, W / 2, e); player.y = lerp(C.fy, H * 0.28, e); player.vx = 0; player.vy = 0;
+  target.x = player.x; target.y = player.y;
+  if (C.t > 1.2 && !C.cues.rise) { C.cues.rise = 1; Sound.cineRise(); shake = 4; }
+  if (C.t > 3.0 && !C.cues.reveal) { C.cues.reveal = 1; Sound.bossWarn(); vibrate([80, 60, 80]); shake = 8; }
+  if (C.t >= C.dur) {
+    state = 'play'; cine = null; startBoss(C.kind);
+    boss.y = H - boss.def.restY * S + 30 * S; // sinematikte zaten yükseldi: hemen savaşa
+    gameMusic(); show(ui.ink, true); show(ui.pauseBtn, true); last = performance.now();
+  }
+}
+let silCvs = null;
+function drawCinema() {
+  const C = cine; if (!C) return;
+  OktoCinema.drawIntro({
+    ctx, W, H, S, FONT, time, t: C.t, dur: C.dur, title: C.title, sub: C.sub, color: C.color,
+    drawBoss: (y, dark) => { // canavar, karanlık silüetten aydınlığa
+      const fake = { kind: C.kind, def: C.def, big: true, x: W / 2, y, r: C.def.r * S, hp: 1, maxHp: 1, t: C.t, flashT: 0, stun: 0, puff: 0, puffT: 0 };
+      if (dark <= 0.01) { OktoBosses.draw(Object.assign(gfx(), { boss: fake })); return; }
+      if (!silCvs) silCvs = document.createElement('canvas');
+      if (silCvs.width !== cvs.width || silCvs.height !== cvs.height) { silCvs.width = cvs.width; silCvs.height = cvs.height; }
+      const c2 = silCvs.getContext('2d');
+      c2.setTransform(1, 0, 0, 1, 0, 0); c2.clearRect(0, 0, silCvs.width, silCvs.height); c2.setTransform(DPR, 0, 0, DPR, 0, 0);
+      OktoBosses.draw(Object.assign(gfx(), { ctx: c2, boss: fake }));
+      c2.globalCompositeOperation = 'source-atop'; c2.fillStyle = `rgba(4,8,28,${0.92 * dark})`; c2.fillRect(0, 0, W, H); c2.globalCompositeOperation = 'source-over';
+      ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(silCvs, 0, 0); ctx.restore();
+    },
+  });
+}
+function bigVictory() {
+  banners.length = 0; // zafer yazısı başka yazıyla üst üste binmesin
+  victory = { t: 0, x: boss.x, y: boss.y - boss.r * 0.5, title: 'BÜYÜK ZAFER!', sub: `${boss.def.name} yenildi` };
+  Sound.fanfare(); vibrate([60, 40, 60, 40, 120]);
+  const D = Profile.data; D.trophies = D.trophies || {}; D.trophies[boss.kind] = (D.trophies[boss.kind] || 0) + 1; Profile.save();
+}
+
 // ---------- Bölüm sonu: özet kartı ve girdap geçişi ----------
 let trans = null;
 function levelClear() {
@@ -959,8 +960,9 @@ function levelClear() {
   bonusPearls += reward;
   const D = Profile.data;
   D.checkpoint = Math.max(D.checkpoint || 1, n + 1); D.startLevel = n + 1; Profile.save();
-  $('clTitle').textContent = `Bölüm ${n} Tamamlandı!`;
-  $('clName').textContent = levelInfo(n).name;
+  const LI = levelInfo(n), bigWin = LI.arena;
+  $('clTitle').textContent = bigWin ? `${LI.groupName} Tamamlandı!` : `Bölüm ${n} Tamamlandı!`;
+  $('clName').textContent = bigWin ? `Büyük canavar yenildi · Kupa kazandın` : LI.name;
   const st = $('clStars'); st.innerHTML = '';
   for (let i = 0; i < 3; i++) { const sp = document.createElement('span'); sp.textContent = '★'; sp.className = i < stars ? 'on' : ''; sp.style.animationDelay = `${0.3 + i * 0.35}s`; st.append(sp); }
   for (let i = 0; i < stars; i++) Sound.tone(880 * Math.pow(2, i * 4 / 12), 0.3, 'triangle', 0.1, 0, 0.6 + i * 0.35, true);
@@ -1037,7 +1039,7 @@ function update(dt) {
   const L = levelInfo(levelN);
   if (phase === 'dive') {
     depth = Math.min(depth + scroll * dt / (22 * S), L.end);
-    if (depth >= L.end) { phase = 'boss'; startBoss(L.boss); }
+    if (depth >= L.end) { phase = 'boss'; if (bossDef(L.boss).size === 'big') startCinema(L); else startBoss(L.boss); }
   }
 
   // Oyuncu hareketi (göreli sürükleme hedefe gider)
@@ -1129,7 +1131,7 @@ function update(dt) {
   }
   rockCollisions();
   if (window.OktoZones && OktoZones.active()) OktoZones.collide(zoneEnv(dt, scroll));
-  if (boss && boss.phase === 'fight') { const cy = boss.y - boss.r * (boss.kind === 'puffer' ? 0 : boss.kind === 'jelly' ? 0.3 : 0.2); if (Math.hypot(boss.x - p.x, cy - p.y) < bossContactR() + p.r * (0.6 + 0.85 * p.big)) {
+  if (boss && boss.phase === 'fight') { const cy = OktoBossAI.contactY(boss); if (Math.hypot(boss.x - p.x, cy - p.y) < bossContactR() + p.r * (0.6 + 0.85 * p.big)) {
     if (p.bigT > 0) { if (p.bossBumpT <= 0) { p.bossBumpT = 1; damageBoss(1); pushTarget(0, -90 * S); } } else hurt();
   } }
   entities = entities.filter(e => !e.dead && Number.isFinite(e.x) && Number.isFinite(e.y) && e.y > -120 * S && e.y < H + 400 * S && e.x > -200 * S && e.x < W + 200 * S);
@@ -1157,11 +1159,13 @@ function updateAmbient(dt, scroll) {
 }
 
 // ---------- Çizim ----------
+let envCache = { n: -1, env: null };
+function levelEnv() { if (envCache.n !== levelN) envCache = { n: levelN, env: (levelInfo(levelN).env || null) }; const e = envCache.env; return e && e.water ? e : null; }
 function drawBackground() {
-  const t = clamp(depth / 600, 0, 1);
+  const t = clamp(depth / 600, 0, 1), env = levelEnv();
   const g = ctx.createLinearGradient(0, 0, 0, H);
-  g.addColorStop(0, lerpColor('#3cc7f0', '#06223f', t));
-  g.addColorStop(1, lerpColor('#0b5d8f', '#010a18', t));
+  g.addColorStop(0, env ? env.water[0] : lerpColor('#3cc7f0', '#06223f', t)); // bölüm grubunda ortamın kendi su rengi
+  g.addColorStop(1, env ? env.water[1] : lerpColor('#0b5d8f', '#010a18', t));
   ctx.fillStyle = g; ctx.fillRect(-20, -20, W + 40, H + 40);
   const rayA = (1 - t) * 0.12;
   if (rayA > 0.005) {
@@ -1330,10 +1334,11 @@ function drawHUD() {
   }
   // bölüm sonu canavarının can barı
   if (boss && boss.phase !== 'dying') {
-    const bw = Math.min(260, W - 140), bx = W / 2 - bw / 2, by = top + 76;
+    const bw = Math.min(boss.big ? 300 : 260, W - 140), bx = W / 2 - bw / 2, by = top + 76;
     ctx.fillStyle = 'rgba(0,0,0,.45)'; ctx.beginPath(); ctx.roundRect(bx - 4, by - 4, bw + 8, 22, 11); ctx.fill();
-    ctx.fillStyle = '#ff4d6d'; ctx.beginPath(); ctx.roundRect(bx, by, bw * Math.max(0, boss.hp) / boss.maxHp, 14, 7); ctx.fill();
-    ctx.font = `700 12px ${FONT}`; ctx.fillStyle = '#fff'; ctx.textBaseline = 'middle'; ctx.fillText(`${BOSS_NAMES[boss.kind]}  ${Math.max(0, boss.hp)}/${boss.maxHp}`, W / 2, by + 7);
+    if (boss.big) { ctx.strokeStyle = '#ffd36b'; ctx.lineWidth = 2; ctx.beginPath(); ctx.roundRect(bx - 5, by - 5, bw + 10, 24, 12); ctx.stroke(); } // büyük canavar: altın çerçeve
+    ctx.fillStyle = boss.big ? '#ff8a3d' : '#ff4d6d'; ctx.beginPath(); ctx.roundRect(bx, by, bw * Math.max(0, boss.hp) / boss.maxHp, 14, 7); ctx.fill();
+    ctx.font = `700 12px ${FONT}`; ctx.fillStyle = '#fff'; ctx.textBaseline = 'middle'; ctx.fillText(`${boss.def.name}  ${Math.max(0, boss.hp)}/${boss.maxHp}`, W / 2, by + 7);
   }
   // mürekkep düğmesi
   const c = inkCtx, s = 168, cx = s / 2, rr = s / 2 - 10, ready = inkCharge >= 1;
@@ -1448,9 +1453,11 @@ function frame(now) {
   try { drawFrame(); } catch (err) { reportError('çizim', err); try { ctx.restore(); } catch {} }
 }
 function stepFrame(now, dt) {
-  if (shake > 0 && state !== 'play') shake = Math.max(0, shake - dt * 40); // ölünce/menüde sarsıntı sönsün
+  if (shake > 0 && state !== 'play') shake = Math.max(0, shake - dt * 40);
+  if (victory && state !== 'pause') { victory.t += dt; if (victory.t > 3.8) victory = null; } // ölünce/menüde sarsıntı sönsün
   if ((sizeCheckT += dt) > 0.5) { sizeCheckT = 0; edgeDue = true; refreshSafeTop(); }
   if (state === 'play') update(dt);
+  else if (state === 'cinema') { updateCinema(dt); updateFx(dt); for (const q of particles) { q.x += q.vx * dt; q.y += q.vy * dt; q.life -= q.decay * dt; } particles = particles.filter(q => q.life > 0); }
   else if (state === 'transition') { updateTransition(dt); updateFx(dt); for (const q of particles) { q.x += q.vx * dt; q.y += q.vy * dt; q.life -= q.decay * dt; } particles = particles.filter(q => q.life > 0); }
   else if (state === 'clear') { time += dt; updateFx(dt); }
   else if (state === 'over') {
@@ -1471,8 +1478,8 @@ function updateEdge() { // şerit rengi sahnenin zemin renginden hesaplanır (an
   let c;
   if (state === 'menu') c = [173, 139, 86]; // açılış sahnesinin kararmış kum rengi (ölçülmüş)
   else {
-    const t = clamp(depth / 600, 0, 1), A = [0x0b, 0x5d, 0x8f], B = [0x01, 0x0a, 0x18];
-    c = A.map((v, i) => lerp(v, B[i], t));
+    const t = clamp(depth / 600, 0, 1), A = [0x0b, 0x5d, 0x8f], B = [0x01, 0x0a, 0x18], env = levelEnv();
+    c = env ? [1, 3, 5].map(k => parseInt(env.water[1].slice(k, k + 2), 16)) : A.map((v, i) => lerp(v, B[i], t));
     if (seabedAmt > 0.01) { const sb = tier >= 3 ? [38, 38, 63] : [184, 138, 78]; c = c.map((v, i) => lerp(v, sb[i], seabedAmt)); }
   }
   if (open('pauseMenu') || open('over') || open('clear') || open('help')) c = c.map((v, i) => v * 0.2 + [2, 12, 26][i] * 0.8); // koyu perdeyle aynı oranda
@@ -1481,7 +1488,7 @@ function updateEdge() { // şerit rengi sahnenin zemin renginden hesaplanır (an
 function drawFrame() {
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   ctx.save();
-  if (shake > 0 && (state === 'play' || state === 'transition')) ctx.translate(rand(-shake, shake), rand(-shake, shake));
+  if (shake > 0 && (state === 'play' || state === 'transition' || state === 'cinema')) ctx.translate(rand(-shake, shake), rand(-shake, shake));
   if (state === 'menu' && window.OktoTitle) OktoTitle.draw(ctx, W, H, time, Object.assign(look(), { top: safeTop }));
   else {
     drawBackground();
@@ -1499,6 +1506,8 @@ function drawFrame() {
     if (zenv) { OktoZones.drawFront(ctx, zenv); OktoZones.overlay(ctx, zenv, zoneLights()); }
     drawFx();
     if (state === 'transition') drawTransition();
+    if (state === 'cinema') drawCinema();
+    if (victory) OktoCinema.drawVictory(Object.assign({ ctx, W, H, S, FONT, time }, victory));
   }
   ctx.restore();
   if (state === 'play' || state === 'pause') { drawHUD(); drawBanners(); }
@@ -1515,11 +1524,13 @@ function drawFrame() {
 resize();
 reset();
 toMenu();
+if (TEST.on) { const v = $('ver'); v.textContent += ' TEST'; v.style.color = '#ffb347'; } // test adresinde olduğumuz görünsün
 requestAnimationFrame(frame);
 
 // Test/hata ayıklama için
 window.__okto = {
   get state() { return state; }, get score() { return score; }, get depth() { return depth; }, set depth(v) { depth = v; },
+  step: dt => stepFrame(0, dt), draw: () => drawFrame(), levelInfo: n => levelInfo(n), get cine() { return cine; }, get victory() { return victory; }, TEST,
   get lives() { return lives; }, diff: () => diff(), get safeTop() { return safeTop; }, get rocks() { return rocks; }, get zoneName() { return zone; }, setZone: z => { plan = [{ type: 'open', a: 0, b: depth + 1 }, { type: z, a: depth + 1, b: depth + 200 }, { type: 'open', a: depth + 200, b: 1e6 }]; }, rockStats: () => ({ onScreen: rocks.filter(onScreen).length, all: rocks.length }), corridorNow: () => { let worst = 1e9; for (let y = 0; y < H; y += 4) worst = Math.min(worst, widestGap(blockedAt(y, rocks))); return worst; }, get plan() { return plan; }, get zone() { return zone; }, get shake() { return shake; }, set lives(v) { lives = v; }, set invuln(v) { invuln = v; }, get boss() { return boss; }, get tier() { return tier; }, get levelN() { return levelN; }, get phase() { return phase; }, damageBoss, startTransition,
   Sound, TIERS, startGame, useInk, lightBomb: () => lightBomb(player.x, player.y), get entities() { return entities; }, get player() { return player; }, get target() { return target; },
   Profile, Missions, spawnGift: () => entities.push({ type: 'gift', x: player.x, y: player.y + 70 * S, r: 14 * S, t: 0, hue: 330 }), spawnGlow: () => entities.push({ type: 'glow', x: player.x, y: player.y + 80 * S, r: 15 * S, t: 0 }),

@@ -1,6 +1,6 @@
 /* OKTO müzikleri: açılış ekranı + oyun içinde 3 kademe (hepsi kodla üretilir)
    Kendi müziğini koymak için: music/acilis.mp3 (açılış) ve music/oyun.mp3 (oyun içi). Sonra aşağıdaki HAS_CUSTOM içinde true yap.
-   window.OktoMusic: play('menu' | 'g1' | 'g2' | 'g3'), start() (= play('menu')), stop(sönüm), setMuted(bool), renderWav(sn, parça) */
+   window.OktoMusic: play('menu' | 'g1' | 'g2' | 'g3' | 'boss'), start() (= play('menu')), stop(sönüm), setMuted(bool), renderWav(sn, parça) */
 (() => {
 'use strict';
 const CUSTOM = { menu: 'music/acilis.mp3', game: 'music/oyun.mp3' };
@@ -132,11 +132,22 @@ function scheduleG3(ac, out, step, t, E) {
   if ((pos === 3 || pos === 6) && k < 6) bell(ac, out, t, sc[k] + (k % 2 ? 0 : 12), 0.08, 2.2);
   if (pos === 4 && bar % 2 === 1) bubble(ac, out, t, 0.05);
 }
+const GB = { roots: [40, 40, 36, 38], ost: [52, 55, 59, 55, 52, 55, 60, 59] }; // Mi minör: büyük canavar savaşı
+function scheduleBoss(ac, out, step, t, E) { // büyük canavar: davul + ısrarcı bas + gerilimli çanlar
+  const i = step % 64, bar = Math.floor(i / 8), pos = i % 8, rt = GB.roots[bar % 4];
+  if (pos % 2 === 0) bass(ac, out, t, rt + (pos === 6 ? 7 : 0), E * 1.6, 0.3);
+  if (pos === 0 || pos === 3 || pos === 6) kick(ac, out, t, pos === 0 ? 0.2 : 0.12);
+  if (pos % 2 === 1) shaker(ac, out, t, 0.028);
+  if (bar % 2 === 1) marimba(ac, out, t, GB.ost[pos] + (bar % 4 === 3 ? -4 : 0), 0.16);
+  if (pos === 0 && bar % 4 === 0) pad(ac, out, t, [rt + 24, rt + 27, rt + 31], E * 16, 0.035);
+  if (pos === 4 && bar % 2 === 0) bell(ac, out, t, rt + 36, 0.07, 1.2);
+}
 const TRACKS = {
   menu: { bpm: 112, vol: 0.55, echo: 0.28, schedule: (ac, out, s, t) => scheduleStep(ac, out, s, t) },
   g1: { bpm: 100, vol: 0.4, echo: 0.25, schedule: scheduleG1 },
   g2: { bpm: 84, vol: 0.42, echo: 0.4, schedule: scheduleG2 },
   g3: { bpm: 70, vol: 0.45, echo: 0.5, schedule: scheduleG3 },
+  boss: { bpm: 128, vol: 0.42, echo: 0.3, schedule: scheduleBoss },
 };
 const eighthOf = T => 60 / T.bpm / 2;
 

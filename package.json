@@ -7,7 +7,8 @@
     "www": "node scripts/build-www.js",
     "cap:sync": "npm run www && npx cap sync",
     "ios": "npm run cap:sync && npx cap open ios",
-    "android": "npm run cap:sync && npx cap open android"
+    "android": "npm run cap:sync && npx cap open android",
+    "test": "node tests/regress.js"
   },
   "devDependencies": {
     "@capacitor/cli": "^6.1.2"

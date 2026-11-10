@@ -18,7 +18,7 @@ Tasarım brifi: `docs/BRIF.md` ("OKTO – UNDERWATER DESCENT", kullanıcının 1
 - Dal: `claude/octopus-mobile-game-0is63u` → GitHub Pages: https://ahmet85.github.io/Ahmet85/
 - Aynı dalda başka bir oturumun `ritim/` klasörü var; **ona dokunma**, push öncesi `git fetch` + `git rebase` yap.
 - **Her yayında sürümü artır:** `index.html` içindeki tüm `?v=` ekleri, menüdeki `s<sürüm>` etiketi ve `sw.js` içindeki
-  `okto-v<sürüm>` birlikte. Kullanıcı sağ alttaki `s<sürüm>` ile güncellemenin geldiğini kontrol ediyor. Son sürüm: **s21**.
+  `okto-v<sürüm>` birlikte. Kullanıcı sağ alttaki `s<sürüm>` ile güncellemenin geldiğini kontrol ediyor. Son sürüm: **s22**.
 - Telefonda güncelleme: uygulamayı kapat-aç (gerekirse iki kez). Açılış görseli/simge değişirse sil-yeniden kur gerekir.
 
 ## Alınan kararlar
@@ -32,6 +32,14 @@ Tasarım brifi: `docs/BRIF.md` ("OKTO – UNDERWATER DESCENT", kullanıcının 1
 - Bölüm içi **bölge planı**: açık su + Resif Adacıkları / Mercan Kanyonu, araya sakin dinlenme parçaları.
 - Tuvale çizilen yazılarda **emoji yok** (iPhone genişliğini ölçemiyor, yazı kayıyor). Duyurular elle ortalanır.
 - Yanıp sönen efektler yumuşak tutulur (çocuk oyunu, ışığa hassasiyet).
+
+## Canavar ve bölüm grubu altyapısı (s22)
+- Kullanıcı kararı: sonsuz tekrar yerine **bölüm grupları**: her bölümde farklı ortam + mini canavar; 3 mini canavardan sonra
+  sinematik girişli **büyük canavar**; büyük zafer kutlaması; sonraki grupta yeni ortamlar ve canavarlar.
+- **Kullanıcı onay vermeden varsayılan düzen (klasik) ve mevcut 3 canavar değiştirilmez.** Grup düzeni yalnızca test adresinde.
+- Görseller ve bölüm planı tasarım yapay zekâsından gelecek; teslim biçimi ve tanım alanları: `docs/BOSS-SISTEMI.md`.
+- Test adresleri (hiçbir şey kaydetmez, sağ altta TEST yazar): `?boss=kimlik`, `?bolum=N`, `?plan=grup`; liste: `preview/boss-test.html`.
+- s22 yeniden düzenlemesinde mevcut canavarlar eski s21 koduyla aynı rastgele sayılarla yan yana oynatıldı: 4 bölümde birebir aynı.
 
 ## iPhone'a özgü dersler (tekrar yaşama)
 - **Ekran ölçümüyle oynama**: basit `innerWidth/innerHeight` + `resize` olayı kalsın. Periyodik yeniden boyutlandırma ve
@@ -52,7 +60,12 @@ Tasarım brifi: `docs/BRIF.md` ("OKTO – UNDERWATER DESCENT", kullanıcının 1
 | `okto.js` | Okto karakter çizimi; ifadeler; 7 renk ve 7 aksesuar (`OktoChar.CATALOG`) |
 | `zones.js` | 7 özel bölgenin mantığı ve çizimleri (akıntı, mağara karanlığı, batık gemi, bacalar, yosun, mayınlar, kovalayan fener balığı) |
 | `enemies.js` | Düşman ve toplanabilir çizimleri |
-| `bosses.js` | Bölüm sonu canavarları ve saldırı çizimleri |
+| `bosses.js` | Canavar çizimleri (`DRAWERS`; çizimi olmayan canavar için geçici çizim) ve saldırı çizimleri |
+| `boss-ai.js` | Canavar sistemi: tanımlar (`OktoBossAI.register`), ortak saldırı kütüphanesi, can eşiğiyle aşamalar, büyük/mini |
+| `campaign.js` | Bölüm düzeni: `klasik` (varsayılan, s21) ve `grup` (3 bölüm + mini canavar, sonra büyük canavar; TASLAK) |
+| `cinema.js` | Büyük canavar sinematik girişi ve büyük zafer kutlaması |
+| `tests/regress.js` | Gerileme testleri (`node tests/regress.js`): her yayından önce çalıştır |
+| `yedek/s21/` | Yeni altyapıdan önceki s21'in oynanabilir yedeği (dokunma) |
 | `assets/` | Varlık listesi (`assets/README.md`) ve saydam PNG kopyaları (`assets/png`, `tools/export-assets.js` ile üretilir) |
 | `reef.js` | Resif varlıkları (yosunlu/sivri/mağaralı ada, kanyon çıkıntısı), kanyon duvarı, uzak silüetler, ön plan mercanları, deniz tabanı |
 | `title.js` | Animasyonlu, dokunmaya tepki veren açılış ekranı |

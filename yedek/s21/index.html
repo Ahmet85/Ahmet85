@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="tr" style="background:#2ba8e0">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#0b4f7a">
+<meta name="color-scheme" content="dark">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Okto: Derinlerin Kaşifi</title>
+<link rel="manifest" href="manifest.json">
+<!-- iPhone açılış görselleri: beyaz flaş yerine menünün ilk karesi görünür -->
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<style>
+  @font-face{font-family:Fredoka;font-weight:700;font-display:block;src:url(fonts/fredoka-700-latin.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+20AC,U+2122,U+2212,U+FEFF,U+FFFD}
+  @font-face{font-family:Fredoka;font-weight:700;font-display:block;src:url(fonts/fredoka-700-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+1E00-1E9F,U+2020,U+20A0-20AB,U+2C60-2C7F,U+A720-A7FF}
+  :root { --sat: env(safe-area-inset-top, 0px); }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none; -webkit-user-select:none; }
+  html,body { margin:0; height:100%; overflow:hidden; overscroll-behavior:none; background:#2ba8e0; font-family:"Trebuchet MS","Segoe UI",system-ui,sans-serif; color:#fff; }
+  canvas { position:fixed; inset:0; display:block; touch-action:none; }
+  button { touch-action:manipulation; }
+  .overlay { position:fixed; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px;
+    padding:max(24px,env(safe-area-inset-top)) 20px max(24px,env(safe-area-inset-bottom)); text-align:center;
+    background:radial-gradient(ellipse at center, rgba(4,33,61,.55), rgba(2,12,26,.85)); backdrop-filter:blur(2px); z-index:5; }
+  .hidden { display:none !important; }
+  h1 { margin:0; font-size:clamp(40px,12vw,72px); line-height:1; letter-spacing:1px;
+    background:linear-gradient(180deg,#ffd1e8,#ff7eb6 55%,#c04dff); -webkit-background-clip:text; background-clip:text; color:transparent;
+    filter:drop-shadow(0 4px 0 rgba(0,0,0,.25)); }
+  h2 { margin:0; font-size:clamp(28px,8vw,44px); }
+  .sub { margin:0; opacity:.85; font-size:clamp(15px,4.2vw,19px); }
+  .btn { pointer-events:auto; border:0; border-radius:999px; padding:16px 42px; font:inherit; font-size:22px; font-weight:bold; color:#fff; cursor:pointer;
+    background:linear-gradient(180deg,#ff8fc2,#e2468f); box-shadow:0 6px 0 #9c2160, 0 10px 24px rgba(0,0,0,.35); transition:transform .08s; }
+  .btn:active { transform:translateY(4px); box-shadow:0 2px 0 #9c2160; }
+  .btn.alt { background:linear-gradient(180deg,#5fd3ff,#1f8fd1); box-shadow:0 6px 0 #0d5a8a, 0 10px 24px rgba(0,0,0,.35); font-size:18px; padding:12px 30px; }
+  .card { background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.15); border-radius:18px; padding:14px 18px; max-width:380px; width:100%; text-align:left; font-size:15px; line-height:1.55; }
+  .card b { color:#ffd1e8; }
+  .stats { display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
+  .stat { background:rgba(255,255,255,.1); border-radius:14px; padding:10px 16px; min-width:96px; }
+  .stat .v { font-size:28px; font-weight:bold; }
+  .stat .l { font-size:12px; opacity:.75; text-transform:uppercase; letter-spacing:1px; }
+  .new { color:#ffe066; font-weight:bold; animation:pulse 0.8s infinite alternate; }
+  @keyframes pulse { from{transform:scale(1)} to{transform:scale(1.08)} }
+  #menuOcto { width:140px; height:140px; animation:bob 2.4s ease-in-out infinite; }
+  @keyframes bob { 0%,100%{transform:translateY(0) rotate(-3deg)} 50%{transform:translateY(-12px) rotate(3deg)} }
+  #inkBtn { position:fixed; right:max(18px,env(safe-area-inset-right)); bottom:max(22px,env(safe-area-inset-bottom)); width:84px; height:84px; border-radius:50%;
+    border:0; padding:0; background:transparent; z-index:4; touch-action:none; cursor:pointer; }
+  #pauseBtn { position:fixed; top:max(10px,env(safe-area-inset-top)); right:max(10px,env(safe-area-inset-right)); width:44px; height:44px; border-radius:12px; border:0;
+    background:rgba(255,255,255,.15); color:#fff; font-size:20px; font-weight:bold; z-index:4; cursor:pointer; }
+  #muteBtn { position:fixed; top:max(10px,env(safe-area-inset-top)); right:calc(max(10px,env(safe-area-inset-right)) + 52px); width:44px; height:44px; border-radius:12px; border:0;
+    background:rgba(255,255,255,.15); color:#fff; font-size:20px; z-index:4; cursor:pointer; }
+  .row { display:flex; gap:12px; flex-wrap:wrap; justify-content:center; }
+  .best { font-size:15px; opacity:.85; }
+  #menu { position:fixed; inset:0; z-index:3; pointer-events:none; }
+  #menu.hidden { display:none; }
+  #helpBtn { pointer-events:auto; position:absolute; top:max(12px,env(safe-area-inset-top)); right:max(12px,env(safe-area-inset-right)); width:46px; height:46px; border-radius:50%;
+    border:3px solid #0f3d8c; background:#ffd73a; color:#0f3d8c; font:700 24px Fredoka,"Trebuchet MS",sans-serif; cursor:pointer; box-shadow:0 4px 0 #0f3d8c; }
+  #musicBtn { pointer-events:auto; position:absolute; top:max(12px,env(safe-area-inset-top)); left:max(12px,env(safe-area-inset-left)); height:46px; padding:0 16px; border-radius:23px;
+    border:3px solid #0f3d8c; background:#fff; color:#0f3d8c; font:700 17px Fredoka,"Trebuchet MS",sans-serif; cursor:pointer; box-shadow:0 4px 0 #0f3d8c; }
+  #musicBtn.hint { animation:pulse .7s infinite alternate; }
+  #musicBtn.icon { width:46px; padding:0; font-size:20px; }
+  #diffBtn { pointer-events:auto; position:absolute; top:calc(max(12px,env(safe-area-inset-top)) + 56px); left:max(12px,env(safe-area-inset-left)); height:32px; padding:0 12px; border-radius:16px;
+    border:2px solid #0f3d8c; background:rgba(255,255,255,.9); color:#0f3d8c; font:700 13px Fredoka,"Trebuchet MS",sans-serif; cursor:pointer; box-shadow:0 3px 0 #0f3d8c; }
+  #helpBtn:active { transform:translateY(3px); box-shadow:0 1px 0 #0f3d8c; }
+  #menuBest { position:absolute; left:0; right:0; bottom:max(14px,env(safe-area-inset-bottom)); text-align:center; font:700 17px Fredoka,"Trebuchet MS",sans-serif; color:#5a3410; opacity:1; text-shadow:0 1px 0 rgba(255,255,255,.6); }
+  h1,h2,.btn { font-family:Fredoka,"Trebuchet MS",sans-serif; }
+  .roundBtn { pointer-events:auto; position:absolute; width:60px; height:60px; border-radius:50%; border:3px solid #0f3d8c; background:#fff; font-size:26px; line-height:1;
+    box-shadow:0 4px 0 #0f3d8c; cursor:pointer; padding:0; }
+  .roundBtn span { position:absolute; left:50%; top:64px; transform:translateX(-50%); font:700 13px Fredoka,"Trebuchet MS",sans-serif; color:#5a3410; white-space:nowrap; text-shadow:0 1px 0 rgba(255,255,255,.7); }
+  .roundBtn:active { transform:translateY(3px); box-shadow:0 1px 0 #0f3d8c; }
+  .badge { position:absolute; top:-6px; right:-6px; width:22px; height:22px; border-radius:50%; background:#ff3d6e; color:#fff; font:700 14px/22px Fredoka,sans-serif; border:2px solid #fff; }
+  #levelPick { pointer-events:auto; position:absolute; left:50%; transform:translateX(-50%); border:3px solid #0f3d8c; border-radius:20px; background:#ffd73a; color:#0f3d8c;
+    font:700 15px Fredoka,"Trebuchet MS",sans-serif; padding:6px 14px; box-shadow:0 3px 0 #0f3d8c; cursor:pointer; white-space:nowrap; }
+  #levelPick.hidden { display:none; }
+  #levelPick small { font-size:11px; opacity:.7; }
+  .stars { display:flex; gap:10px; font-size:56px; line-height:1; }
+  .stars span { color:rgba(255,255,255,.18); transform:scale(.4); animation:starPop .45s forwards; }
+  .stars span.on { color:#ffd73a; text-shadow:0 0 18px rgba(255,215,58,.8), 0 3px 0 #b07d00; }
+  @keyframes starPop { 60% { transform:scale(1.25); } 100% { transform:scale(1); } }
+  #clStats { text-align:center; font-size:16px; } #clStats .rw { margin-top:6px; color:#ffd73a; font-weight:bold; font-size:18px; }
+  .errinfo { font-size:11px; opacity:.6; max-width:360px; word-break:break-word; user-select:text; -webkit-user-select:text; }
+  .ver { position:absolute; right:max(8px,env(safe-area-inset-right)); bottom:max(6px,env(safe-area-inset-bottom)); font:700 11px Fredoka,sans-serif; color:#5a3410; opacity:.55; }
+  .earned { color:#fff7d6; font-weight:bold; font-size:16px; }
+  .panel { justify-content:flex-start; overflow-y:auto; padding-top:max(16px,env(safe-area-inset-top)); background:linear-gradient(180deg,#0e5c93,#06223f); gap:10px; }
+  .phead { display:flex; align-items:center; gap:10px; width:100%; max-width:420px; }
+  .phead h2 { flex:1; text-align:left; font-size:26px; }
+  .wallet { background:#fff7d6; color:#5a3410; font:700 16px Fredoka,sans-serif; padding:6px 12px; border-radius:16px; }
+  .x { width:40px; height:40px; border-radius:50%; border:0; background:rgba(255,255,255,.2); color:#fff; font-size:18px; cursor:pointer; }
+  #shopPreview { position:static; width:200px; height:160px; flex:none; background:radial-gradient(circle at 50% 45%, rgba(120,220,255,.35), rgba(255,255,255,0) 70%); border-radius:20px; }
+  .tabs { display:flex; gap:8px; }
+  .tab { border:0; border-radius:14px; padding:8px 16px; font:700 15px Fredoka,sans-serif; background:rgba(255,255,255,.15); color:#fff; cursor:pointer; }
+  .tab.on { background:#ffd73a; color:#0f3d8c; }
+  .grid { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; width:100%; max-width:420px; }
+  .item { border:2px solid rgba(255,255,255,.2); background:rgba(255,255,255,.1); border-radius:14px; padding:4px 2px 6px; color:#fff; cursor:pointer; font-family:Fredoka,sans-serif; }
+  .item canvas { position:static; width:64px; height:64px; display:block; margin:0 auto; }
+  .item .nm { font-size:11px; font-weight:700; line-height:1.1; } .item .pr { font-size:11px; color:#fff7d6; }
+  .item.sel { border-color:#ffd73a; background:rgba(255,215,58,.2); }
+  .item.poor { opacity:.55; }
+  #shopAction { font-size:18px; padding:12px 26px; } #shopAction:disabled { filter:grayscale(.6); opacity:.7; }
+  #missionList { display:flex; flex-direction:column; gap:10px; width:100%; max-width:420px; }
+  .mission { display:grid; grid-template-columns:1fr auto; gap:4px 10px; align-items:center; text-align:left; background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.18); border-radius:14px; padding:10px 12px; }
+  .mission.gift { background:rgba(255,215,58,.18); border-color:#ffd73a; }
+  .mission.claimed { opacity:.6; }
+  .mission .mt { font:700 15px Fredoka,sans-serif; grid-column:1; } .mission .ms { font-size:12px; opacity:.8; grid-column:1; }
+  .mission .bar { grid-column:1; height:8px; border-radius:4px; background:rgba(255,255,255,.18); overflow:hidden; } .mission .bar i { display:block; height:100%; background:#7be35a; }
+  .claim { grid-column:2; grid-row:1 / span 3; border:0; border-radius:12px; padding:10px 12px; font:700 14px Fredoka,sans-serif; background:#4ccf3a; color:#fff; box-shadow:0 3px 0 #1f7a22; cursor:pointer; }
+  .claim:disabled { background:rgba(255,255,255,.2); box-shadow:none; color:#ddd; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="safeProbe" style="position:fixed;top:0;left:0;width:1px;height:env(safe-area-inset-top,0px);visibility:hidden;pointer-events:none"></div>
+
+<button id="pauseBtn" class="hidden" aria-label="Duraklat">II</button>
+<button id="muteBtn" class="hidden" aria-label="Ses">🔊</button>
+<button id="inkBtn" class="hidden" aria-label="Mürekkep"><canvas id="inkCanvas" width="168" height="168" style="position:static;width:84px;height:84px"></canvas></button>
+
+<!-- Açılış ekranı tuvale çizilir (title.js); burada yalnızca küçük düğmeler var -->
+<div id="menu">
+  <button id="helpBtn" aria-label="Nasıl oynanır">?</button>
+  <button id="musicBtn" aria-label="Müzik">🎵 Müziği aç</button>
+  <button id="diffBtn" aria-label="Zorluk">Zorluk: Normal</button>
+  <button id="levelPick" class="hidden">▶ Bölüm 2'den başla</button>
+  <button id="shopBtn" class="roundBtn" aria-label="Mağaza">🛍️<span>Mağaza</span></button>
+  <button id="missionBtn" class="roundBtn" aria-label="Görevler">📋<span>Görevler</span><b id="missionBadge" class="badge hidden">!</b></button>
+  <div id="menuBest" class="best"></div>
+  <div id="ver" class="ver">s21 yedek</div>
+</div>
+
+<div id="shop" class="overlay panel hidden">
+  <div class="phead"><h2>🛍️ Mağaza</h2><div id="shopWallet" class="wallet">⚪ 0</div><button id="shopClose" class="x" aria-label="Kapat">✕</button></div>
+  <canvas id="shopPreview" width="400" height="320"></canvas>
+  <div class="tabs"><button class="tab on" data-tab="colors">🎨 Renkler</button><button class="tab" data-tab="accessories">🎩 Aksesuarlar</button></div>
+  <div id="shopGrid" class="grid"></div>
+  <button id="shopAction" class="btn">Bir ürün seç</button>
+</div>
+
+<div id="missions" class="overlay panel hidden">
+  <div class="phead"><h2>📋 Günlük Görevler</h2><div id="missionWallet" class="wallet">⚪ 0</div><button id="missionClose" class="x" aria-label="Kapat">✕</button></div>
+  <p class="sub">Görevler her gün yenilenir. Kazandığın incilerle mağazadan kostüm alabilirsin!</p>
+  <div id="missionList"></div>
+</div>
+
+<div id="help" class="overlay hidden">
+  <h2>Nasıl oynanır?</h2>
+  <div class="card">
+    👆 <b>Parmağını sürükle</b>: Okto parmağını takip eder.<br>
+    ⚪ <b>İnci</b> ve 🐟 <b>balık</b> topla, art arda toplayınca çarpan artar.<br>
+    🪼 Denizanası, 🐡 balon balığı, deniz kestanesi ve 🦈 köpekbalığından kaç!<br>
+    🖤 <b>Mürekkep</b> düğmesi dolunca bas, etraftaki düşmanlar sersemler.<br>
+    🫧 Kalkan, ⭐ deniz yıldızı ve ❤️ can toplanabilir.<br>
+    ✨ <b>Işık Midyesi</b>: ye, ışık bombası patlasın, ekrandaki tüm düşmanlar yok olsun!<br>
+    🪨 <b>Kayalıklara</b> dikkat: resif adacıklarına ve kanyon çıkıntılarına çarpınca can gider. Parlayan <b>mağara ağzına</b> yüzersen hazine çıkar!<br>
+    🎁 Yok ettiğin bazı düşmanlardan <b>hediye</b> düşer: içinden çıkan <b>Altın Karides</b>i ye, 6 saniye <b>Dev Okto</b> ol ve düşmanları ez!<br>
+        🌊 Bölümlerde özel bölgeler var: <b>Akıntı, Karanlık Mağara, Batık Gemi</b> (gizli oda!), <b>Sıcak Bacalar, Yosun Ormanı, Mayın Tarlası</b> ve <b>Kaçış</b>.<br>
+    🎚️ Sol üstteki <b>Zorluk</b> düğmesiyle Kolay / Normal / Zor seçebilirsin.<br>
+    🏁 Her <b>bölümün</b> sonunda bir canavar seni bekler: Dev Balon Balığı, Elektrikli Denizanası, Dev Kalamar. Yen, yıldızları topla, girdaba dal!<br>
+    💾 Yanarsan ulaştığın <b>bölümün başından</b> devam edebilirsin.
+  </div>
+  <button id="helpClose" class="btn">Anladım!</button>
+</div>
+
+<div id="pauseMenu" class="overlay hidden">
+  <h2>Duraklatıldı</h2>
+  <div class="row">
+    <button id="resumeBtn" class="btn">Devam</button>
+    <button id="quitBtn" class="btn alt">Ana Menü</button>
+  </div>
+  <p id="errInfo" class="errinfo hidden"></p>
+</div>
+
+<div id="clear" class="overlay hidden">
+  <h2 id="clTitle">Bölüm 1 Tamamlandı!</h2>
+  <p id="clName" class="sub">Güneşli Sular</p>
+  <div id="clStars" class="stars"></div>
+  <div id="clStats" class="card"></div>
+  <p id="clNext" class="sub"></p>
+  <button id="clearNext" class="btn">Girdaba dal! 🌀</button>
+</div>
+
+<div id="over" class="overlay hidden">
+  <h2>Okto yoruldu! 😵</h2>
+  <p id="oLevel" class="sub"></p>
+  <div id="newBest" class="new hidden">🏆 YENİ REKOR!</div>
+  <div class="stats">
+    <div class="stat"><div class="v" id="oScore">0</div><div class="l">Puan</div></div>
+    <div class="stat"><div class="v" id="oDepth">0</div><div class="l">Derinlik (m)</div></div>
+    <div class="stat"><div class="v" id="oPearls">0</div><div class="l">İnci</div></div>
+  </div>
+  <div id="oEarned" class="earned"></div>
+  <div id="oBest" class="best"></div>
+  <div class="row">
+    <button id="againBtn" class="btn">Tekrar Dal</button>
+    <button id="homeBtn" class="btn alt">Ana Menü</button>
+  </div>
+</div>
+
+<script src="okto.js?v=21"></script>
+<script src="reef.js?v=21"></script>
+<script src="zones.js?v=21"></script>
+<script src="enemies.js?v=21"></script>
+<script src="bosses.js?v=21"></script>
+<script src="title.js?v=21"></script>
+<script src="music.js?v=21"></script>
+<script src="game.js?v=21"></script>
+<!-- yedek kopya: service worker yok (ana oyunun önbelleğine karışmasın) -->
+</body>
+</html>

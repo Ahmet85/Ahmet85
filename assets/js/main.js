@@ -326,16 +326,23 @@ function sceneMarkup(key, cfg) {
   window.addEventListener('resize', () => current && current.resize());
 })();
 
-// Sayfa içi bağlantılar (logo, menü): Ventus sahnesinin içinden kayarak geçmek yerine
-// doğrudan hedefe atlar.
+// Sayfa içi bağlantılar (logo, menü, kutucuklar): kaydırarak değil, doğrudan hedefe atlar.
+// Atlama sırasında Ventus sahnesi gizlenir; sahne yalnızca fare/klavye/parmakla kaydırınca oynar.
 document.querySelectorAll('a[href^="#"]').forEach((a) => {
   a.addEventListener('click', (e) => {
     const id = a.getAttribute('href').slice(1);
     const target = id ? document.getElementById(id) : null;
     if (!target) return;
     e.preventDefault();
-    const top = id === 'ust' ? 0 : target.getBoundingClientRect().top + window.scrollY - 80;
-    window.scrollTo({ top, behavior: 'instant' });
+    const root = document.documentElement;
+    root.classList.add('jumping');
+    root.style.scrollBehavior = 'auto';
+    const top = id === 'ust' ? 0 : Math.round(target.getBoundingClientRect().top + window.scrollY - 80);
+    window.scrollTo(0, top);
     history.replaceState(null, '', '#' + id);
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      root.style.scrollBehavior = '';
+      root.classList.remove('jumping');
+    }));
   });
 });

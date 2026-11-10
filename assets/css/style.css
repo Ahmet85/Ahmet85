@@ -371,3 +371,5 @@ body.scene-lock { overflow: hidden; }
 .ppanel-photo { object-position: 22% 50%; }
 .ppanel-bag { right: 4%; bottom: -6%; width: 42%; max-width: 230px; filter: none; }
 @media (max-width: 820px) { .ppanel-bag { bottom: -4%; width: 34%; } .ppanel-photo { object-position: 30% 50%; } }
+
+.jumping #ventus-sahne .art-sticky { visibility: hidden; }

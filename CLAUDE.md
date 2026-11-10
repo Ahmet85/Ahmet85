@@ -18,7 +18,7 @@ Tasarım brifi: `docs/BRIF.md` ("OKTO – UNDERWATER DESCENT", kullanıcının 1
 - Dal: `claude/octopus-mobile-game-0is63u` → GitHub Pages: https://ahmet85.github.io/Ahmet85/
 - Aynı dalda başka bir oturumun `ritim/` klasörü var; **ona dokunma**, push öncesi `git fetch` + `git rebase` yap.
 - **Her yayında sürümü artır:** `index.html` içindeki tüm `?v=` ekleri, menüdeki `s<sürüm>` etiketi ve `sw.js` içindeki
-  `okto-v<sürüm>` birlikte. Kullanıcı sağ alttaki `s<sürüm>` ile güncellemenin geldiğini kontrol ediyor. Son sürüm: **s27**.
+  `okto-v<sürüm>` birlikte. Kullanıcı sağ alttaki `s<sürüm>` ile güncellemenin geldiğini kontrol ediyor. Son sürüm: **s28**.
 - Telefonda güncelleme: uygulamayı kapat-aç (gerekirse iki kez). Açılış görseli/simge değişirse sil-yeniden kur gerekir.
 - **Açılış görseli (s27):** Okto'suz sahne (oyuncunun rengi bilinemediği için); Okto oyunda oyuncunun renginle kumdan yükselir
   (`title.js` opts.intro). Görseller `preview/splash-gen.html` ile üretilir. Silip yeniden kurmada kayıt silinebilir:
@@ -57,7 +57,13 @@ Tasarım brifi: `docs/BRIF.md` ("OKTO – UNDERWATER DESCENT", kullanıcının 1
 - s27: beceri düğmesi mürekkep düğmesinin yerini aldı. Mürekkep Yelpazesi canavara eski güdümlü mürekkep topunu da atar
   (başta tek beceriyle 1. canavar ~3 basışta yenilir). Deniz yıldızı bütün bekleme sürelerini doldurur. İlk açılışta en iyi puan
   Kaşif Puanı sayılır. Eski mürekkep düğmesi yalnızca test adresinde: `?murekkep` (eski s21 ile birebir aynılık testi bununla yapılır).
-- Sırada: kalan 9 beceri (panelde "yakında").
+- **s28: 12 becerinin hepsi çalışıyor.** "Küçük düşman" = köpekbalığı ve canavarlar dışındakiler.
+  Dokunaç Darbesi (5 sn, 4 kısa darbe iter+1,2 sn sersem, canavara 1) · Akıntı İtişi (6 sn, 4 geniş dalga savurur, mermileri siler) ·
+  Kabarcık Kapanı (7 sn, 4 kabarcık ilk küçük düşmanı 3 sn hapseder) · Fener Nabzı (8 sn, 4,5 sn dört huzme; karanlık mağarayı
+  aydınlatır, düşmanları kesik çizgiyle gösterir) · Resif Kancası (7 sn, ilk küçük düşmanı 150 nokta uzakta 3 sn tutar) ·
+  Işık Dalgası (8 sn, ilerleyen 4 yay değdiğini yok eder, canavara 1) · Dönen Dokunaçlar (6 sn, çevreyi süpürür, çaprazlar dahil,
+  canavara 1) · Girdap Çekişi (9 sn, 2,6 sn çevredeki küçük düşmanları Okto'nun etrafında döndürür, sonra savurur) ·
+  Dev Okto Darbesi (4 sn, yalnızca Dev Okto'yken; 4 geniş darbe yok eder, canavara 2).
 
 ## iPhone'a özgü dersler (tekrar yaşama)
 - **Ekran ölçümüyle oynama**: basit `innerWidth/innerHeight` + `resize` olayı kalsın. Periyodik yeniden boyutlandırma ve
@@ -82,7 +88,7 @@ Tasarım brifi: `docs/BRIF.md` ("OKTO – UNDERWATER DESCENT", kullanıcının 1
 | `boss-ai.js` | Canavar sistemi: tanımlar (`OktoBossAI.register`), ortak saldırı kütüphanesi, can eşiğiyle aşamalar, büyük/mini |
 | `campaign.js` | Bölüm düzeni: `klasik` (varsayılan, s21) ve `grup` (3 bölüm + mini canavar, sonra büyük canavar; TASLAK) |
 | `cinema.js` | Büyük canavar sinematik girişi ve büyük zafer kutlaması |
-| `skills.js` | Beceri halkası denemesi: 12 beceri tanımı, halka girdisi, 3 çalışan beceri, düğme ve halka çizimi |
+| `skills.js` | Beceri halkası: 12 beceri (mantık, efektler, simgeler), halka girdisi, açılma (Kaşif Puanı), düğme ve halka çizimi |
 | `tests/regress.js` | Gerileme testleri (`node tests/regress.js`): her yayından önce çalıştır |
 | `yedek/s21/` | Yeni altyapıdan önceki s21'in oynanabilir yedeği (dokunma) |
 | `assets/` | Varlık listesi (`assets/README.md`) ve saydam PNG kopyaları (`assets/png`, `tools/export-assets.js` ile üretilir) |

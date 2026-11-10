@@ -1,5 +1,5 @@
 /* OKTO becerileri ve yetenek halkası (s27'den beri normal oyunda; eski mürekkep düğmesi için test adresi: ?murekkep)
-   - 12 beceri tanımlı; ilk denemede 3'ü çalışıyor: Mürekkep Yelpazesi, İnci Atışı, Kalkan Açılımı.
+   - 12 beceri (s28'den beri hepsi çalışıyor). 'Küçük düşman': köpekbalığı ve canavarlar dışındaki düşmanlar.
    - Oyuncu 3 beceri kuşanır. Sağ alttaki tek düğme:
        basılı tut  → Okto'nun çevresinde halka açılır (oyun yavaşlar)
        sürükle     → yukarı / sola / sağa: o dilim vurgulanır
@@ -29,24 +29,68 @@ const ICONS = {
     for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2 - Math.PI / 2; c.beginPath(); c.arc(0, 0, r * 0.68, a - 0.55, a + 0.55); c.stroke(); }
     c.fillStyle = '#ff7eb6'; c.beginPath(); c.arc(0, 0, r * 0.26, 0, TAU); c.fill();
   },
+  tentacleSlam(c, r) {
+    c.lineCap = 'round';
+    for (const [dx, dy] of DIRS) { c.strokeStyle = '#ff7eb6'; c.lineWidth = r * 0.26; c.beginPath(); c.moveTo(dx * r * 0.25, dy * r * 0.25); c.lineTo(dx * r * 0.82, dy * r * 0.82); c.stroke(); c.fillStyle = '#ffe3f0'; c.beginPath(); c.arc(dx * r * 0.82, dy * r * 0.82, r * 0.11, 0, TAU); c.fill(); }
+    c.fillStyle = '#ff9fc9'; c.beginPath(); c.arc(0, 0, r * 0.28, 0, TAU); c.fill();
+  },
+  currentPush(c, r) {
+    c.strokeStyle = '#7fd8ff'; c.lineWidth = r * 0.12; c.lineCap = 'round';
+    for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2; for (const k of [0.55, 0.85]) { c.beginPath(); c.arc(0, 0, r * k, a - 0.45, a + 0.45); c.stroke(); } }
+    c.fillStyle = '#d6f4ff'; c.beginPath(); c.arc(0, 0, r * 0.2, 0, TAU); c.fill();
+  },
+  bubbleTrap(c, r) {
+    for (const [dx, dy] of DIRS) { c.strokeStyle = '#bff3ff'; c.lineWidth = r * 0.08; c.fillStyle = 'rgba(160,230,255,.35)'; c.beginPath(); c.arc(dx * r * 0.6, dy * r * 0.6, r * 0.27, 0, TAU); c.fill(); c.stroke(); c.fillStyle = '#fff'; c.beginPath(); c.arc(dx * r * 0.6 - r * 0.08, dy * r * 0.6 - r * 0.09, r * 0.06, 0, TAU); c.fill(); }
+    c.fillStyle = '#ff7eb6'; c.beginPath(); c.arc(0, 0, r * 0.18, 0, TAU); c.fill();
+  },
+  lanternPulse(c, r) {
+    c.fillStyle = 'rgba(255,240,150,.55)';
+    for (const [dx, dy] of DIRS) { const px = -dy, py = dx; c.beginPath(); c.moveTo(dx * r * 0.2, dy * r * 0.2); c.lineTo(dx * r * 0.95 + px * r * 0.28, dy * r * 0.95 + py * r * 0.28); c.lineTo(dx * r * 0.95 - px * r * 0.28, dy * r * 0.95 - py * r * 0.28); c.fill(); }
+    c.fillStyle = '#ffe680'; c.beginPath(); c.arc(0, 0, r * 0.3, 0, TAU); c.fill();
+  },
+  reefHook(c, r) {
+    c.strokeStyle = '#ff9fc9'; c.lineWidth = r * 0.12; c.lineCap = 'round';
+    for (const [dx, dy] of DIRS) { const px = -dy, py = dx; c.beginPath(); c.moveTo(dx * r * 0.2, dy * r * 0.2); c.lineTo(dx * r * 0.75, dy * r * 0.75); c.quadraticCurveTo(dx * r * 0.95 + px * r * 0.2, dy * r * 0.95 + py * r * 0.2, dx * r * 0.7 + px * r * 0.25, dy * r * 0.7 + py * r * 0.25); c.stroke(); }
+    c.fillStyle = '#7a6a5a'; c.beginPath(); c.arc(0, 0, r * 0.22, 0, TAU); c.fill();
+  },
+  lightWave(c, r) {
+    c.lineCap = 'round';
+    for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2; c.strokeStyle = '#fff6b0'; c.lineWidth = r * 0.16; c.beginPath(); c.arc(0, 0, r * 0.72, a - 0.5, a + 0.5); c.stroke(); c.strokeStyle = '#ffffff'; c.lineWidth = r * 0.05; c.beginPath(); c.arc(0, 0, r * 0.72, a - 0.4, a + 0.4); c.stroke(); }
+    c.fillStyle = '#fff3a0'; c.beginPath(); c.arc(0, 0, r * 0.22, 0, TAU); c.fill();
+  },
+  spinTentacles(c, r) {
+    c.strokeStyle = '#ff7eb6'; c.lineWidth = r * 0.16; c.lineCap = 'round';
+    for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2; c.beginPath(); c.arc(0, 0, r * 0.62, a, a + 1.1); c.stroke(); }
+    c.fillStyle = '#ff9fc9'; c.beginPath(); c.arc(0, 0, r * 0.26, 0, TAU); c.fill();
+  },
+  vortexPull(c, r) {
+    c.strokeStyle = '#8fd8ff'; c.lineWidth = r * 0.1; c.lineCap = 'round'; c.beginPath();
+    for (let a = 0; a < TAU * 2.2; a += 0.15) { const rr = r * 0.9 * (1 - a / (TAU * 2.4)); c.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); }
+    c.stroke();
+  },
+  gigaSlam(c, r) {
+    c.fillStyle = '#ffd23f'; c.strokeStyle = '#a86a00'; c.lineWidth = r * 0.05;
+    for (const [dx, dy] of DIRS) { const px = -dy, py = dx; c.beginPath(); c.moveTo(dx * r * 0.25 + px * r * 0.16, dy * r * 0.25 + py * r * 0.16); c.lineTo(dx * r * 0.92 + px * r * 0.26, dy * r * 0.92 + py * r * 0.26); c.lineTo(dx * r * 0.92 - px * r * 0.26, dy * r * 0.92 - py * r * 0.26); c.lineTo(dx * r * 0.25 - px * r * 0.16, dy * r * 0.25 - py * r * 0.16); c.closePath(); c.fill(); c.stroke(); }
+    c.fillStyle = '#ff7eb6'; c.beginPath(); c.arc(0, 0, r * 0.3, 0, TAU); c.fill();
+  },
   generic(c, r) { c.fillStyle = 'rgba(255,255,255,.5)'; c.beginPath(); c.arc(0, 0, r * 0.3, 0, TAU); c.fill(); },
 };
 
-// ---------- 12 beceri (ready: bu denemede çalışıyor mu) ----------
+// ---------- 12 beceri (s28: hepsi çalışıyor) ----------
 // xp: açılması için gereken toplam Kaşif Puanı (dalışlarda kazanılan bütün puanlar birikir; canavar yenmek çok puan verir)
 const DEFS = [
   { id: 'inkFan', name: 'Mürekkep Yelpazesi', cd: 6, ready: true, color: '#b48cff', xp: 0, desc: 'Dört bulut, yakındaki düşmanları sersemletir' },
   { id: 'pearlShot', name: 'İnci Atışı', cd: 3.5, ready: true, color: '#fff3d6', xp: 300, desc: 'Dört inci, her biri ilk hedefe vurur' },
   { id: 'shieldArcs', name: 'Kalkan Açılımı', cd: 10, ready: true, color: '#9ee8ff', xp: 800, desc: 'Dört yay, her biri bir mermiyi durdurur' },
-  { id: 'tentacleSlam', name: 'Dokunaç Darbesi', cd: 5, ready: false, xp: 1500, desc: 'Dört kısa darbe, yakındaki düşmanları iter' },
-  { id: 'currentPush', name: 'Akıntı İtişi', cd: 6, ready: false, xp: 2400, desc: 'Dört dalga, küçük düşmanları uzaklaştırır' },
-  { id: 'bubbleTrap', name: 'Kabarcık Kapanı', cd: 7, ready: false, xp: 3500, desc: 'Dört kabarcık, küçük düşmanları tutar' },
-  { id: 'lanternPulse', name: 'Fener Nabzı', cd: 8, ready: false, xp: 5000, desc: 'Dört huzme, karanlıkta her şeyi gösterir' },
-  { id: 'reefHook', name: 'Resif Kancası', cd: 7, ready: false, xp: 6500, desc: 'Dört dokunaç, küçük düşmanları uzakta tutar' },
-  { id: 'lightWave', name: 'Işık Dalgası', cd: 8, ready: false, xp: 8500, desc: 'Dört ışık yayı, düşmanlara hasar verir' },
-  { id: 'spinTentacles', name: 'Dönen Dokunaçlar', cd: 6, ready: false, xp: 11000, desc: 'Dört yönden süpürme, çaprazları da kapsar' },
-  { id: 'vortexPull', name: 'Girdap Çekişi', cd: 9, ready: false, xp: 14000, desc: 'Küçük düşmanları Okto’nun çevresinde toplar' },
-  { id: 'gigaSlam', name: 'Dev Okto Darbesi', cd: 4, ready: false, xp: 18000, desc: 'Dev Okto’yken dört geniş darbe' },
+  { id: 'tentacleSlam', color: '#ff9fc9', name: 'Dokunaç Darbesi', cd: 5, ready: true, xp: 1500, desc: 'Dört kısa darbe, yakındaki düşmanları iter' },
+  { id: 'currentPush', color: '#7fd8ff', name: 'Akıntı İtişi', cd: 6, ready: true, xp: 2400, desc: 'Dört dalga, küçük düşmanları uzaklaştırır' },
+  { id: 'bubbleTrap', color: '#bff3ff', name: 'Kabarcık Kapanı', cd: 7, ready: true, xp: 3500, desc: 'Dört kabarcık, küçük düşmanları tutar' },
+  { id: 'lanternPulse', color: '#ffe680', name: 'Fener Nabzı', cd: 8, ready: true, xp: 5000, desc: 'Dört huzme, karanlıkta her şeyi gösterir' },
+  { id: 'reefHook', color: '#ff9fc9', name: 'Resif Kancası', cd: 7, ready: true, xp: 6500, desc: 'Dört dokunaç, küçük düşmanları uzakta tutar' },
+  { id: 'lightWave', color: '#fff3a0', name: 'Işık Dalgası', cd: 8, ready: true, xp: 8500, desc: 'Dört ışık yayı, düşmanlara hasar verir' },
+  { id: 'spinTentacles', color: '#ff7eb6', name: 'Dönen Dokunaçlar', cd: 6, ready: true, xp: 11000, desc: 'Dört yönden süpürme, çaprazları da kapsar' },
+  { id: 'vortexPull', color: '#8fd8ff', name: 'Girdap Çekişi', cd: 9, ready: true, xp: 14000, desc: 'Küçük düşmanları Okto’nun çevresinde toplar' },
+  { id: 'gigaSlam', color: '#ffd23f', name: 'Dev Okto Darbesi', cd: 4, ready: true, xp: 18000, desc: 'Altın karidesle Dev Okto’yken dört geniş darbe', needBig: true },
 ];
 const byId = id => DEFS.find(d => d.id === id);
 
@@ -54,6 +98,7 @@ const byId = id => DEFS.find(d => d.id === id);
 const st = {
   equipped: ['inkFan', 'pearlShot', 'shieldArcs'], sel: 0, cd: {}, lock: 0,
   hold: null,            // { id, x, y, t, open, hover }
+  pushes: [],            // itilen düşmanlar { e, vx, vy }
   fx: [],                // etkin efektler
 };
 // halkada dilim merkezleri (kuşanılan beceri sayısına göre): 3 → üst, sol-alt, sağ-alt · 2 → sol, sağ
@@ -85,6 +130,7 @@ function cancel() { st.hold = null; }
 function activate(E) {
   const id = st.equipped[st.sel], d = byId(id);
   if (!d || !d.ready || (st.cd[id] || 0) > 0 || st.lock > 0) { E.sound.tone(200, 0.08, 'square', 0.04); return false; }
+  if (d.needBig && !(E.player.bigT > 0)) { E.sound.tone(200, 0.08, 'square', 0.04); E.floater(E.player.x, E.player.y - 50 * E.S, 'Önce Dev Okto ol!', '#ffd23f'); return false; }
   st.cd[id] = d.cd; st.lock = 0.35; E.vibrate(25);
   const P = E.player, S = E.S;
   if (id === 'inkFan') {
@@ -99,19 +145,59 @@ function activate(E) {
     E.sound.tone(500, 0.3, 'sine', 0.08, 400); E.sound.tone(1000, 0.2, 'triangle', 0.05, 0, 0.1, true);
     st.fx = st.fx.filter(f => f.kind !== 'shield');
     st.fx.push({ kind: 'shield', t: 0, life: 6, arcs: [true, true, true, true] }); // sırayla: üst, alt, sol, sağ
+  } else if (id === 'tentacleSlam') {
+    E.sound.tone(180, 0.15, 'square', 0.08, -60); E.sound.noise(0.15, 0.12, 900);
+    const sg = { hitBoss: false };
+    for (const [dx, dy] of DIRS) st.fx.push({ kind: 'slam', dx, dy, t: 0, life: 0.4, len: 100 * S, w: 24 * S, hit: new Set(), dmg: 1, push: 360, grp: sg });
+  } else if (id === 'gigaSlam') {
+    E.sound.tone(90, 0.3, 'sawtooth', 0.12, -30); E.sound.noise(0.3, 0.2, 700); E.shake && E.shake(10);
+    const gg = { hitBoss: false };
+    for (const [dx, dy] of DIRS) st.fx.push({ kind: 'slam', dx, dy, t: 0, life: 0.45, len: 175 * S, w: 56 * S, hit: new Set(), dmg: 2, push: 0, kill: true, giga: true, grp: gg });
+  } else if (id === 'currentPush') {
+    E.sound.filtered ? E.sound.filtered(0.6, 0.18, 'bandpass', 700, 0.8, 0, 0.05) : E.sound.noise(0.5, 0.15, 700);
+    for (const [dx, dy] of DIRS) st.fx.push({ kind: 'wave', dx, dy, t: 0, life: 0.7, reach: 230 * S, w: 70 * S, hit: new Set() });
+  } else if (id === 'bubbleTrap') {
+    E.sound.tone(600, 0.15, 'sine', 0.07, 400); E.sound.tone(900, 0.1, 'sine', 0.05, 300, 0.06);
+    for (const [dx, dy] of DIRS) st.fx.push({ kind: 'bubble', x: P.x + dx * P.r, y: P.y + dy * P.r, vx: dx * 300 * S, vy: dy * 300 * S, t: 0, life: 1.1, r: 14 * S });
+  } else if (id === 'lanternPulse') {
+    E.sound.tone(660, 0.5, 'sine', 0.07, 0, 0, true); E.sound.tone(990, 0.6, 'triangle', 0.04, 0, 0.1, true);
+    st.fx = st.fx.filter(f => f.kind !== 'lantern');
+    st.fx.push({ kind: 'lantern', t: 0, life: 4.5, len: 320 * S, w: 46 * S });
+  } else if (id === 'reefHook') {
+    E.sound.tone(300, 0.2, 'triangle', 0.08, 300);
+    for (const [dx, dy] of DIRS) st.fx.push({ kind: 'hook', dx, dy, t: 0, life: 3.2, len: 150 * S, w: 22 * S, held: null });
+  } else if (id === 'lightWave') {
+    E.sound.tone(880, 0.3, 'triangle', 0.08, 600, 0, true); E.sound.noise(0.3, 0.08, 4000);
+    const lg = { hitBoss: false }; // dört yay canavara en fazla bir kez vurur
+    for (const [dx, dy] of DIRS) st.fx.push({ kind: 'light', dx, dy, x: P.x, y: P.y, t: 0, life: 0.6, reach: 330 * S, hit: new Set(), grp: lg });
+  } else if (id === 'spinTentacles') {
+    E.sound.tone(250, 0.45, 'sawtooth', 0.05, 300); E.sound.noise(0.4, 0.08, 1500);
+    st.fx.push({ kind: 'spin', t: 0, life: 0.6, R: 105 * S, hit: new Set(), bossHit: false });
+  } else if (id === 'vortexPull') {
+    E.sound.tone(200, 1.2, 'sine', 0.08, 300); E.sound.noise(1.2, 0.08, 600);
+    st.fx = st.fx.filter(f => f.kind !== 'vortex');
+    st.fx.push({ kind: 'vortex', t: 0, life: 2.6, R: 230 * S, orbit: 72 * S, caught: new Set() });
   }
   return true;
 }
 
 // ---------- Güncelleme ----------
 const isShot = e => e.type === 'spike' || e.type === 'blob';
+const isSmall = (E, e) => E.enemies.has(e.type) && !isShot(e) && e.type !== 'shark' && !e.dead;
+// Okto'dan (dx,dy) yönünde uzanan şeridin içinde mi? (boy: len, yarı genişlik: w)
+function inLane(P, dx, dy, len, w, x, y, r) { const ax = x - P.x, ay = y - P.y, a = ax * dx + ay * dy, p = Math.abs(ax * -dy + ay * dx); return a > -r && a < len + r && p < w + r; }
+function stun(E, e, sec) { if (!e.stunned) { E.addScore(15); E.track && E.track('stun_day', 1); } e.stunned = true; e.skStun = Math.max(e.skStun || 0, sec); if (e.type === 'shark') { e.warn = 0; } }
+function kick(e, vx, vy) { st.pushes.push({ e, vx, vy }); }
+function bossIn(E, x, y, r) { const B = E.boss; return B && B.phase === 'fight' && Math.hypot(B.x - x, B.y - B.r * 0.3 - y) < B.r * 0.85 + r; }
 function update(E, dt) {
   for (const k in st.cd) if (st.cd[k] > 0) st.cd[k] = Math.max(0, st.cd[k] - dt);
   if (st.lock > 0) st.lock -= dt;
   if (st.hold && !st.hold.open && E.now - st.hold.t > 220) st.hold.open = true; // basılı tutunca açılır
   const P = E.player, S = E.S;
   // kısa süreli sersemleme sayaçları
-  for (const e of E.entities) if (e.skStun > 0) { e.skStun -= dt; if (e.skStun <= 0) { e.stunned = false; e.skStun = 0; } }
+  for (const e of E.entities) if (e.skStun > 0) { e.skStun -= dt; if (e.skStun <= 0) { e.stunned = false; e.skStun = 0; e.trapped = false; } }
+  for (const q of st.pushes) { q.e.x += q.vx * dt; q.e.y += q.vy * dt; const k = Math.pow(0.02, dt); q.vx *= k; q.vy *= k; }
+  st.pushes = st.pushes.filter(q => !q.e.dead && Math.hypot(q.vx, q.vy) > 20 * S);
   for (const f of st.fx) {
     f.t += dt;
     if (f.kind === 'ink') {
@@ -146,10 +232,91 @@ function update(E, dt) {
         f.arcs[i] = false; e.dead = true; E.burst(e.x, e.y, '#9ee8ff', 12, 140); E.sound.tone(700, 0.12, 'triangle', 0.08, -300);
       }
       if (!f.arcs.some(Boolean)) f.done = true;
+    } else if (f.kind === 'slam') { // dokunaç darbesi / dev darbe: uzanır, değdiğini iter (dev darbe yok eder)
+      const ext = Math.sin(Math.min(1, f.t / f.life) * Math.PI), len = f.len * ext;
+      for (const e of E.entities) {
+        if (e.dead || f.hit.has(e) || !(E.enemies.has(e.type)) || !inLane(P, f.dx, f.dy, len, f.w, e.x, e.y, e.r)) continue;
+        f.hit.add(e);
+        if (isShot(e) || f.kill) { e.dead = true; E.burst(e.x, e.y, f.giga ? '#ffd23f' : '#ff9fc9', 12, 150); E.addScore(20); continue; }
+        if (e.type === 'shark') { e.warn = 0; e.sp *= 0.5; }
+        stun(E, e, 1.2); kick(e, f.dx * f.push * S, f.dy * f.push * S); E.burst(e.x, e.y, '#ff9fc9', 6, 90);
+      }
+      if (!f.grp.hitBoss && bossIn(E, P.x + f.dx * len, P.y + f.dy * len, f.w)) { f.grp.hitBoss = true; E.damageBoss(f.dmg); } // dört darbe canavara bir kez
+    } else if (f.kind === 'wave') { // akıntı itişi: geniş dalga ilerler, küçük düşmanları savurur
+      const k = Math.min(1, f.t / f.life), front = f.reach * (1 - Math.pow(1 - k, 2));
+      f.cx = P.x + f.dx * front; f.cy = P.y + f.dy * front;
+      for (const e of E.entities) {
+        if (e.dead || f.hit.has(e)) continue;
+        const ax = e.x - P.x, ay = e.y - P.y, a = ax * f.dx + ay * f.dy, p = Math.abs(ax * -f.dy + ay * f.dx);
+        if (a < 0 || a > front + e.r || p > f.w + front * 0.35) continue;
+        if (isShot(e)) { e.dead = true; E.burst(e.x, e.y, '#7fd8ff', 8, 90); continue; }
+        if (!isSmall(E, e)) continue;
+        f.hit.add(e); kick(e, f.dx * 520 * S, f.dy * 520 * S); stun(E, e, 0.8);
+      }
+    } else if (f.kind === 'bubble') { // kabarcık kapanı: ilk küçük düşmanı içine alır
+      f.x += f.vx * dt; f.y += f.vy * dt;
+      if (f.x < -30 || f.x > E.W + 30 || f.y < -30 || f.y > E.H + 30) { f.done = true; continue; }
+      for (const e of E.entities) {
+        if (e.dead || Math.hypot(e.x - f.x, e.y - f.y) > e.r + f.r) continue;
+        if (isShot(e)) { e.dead = true; f.done = true; E.burst(f.x, f.y, '#bff3ff', 10, 110); break; }
+        if (!isSmall(E, e) || e.trapped) continue;
+        e.trapped = true; stun(E, e, 3); f.done = true; E.sound.tone(500, 0.2, 'sine', 0.07, 300); E.floater(e.x, e.y - 24 * S, 'yakalandı!', '#bff3ff'); break;
+      }
+    } else if (f.kind === 'lantern') { // fener nabzı: dört huzme; karanlık mağarayı aydınlatır, değdiği düşmanları gösterir
+      for (const e of E.entities) if (E.enemies.has(e.type) && !e.dead && DIRS.some(([dx, dy]) => inLane(P, dx, dy, f.len, f.w, e.x, e.y, e.r))) e.seenT = 0.3;
+    } else if (f.kind === 'hook') { // resif kancası: uzanır, ilk küçük düşmanı yakalar ve uzakta tutar
+      const ext = Math.min(1, f.t / 0.25), len = f.len * ext;
+      if (!f.held && f.t < 0.6) for (const e of E.entities) if (isSmall(E, e) && inLane(P, f.dx, f.dy, len, f.w, e.x, e.y, e.r)) { f.held = e; stun(E, e, 3.2); E.sound.tone(400, 0.12, 'square', 0.05); break; }
+      if (f.held) { if (f.held.dead) f.held = null; else { f.held.x = P.x + f.dx * f.len; f.held.y = P.y + f.dy * f.len; } }
+      else if (f.t > 0.6) f.done = true; // boşa uzandı: geri çekil
+    } else if (f.kind === 'light') { // ışık dalgası: ilerleyen yay, değdiği düşmanı yok eder
+      const k = Math.min(1, f.t / f.life), front = f.reach * k;
+      f.cx = P.x + f.dx * front; f.cy = P.y + f.dy * front;
+      for (const e of E.entities) {
+        if (e.dead || f.hit.has(e) || !E.enemies.has(e.type)) continue;
+        const ax = e.x - P.x, ay = e.y - P.y, a = ax * f.dx + ay * f.dy, p = Math.abs(ax * -f.dy + ay * f.dx);
+        if (Math.abs(a - front) > 22 * S + e.r || p > 40 * S + front * 0.5) continue;
+        f.hit.add(e); e.dead = true; E.burst(e.x, e.y, '#fff3a0', 12, 150); E.addScore(20);
+      }
+      if (!f.grp.hitBoss && bossIn(E, f.cx, f.cy, 24 * S)) { f.grp.hitBoss = true; E.damageBoss(1); }
+    } else if (f.kind === 'spin') { // dönen dokunaçlar: dört dokunaç Okto'nun çevresini süpürür (çaprazlar dahil)
+      const ang = (f.t / f.life) * Math.PI * 0.75;
+      for (const e of E.entities) {
+        if (e.dead || f.hit.has(e) || !E.enemies.has(e.type)) continue;
+        const ax = e.x - P.x, ay = e.y - P.y, d = Math.hypot(ax, ay);
+        if (d > f.R + e.r || d < 4) continue;
+        const ea = Math.atan2(ay, ax); let hitNow = false;
+        for (let i = 0; i < 4; i++) { let diff = ((ea - (i * Math.PI / 2 + ang)) % TAU + TAU) % TAU; if (diff > Math.PI) diff -= TAU; if (Math.abs(diff) < 0.35) hitNow = true; }
+        if (!hitNow) continue;
+        f.hit.add(e);
+        if (isShot(e)) { e.dead = true; E.burst(e.x, e.y, '#ff9fc9', 8, 90); continue; }
+        stun(E, e, 1.5); kick(e, ax / d * 380 * S, ay / d * 380 * S);
+      }
+      if (!f.bossHit && bossIn(E, P.x, P.y, f.R)) { f.bossHit = true; E.damageBoss(1); }
+    } else if (f.kind === 'vortex') { // girdap çekişi: çevredeki küçük düşmanları Okto'nun etrafında döndürür
+      const pull = f.t < f.life - 0.4;
+      for (const e of E.entities) {
+        if (!isSmall(E, e)) continue;
+        const ax = e.x - P.x, ay = e.y - P.y, d = Math.hypot(ax, ay) || 1;
+        if (!f.caught.has(e) && d < f.R && pull) { f.caught.add(e); stun(E, e, f.life - f.t + 1); }
+        if (!f.caught.has(e)) continue;
+        if (pull) { const a = Math.atan2(ay, ax) + dt * 3.2, rr = d + (f.orbit - d) * Math.min(1, dt * 4); e.x = P.x + Math.cos(a) * rr; e.y = P.y + Math.sin(a) * rr; }
+        else if (!e.flung) { e.flung = true; kick(e, ax / d * 300 * S, ay / d * 300 * S); }
+      }
+      for (const e of E.entities) if (isShot(e) && !e.dead && Math.hypot(e.x - P.x, e.y - P.y) < f.orbit + 20 * S) { e.dead = true; E.burst(e.x, e.y, '#8fd8ff', 6, 80); }
     }
     if (f.t >= f.life) f.done = true;
   }
   st.fx = st.fx.filter(f => !f.done);
+}
+// karanlık mağara için ışıklar (fener nabzının huzmeleri)
+function lights(E) {
+  const L = [], P = E.player, S = E.S;
+  for (const f of st.fx) if (f.kind === 'lantern') {
+    const a = f.t < 0.3 ? f.t / 0.3 : f.life - f.t < 0.6 ? (f.life - f.t) / 0.6 : 1;
+    for (const [dx, dy] of DIRS) for (let k = 1; k <= 5; k++) L.push({ x: P.x + dx * f.len * k / 5, y: P.y + dy * f.len * k / 5, r: f.w * 1.6, a: 0.9 * a });
+  }
+  return L;
 }
 const shielding = () => st.fx.some(f => f.kind === 'shield');
 const timeScale = () => (st.hold && st.hold.open ? 0.4 : 1); // halka açıkken oyun yavaşlar
@@ -179,7 +346,63 @@ function drawFx(c, E) {
         c.strokeStyle = `rgba(255,255,255,${0.6 * fade})`; c.lineWidth = 2 * S; c.beginPath(); c.arc(0, 0, R + 1 * S, a - 0.45, a + 0.2); c.stroke();
       });
       c.restore();
+    } else if (f.kind === 'slam') {
+      const ext = Math.sin(Math.min(1, f.t / f.life) * Math.PI), len = f.len * ext, w = f.w;
+      c.save(); c.translate(P.x, P.y); c.rotate(Math.atan2(f.dy, f.dx));
+      c.fillStyle = f.giga ? '#ffd23f' : '#ff7eb6'; c.strokeStyle = f.giga ? '#a86a00' : '#7a1c4f'; c.lineWidth = 2.5 * S;
+      c.beginPath(); c.moveTo(P.r * 0.6, -w * 0.55); c.quadraticCurveTo(len * 0.6, -w * 0.8, len, 0); c.quadraticCurveTo(len * 0.6, w * 0.8, P.r * 0.6, w * 0.55); c.closePath(); c.fill(); c.stroke();
+      c.fillStyle = f.giga ? '#fff3b0' : '#ffe3f0'; for (let k = 1; k <= 4; k++) { c.beginPath(); c.arc(len * (0.25 + k * 0.15), 0, w * 0.13 * (1.2 - k * 0.15), 0, TAU); c.fill(); }
+      c.restore();
+    } else if (f.kind === 'wave') {
+      const a = 1 - f.t / f.life, front = Math.hypot(f.cx - P.x, f.cy - P.y);
+      c.save(); c.translate(P.x, P.y); c.rotate(Math.atan2(f.dy, f.dx)); c.lineCap = 'round';
+      for (const [off, al] of [[0, 0.8], [-18 * S, 0.45], [-34 * S, 0.25]]) { c.strokeStyle = `rgba(190,240,255,${al * a})`; c.lineWidth = 6 * S; c.beginPath(); c.arc(off, 0, Math.max(10, front), -0.35 - f.w / (front + 60 * S) * 0.6, 0.35 + f.w / (front + 60 * S) * 0.6); c.stroke(); }
+      c.restore();
+    } else if (f.kind === 'bubble') {
+      c.save(); c.translate(f.x, f.y); c.fillStyle = 'rgba(160,230,255,.3)'; c.strokeStyle = '#dff8ff'; c.lineWidth = 2 * S;
+      c.beginPath(); c.arc(0, 0, f.r, 0, TAU); c.fill(); c.stroke(); c.fillStyle = '#fff'; c.beginPath(); c.arc(-f.r * 0.35, -f.r * 0.35, f.r * 0.18, 0, TAU); c.fill(); c.restore();
+    } else if (f.kind === 'lantern') {
+      const a = f.t < 0.3 ? f.t / 0.3 : f.life - f.t < 0.6 ? (f.life - f.t) / 0.6 : 1;
+      c.save(); c.globalCompositeOperation = 'lighter'; c.translate(P.x, P.y);
+      for (const [dx, dy] of DIRS) {
+        const g = c.createLinearGradient(0, 0, dx * f.len, dy * f.len); g.addColorStop(0, `rgba(255,240,150,${0.35 * a})`); g.addColorStop(1, 'rgba(255,240,150,0)');
+        const px = -dy, py = dx; c.fillStyle = g; c.beginPath(); c.moveTo(px * 10 * S, py * 10 * S); c.lineTo(dx * f.len + px * f.w, dy * f.len + py * f.w); c.lineTo(dx * f.len - px * f.w, dy * f.len - py * f.w); c.lineTo(-px * 10 * S, -py * 10 * S); c.fill();
+      }
+      c.restore();
+    } else if (f.kind === 'hook') {
+      const ext = f.held ? 1 : f.t < 0.25 ? f.t / 0.25 : Math.max(0, 1 - (f.t - 0.25) / 0.35), len = f.len * ext;
+      c.save(); c.translate(P.x, P.y); c.rotate(Math.atan2(f.dy, f.dx)); c.lineCap = 'round';
+      c.strokeStyle = '#ff7eb6'; c.lineWidth = 7 * S; c.beginPath(); c.moveTo(P.r * 0.6, 0);
+      for (let k = 0; k <= 10; k++) { const x = P.r * 0.6 + (len - P.r * 0.6) * k / 10; c.lineTo(x, Math.sin(k * 1.3 + f.t * 8) * 3 * S); } c.stroke();
+      c.strokeStyle = '#ffe3f0'; c.lineWidth = 3 * S; c.beginPath(); c.arc(len, 0, 8 * S, -1.2, 1.8); c.stroke();
+      c.restore();
+    } else if (f.kind === 'light') {
+      const a = 1 - f.t / f.life, front = Math.hypot(f.cx - P.x, f.cy - P.y), half = Math.min(0.55, (40 * S + front * 0.5) / Math.max(front, 1)); // dört ayrı yay
+      c.save(); c.globalCompositeOperation = 'lighter'; c.translate(P.x, P.y); c.rotate(Math.atan2(f.dy, f.dx)); c.lineCap = 'round';
+      c.strokeStyle = `rgba(255,246,176,${0.9 * a})`; c.lineWidth = 9 * S; c.beginPath(); c.arc(0, 0, Math.max(10, front), -half, half); c.stroke();
+      c.strokeStyle = `rgba(255,255,255,${a})`; c.lineWidth = 3 * S; c.beginPath(); c.arc(0, 0, Math.max(10, front), -half * 0.8, half * 0.8); c.stroke();
+      c.restore();
+    } else if (f.kind === 'spin') {
+      const ang = (f.t / f.life) * Math.PI * 0.75, a = 1 - Math.max(0, f.t - f.life * 0.7) / (f.life * 0.3);
+      c.save(); c.translate(P.x, P.y); c.globalAlpha = a; c.lineCap = 'round';
+      for (let i = 0; i < 4; i++) {
+        const b = i * Math.PI / 2 + ang;
+        c.strokeStyle = 'rgba(255,126,182,.35)'; c.lineWidth = 16 * S; c.beginPath(); c.arc(0, 0, f.R * 0.75, b - 0.6, b); c.stroke();
+        c.strokeStyle = '#ff7eb6'; c.lineWidth = 9 * S; c.beginPath(); c.moveTo(Math.cos(b) * P.r * 0.6, Math.sin(b) * P.r * 0.6); c.lineTo(Math.cos(b) * f.R, Math.sin(b) * f.R); c.stroke();
+        c.fillStyle = '#ffe3f0'; c.beginPath(); c.arc(Math.cos(b) * f.R, Math.sin(b) * f.R, 5 * S, 0, TAU); c.fill();
+      }
+      c.restore();
+    } else if (f.kind === 'vortex') {
+      const a = f.t < 0.3 ? f.t / 0.3 : f.life - f.t < 0.5 ? (f.life - f.t) / 0.5 : 1;
+      c.save(); c.translate(P.x, P.y); c.globalAlpha = 0.7 * a; c.lineCap = 'round';
+      for (let arm = 0; arm < 3; arm++) { c.beginPath(); for (let k = 0; k <= 40; k++) { const s2 = k / 40, ang = arm * TAU / 3 + s2 * 4 - f.t * 6, r = f.orbit * 0.5 + s2 * (f.R - f.orbit * 0.5); c.lineTo(Math.cos(ang) * r, Math.sin(ang) * r); } c.strokeStyle = 'rgba(143,216,255,.6)'; c.lineWidth = 4 * S; c.stroke(); }
+      c.restore();
     }
+  }
+  // kabarcığa yakalanan / fenerle görülen düşmanlar
+  for (const e of E.entities) {
+    if (e.trapped && !e.dead) { c.save(); c.translate(e.x, e.y); c.fillStyle = 'rgba(160,230,255,.25)'; c.strokeStyle = '#dff8ff'; c.lineWidth = 2 * S; c.beginPath(); c.arc(0, 0, e.r * 1.5, 0, TAU); c.fill(); c.stroke(); c.restore(); }
+    if (e.seenT > 0) { e.seenT -= 1 / 60; c.save(); c.strokeStyle = 'rgba(255,240,150,.8)'; c.lineWidth = 2 * S; c.setLineDash([5 * S, 4 * S]); c.beginPath(); c.arc(e.x, e.y, e.r * 1.4, 0, TAU); c.stroke(); c.restore(); }
   }
 }
 
@@ -219,7 +442,7 @@ function drawButton(c, s, E) {
   if (!ready) { c.fillStyle = '#fff'; c.font = '700 30px Fredoka, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(Math.ceil(cdl), cx, cx - 2); }
 }
 
-function reset() { st.cd = {}; st.fx = []; st.hold = null; st.lock = 0; if (st.sel >= st.equipped.length) st.sel = 0; }
+function reset() { st.cd = {}; st.fx = []; st.pushes = []; st.hold = null; st.lock = 0; if (st.sel >= st.equipped.length) st.sel = 0; }
 // ---------- Açılma (Kaşif Puanı) ----------
 const unlockedIds = xp => DEFS.filter(d => d.xp <= xp).map(d => d.id);
 const nextUnlock = xp => DEFS.filter(d => d.xp > xp).sort((a, b) => a.xp - b.xp)[0] || null;
@@ -249,6 +472,6 @@ window.OktoSkills = {
   refill() { st.cd = {}; }, // deniz yıldızı: bütün bekleme süreleri dolar
   setEquipped(list) { if (Array.isArray(list) && list.length === 3) st.equipped = list.slice(); },
   select(i) { st.sel = clamp(i | 0, 0, 2); },
-  down, move, up, cancel, activate, update, drawFx, drawRing, drawButton, shielding, timeScale, reset,
+  lights, down, move, up, cancel, activate, update, drawFx, drawRing, drawButton, shielding, timeScale, reset,
 };
 })();

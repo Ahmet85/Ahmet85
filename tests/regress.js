@@ -220,6 +220,28 @@ function serve() {
     ok(errors.length === 0, 'hata yok' + (errors.length ? ': ' + errors.join(' / ') : ''));
     await close();
   }
+  { // 12 becerinin her biri düşmanlı bir sahnede hatasız çalışıyor
+    const { page, errors, close } = await open('?beceri&xp=20000');
+    const r = await page.evaluate(() => {
+      const O = window.__okto, K = O.SK, out = [];
+      for (const d of K.DEFS) {
+        O.startGame(1); for (let i = 0; i < 60; i++) { O.lives = 3; O.invuln = 5; O.step(1 / 60); }
+        const P = O.player; O.entities.length = 0;
+        [[0, -90], [0, 90], [-90, 0], [90, 0], [-70, -70]].forEach(([dx, dy], i) => O.entities.push({ type: ['jelly', 'urchin', 'puffer', 'angler', 'jelly'][i], x: P.x + dx, y: P.y + dy, r: 16, t: 0, hue: 300, base: 14, puff: 0 }));
+        if (d.needBig) P.bigT = 5;
+        K.state.equipped = [d.id]; K.state.sel = 0; K.state.cd = {};
+        window.dispatchEvent(new KeyboardEvent('keydown', { key: ' ' }));
+        const fired = (K.state.cd[d.id] || 0) > 0;
+        for (let i = 0; i < 40; i++) { O.lives = 3; O.invuln = 5; O.step(1 / 60); } // en kısa sersemletme 0,8 sn
+        const hit = O.entities.filter(e => ['jelly', 'urchin', 'puffer', 'angler'].includes(e.type)).filter(e => !e.stunned).length < 5;
+        out.push(d.id + ':' + (fired ? 'ateş' : 'YOK') + (hit || d.id === 'shieldArcs' || d.id === 'lanternPulse' ? '' : ':etkisiz'));
+      }
+      return out;
+    });
+    ok(r.every(x => x.endsWith('ateş')), '12 beceri ateşlendi ve düşmanlara etki etti' + (r.every(x => x.endsWith('ateş')) ? '' : ': ' + r.join(' ')));
+    ok(errors.length === 0, 'hata yok' + (errors.length ? ': ' + errors.join(' / ') : ''));
+    await close();
+  }
   {
     const { page, close } = await open('?murekkep', false);
     ok(await page.evaluate(() => !window.__okto.SK) && !(await page.isVisible('#skillBtn')), 'test adresi ?murekkep: eski mürekkep düğmesi');

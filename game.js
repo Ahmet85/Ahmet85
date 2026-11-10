@@ -446,7 +446,7 @@ if (SK) {
 }
 function skEnv() {
   return { W, H, S, time, now: performance.now(), player, entities, boss, enemies: ENEMIES, damageBoss, burst, floater: addFloater, sound: Sound,
-    addScore: n => { score += n; }, vibrate, track: (id, n) => Missions.track(id, n),
+    addScore: n => { score += n; }, vibrate, track: (id, n) => Missions.track(id, n), shake: n => { shake = Math.max(shake, n); },
     inkShot: () => { if (boss && boss.phase === 'fight') shots.push({ x: player.x, y: player.y, vx: 0, vy: 260 * S, life: 3 }); } };
 }
 
@@ -895,6 +895,7 @@ function zoneLights() { // karanlık mağarada ışık saçan şeyler
     else if (e.type === 'jelly') L.push({ x: e.x, y: e.y, r: 40 * S, a: 0.5 });
   }
   for (const r of rings) L.push({ x: r.x, y: r.y, r: Math.max(10, r.r), a: r.life });
+  if (SK) for (const l of SK.lights(skEnv())) L.push(l); // fener nabzı huzmeleri
   return L;
 }
 function drawWorldFront() { for (const f of nearL) ctx.drawImage(f.a.img, f.x - f.a.ox, f.y - f.a.oy, f.a.cw, f.a.ch); }

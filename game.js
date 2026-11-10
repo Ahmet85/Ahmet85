@@ -277,7 +277,8 @@ cvs.addEventListener('pointerdown', e => {
   if (state === 'cinema') { if (cine && cine.t > 1.2) cine.t = Math.max(cine.t, cine.dur - 0.5); return; } // sinematiği geç
   if (state === 'menu') {
     if (hitPlay(e.clientX, e.clientY)) { startGame(); return; }
-    const r = window.OktoTitle && OktoTitle.tap && OktoTitle.tap(e.clientX, e.clientY, time);
+    const T = window.OktoTitle, r = T && (T.down ? T.down(e.clientX, e.clientY, time) : T.tap(e.clientX, e.clientY, time));
+    if (r === 'grab') { cvs.setPointerCapture && cvs.setPointerCapture(e.pointerId); return; } // Okto tutuldu: itme mi dokunma mı, bırakınca/itince belli olur
     if (r === 'okto') { Sound.giggle(); vibrate(15); }
     else if (r === 'fish') { Sound.splash(); setTimeout(() => Sound.giggle(), 180); }
     return;
@@ -287,7 +288,13 @@ cvs.addEventListener('pointerdown', e => {
   cvs.setPointerCapture && cvs.setPointerCapture(e.pointerId);
 });
 cvs.addEventListener('pointermove', e => {
-  if (state === 'menu') { cvs.style.cursor = hitPlay(e.clientX, e.clientY) ? 'pointer' : 'default'; window.OktoTitle && OktoTitle.pointer && OktoTitle.pointer(e.clientX, e.clientY, time); return; }
+  if (state === 'menu') {
+    cvs.style.cursor = hitPlay(e.clientX, e.clientY) ? 'pointer' : 'default';
+    const T = window.OktoTitle; if (!T) return;
+    if (T.move) { if (T.move(e.clientX, e.clientY, time) === 'spin') { Sound.giggle(); Sound.tone(500, 0.4, 'triangle', 0.06, 700, 0, true); vibrate(20); } }
+    else T.pointer && T.pointer(e.clientX, e.clientY, time);
+    return;
+  }
   cvs.style.cursor = 'default';
   if (!drag.active || e.pointerId !== drag.id) return;
   drag.lx = e.clientX; drag.ly = e.clientY;
@@ -299,7 +306,10 @@ cvs.addEventListener('pointermove', e => {
   if (target.y !== ty) { drag.ay = e.clientY; drag.py = target.y; }
 });
 const endDrag = e => { if (e.pointerId === drag.id) drag.active = false; };
-cvs.addEventListener('pointerup', endDrag);
+cvs.addEventListener('pointerup', e => {
+  if (state === 'menu') { const T = window.OktoTitle; if (T && T.up && T.up(e.clientX, e.clientY, time) === 'okto') { Sound.giggle(); vibrate(15); } return; }
+  endDrag(e);
+});
 cvs.addEventListener('pointercancel', endDrag);
 window.addEventListener('keydown', e => {
   keys[e.key] = true;

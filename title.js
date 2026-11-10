@@ -33,13 +33,40 @@ function tap(x, y, t) {
   if (o && Math.hypot(x - o.x, y - o.y) < o.r) {
     const kinds = Object.keys(REACT_DUR).filter(k => k !== I.lastReact);
     const k = kinds[Math.floor(Math.random() * kinds.length)];
-    I.react = k; I.lastReact = k; I.reactT = t;
+    I.react = k; I.lastReact = k; I.reactT = t; I.spinDir = 1;
     if (k === 'hearts') for (let n = 0; n < 7; n++) addPart('heart', o.x + (Math.random() - 0.5) * o.r, o.y - o.r * 0.5);
     else if (k === 'giggle') addPart('text', o.x + o.r * 0.7, o.y - o.r * 0.9, 'kıkır!');
     else if (k === 'spin') addPart('text', o.x - o.r * 0.9, o.y - o.r, 'vüüü!');
     return 'okto';
   }
   return null;
+}
+// Kolundan tutup itme: Okto'nun sol yarısından tutup yukarı iten parmak onu saat yönünde, sağ yarısından iten ters yönde döndürür.
+// Dokunup bırakmak (itmeden) eskisi gibi rastgele bir tepki verir.
+function spin(dir, t) {
+  const o = I.hits.okto; I.react = 'spin'; I.lastReact = 'spin'; I.reactT = t; I.spinDir = dir;
+  if (o) addPart('text', o.x - dir * o.r * 0.8, o.y - o.r, 'vüüü!');
+}
+function onOkto(x, y) { // kolların uçları da dahil geniş tutma alanı
+  const o = I.hits.okto; if (!o) return false;
+  const dx = (x - o.x) / (o.r * 1.45), dy = (y - o.y) / (o.r * 1.05);
+  return dx * dx + dy * dy < 1;
+}
+function down(x, y, t) {
+  pointer(x, y, t);
+  if (onOkto(x, y)) { const o = I.hits.okto; I.grab = { x, y, side: x < o.x ? 1 : -1 }; return 'grab'; }
+  I.grab = null; return tap(x, y, t);
+}
+function move(x, y, t) {
+  pointer(x, y, t); const g = I.grab; if (!g) return null;
+  const up = g.y - y, side = Math.abs(x - g.x);
+  if (up > 16 && up > side * 0.6) { I.grab = null; spin(g.side, t); return 'spin'; } // yukarı itti: dön
+  if (Math.hypot(x - g.x, y - g.y) > 60) I.grab = null; // başka yöne çekti: vazgeç
+  return null;
+}
+function up(x, y, t) {
+  const g = I.grab; I.grab = null; if (!g) return null;
+  return tap(g.x, g.y, t); // itmeden bıraktı: eski dokunma tepkisi
 }
 function addPart(kind, x, y, text) {
   I.parts.push({ kind, x, y, text, vx: (Math.random() - 0.5) * 60, vy: kind === 'bubble' ? -60 - Math.random() * 80 : -50 - Math.random() * 40, life: kind === 'text' ? 1.3 : 1.6, s: 0.7 + Math.random() * 0.6 });
@@ -80,7 +107,7 @@ function drawOkto(ctx, cx, cy, R, t, look, abs) {
   const k = (abs - I.reactT) / (REACT_DUR[I.react] || 1);
   if (k >= 0 && k < 1) {
     expr.wink = 1; expr.blink = 0; expr.sly = 0;
-    if (I.react === 'spin') { rot += easeOut(k) * TAU; y -= Math.sin(Math.PI * k) * R * 0.45; expr.wave = 1; }
+    if (I.react === 'spin') { rot += easeOut(k) * TAU * (I.spinDir || 1); y -= Math.sin(Math.PI * k) * R * 0.45; expr.wave = 1; }
     else if (I.react === 'jump') { y -= Math.abs(Math.sin(k * TAU)) * R * 0.4 * (1 - k * 0.4); expr.wave = Math.sin(Math.PI * k); }
     else if (I.react === 'giggle') { x += Math.sin(abs * 45) * R * 0.06 * (1 - k); rot += Math.sin(abs * 30) * 0.06 * (1 - k); }
     else if (I.react === 'hearts') { y -= Math.sin(Math.PI * k) * R * 0.15; expr.wave = 1; }
@@ -400,5 +427,5 @@ function draw(ctx, W, H, t, opts = {}) {
   ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
 }
 
-window.OktoTitle = { draw, LOOP, playRect: null, pointer, tap };
+window.OktoTitle = { draw, LOOP, playRect: null, pointer, tap, down, move, up };
 })();

@@ -1,0 +1,71 @@
+<!DOCTYPE html><html><head><meta charset="utf-8">
+<style>
+@font-face{font-family:Fredoka;font-weight:700;src:url(../fonts/fredoka-700-latin.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+20AC,U+2122,U+2212,U+FEFF,U+FFFD}
+@font-face{font-family:Fredoka;font-weight:700;src:url(../fonts/fredoka-700-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+1E00-1E9F,U+2020,U+20A0-20AB,U+2C60-2C7F,U+A720-A7FF}
+html,body{margin:0}canvas{display:block}
+</style></head><body><canvas id="c"></canvas>
+<script src="../okto.js"></script><script src="../reef.js"></script><script src="../enemies.js"></script><script src="../bosses.js"></script>
+<script>
+// Kullanıcının 19 referans tasarımı: her biri oyunun kendi varlıklarıyla dikey sahne olarak (390x700)
+const W = 390, H = 700, TAU = Math.PI * 2, c = document.getElementById('c'), ctx = c.getContext('2d');
+c.width = W * 2; c.height = H * 2; c.style.width = W + 'px'; c.style.height = H + 'px';
+const S = 0.975;
+const G = extra => Object.assign({ ctx, S, W, H, time: 1.3, FONT: 'Fredoka, sans-serif', boss: null, player: { x: W / 2, y: 200 }, slams: [], shots: [] }, extra || {});
+function sea(tier) {
+  const t = [0, 0.05, 0.45, 0.95][tier];
+  const mix = (a, b) => { const A = parseInt(a.slice(1), 16), B = parseInt(b.slice(1), 16); return `rgb(${[16, 8, 0].map(s => Math.round(((A >> s) & 255) * (1 - t) + ((B >> s) & 255) * t)).join(',')})`; };
+  const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, mix('#3cc7f0', '#06223f')); g.addColorStop(1, mix('#0b5d8f', '#010a18'));
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  if (tier === 1) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; for (let i = 0; i < 5; i++) { const x = W * (0.1 + i * 0.22); const gr = ctx.createLinearGradient(0, 0, 0, H); gr.addColorStop(0, 'rgba(255,255,255,.12)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); ctx.fillStyle = gr; ctx.beginPath(); ctx.moveTo(x - 18, 0); ctx.lineTo(x + 26, 0); ctx.lineTo(x + 110, H); ctx.lineTo(x + 20, H); ctx.fill(); } ctx.restore(); }
+  let s = 5; const r = () => (s = (s * 16807) % 2147483647) / 2147483647;
+  for (let i = 0; i < 40; i++) { ctx.fillStyle = tier === 3 ? 'rgba(120,255,230,.5)' : 'rgba(255,255,255,.35)'; ctx.beginPath(); ctx.arc(r() * W, r() * H, 0.6 + r() * 1.6, 0, TAU); ctx.fill(); }
+}
+const put = (a, x, y, alpha = 1) => { ctx.globalAlpha = alpha; ctx.drawImage(a.img, x - a.ox, y - a.oy, a.cw, a.ch); ctx.globalAlpha = 1; };
+const reef = (kind, x, y, f, tier = 1, seed = 3) => put(OktoReef.make(kind, W * f, tier, seed), x, y);
+const ledge = (side, y, f, tier = 1, seed = 4) => put(OktoReef.make('ledge', W * f, tier, seed, side), side < 0 ? 0 : W, y);
+const sil = (k, x, y, f, tier = 1) => put(OktoReef.silhouette(k, W * f, 9, tier === 3 ? 'rgba(10,25,55,.6)' : 'rgba(12,70,120,.5)'), x, y, 0.8);
+const okto = (x, y, o) => OktoChar.draw(ctx, x, y, 22, 1.3, Object.assign({ palette: 'pink', accessory: 'goggles' }, o || {}));
+const ent = (t, x, y, extra) => OktoEnemies.draw(G(), Object.assign({ type: t, x, y, r: { pearl: 8, jelly: 18, star: 13, glow: 15, urchin: 15, angler: 20 }[t] || 14, t: 1, hue: 300, dir: 1 }, extra || {}));
+const bossOf = (kind, x, y) => OktoBosses.draw(G({ boss: { kind, x, y, r: { puffer: 54, jelly: 60, squid: 64 }[kind] * S, puff: 0, puffT: 0, stun: 0, flashT: 0, t: 1, dash: null }, player: { x, y: y - 300 } }));
+function hud(boss) {
+  ctx.font = '700 15px Fredoka, sans-serif'; ctx.fillStyle = '#ff4d6d';
+  for (let i = 0; i < 3; i++) { ctx.save(); ctx.translate(22 + i * 30, 24); ctx.scale(0.8, 0.8); ctx.beginPath(); ctx.moveTo(0, 14); ctx.bezierCurveTo(-26, -4, -12, -22, 0, -8); ctx.bezierCurveTo(12, -22, 26, -4, 0, 14); ctx.fill(); ctx.restore(); }
+  const bw = 240, bx = W / 2 - bw / 2, by = 62;
+  ctx.fillStyle = 'rgba(0,20,45,.5)'; ctx.beginPath(); ctx.roundRect(bx - 3, by - 3, bw + 6, 16, 8); ctx.fill();
+  ctx.fillStyle = boss ? '#ff4d6d' : '#ff8fc2'; ctx.beginPath(); ctx.roundRect(bx, by, bw * (boss ? 0.7 : 0.45), 10, 5); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.fillText(boss || '', W / 2, by + 6); ctx.textAlign = 'left';
+}
+function label(n, title, sub) {
+  ctx.fillStyle = 'rgba(4,20,40,.78)'; ctx.beginPath(); ctx.roundRect(10, H - 112, W - 20, 102, 14); ctx.fill();
+  ctx.font = '700 20px Fredoka, sans-serif'; ctx.fillStyle = '#ffd23f'; ctx.textBaseline = 'top'; ctx.fillText(`${n} · ${title}`, 22, H - 102);
+  ctx.font = '700 13px Fredoka, sans-serif'; ctx.fillStyle = '#eaf6ff';
+  let line = '', y = H - 74; for (const w of sub.split(' ')) { const t = line ? line + ' ' + w : w; if (ctx.measureText(t).width > W - 44) { ctx.fillText(line, 22, y); line = w; y += 17; } else line = t; } ctx.fillText(line, 22, y);
+  ctx.textBaseline = 'alphabetic';
+}
+const SC = [
+  () => { sea(1); reef('mossy', 70, 250, 0.14); reef('mossy', 320, 360, 0.15, 1, 5); reef('mossy', 90, 470, 0.13, 1, 7); okto(200, 200); bossOf('puffer', 220, 560); hud('DEV BALON BALIĞI'); label(1, 'Turkuaz su, küçük kayalar', 'Oyunda: Bölüm 1 resif adacıkları (%12–18) + Dev Balon Balığı arenası.'); },
+  () => { sea(3); reef('mossy', 70, 200, 0.12, 3); reef('mossy', 320, 300, 0.13, 3, 6); okto(200, 160); OktoReef.drawSeabed(ctx, W, H, 1, 3, 1); bossOf('jelly', 200, 560); hud('ELEKTRİKLİ DENİZANASI'); label(2, 'Koyu derinlik, seyrek kaya', 'Oyunda: 3. kademe renkleri, seyrek resif, denizanası savaşı ve koyu deniz tabanı.'); },
+  () => { sea(1); reef('mossy', 90, 240, 0.28, 1, 11); reef('cave', 300, 420, 0.27, 1, 12); okto(200, 160); ent('pearl', 200, 300); ent('pearl', 200, 340); hud(); label(3, 'Büyük yosunlu mercan kayaları', 'Oyunda: Bölüm 3+ büyük resif boyutu (%24–28), yosun kapağı ve mercanlar.'); },
+  () => { sea(2); reef('spiky', 80, 200, 0.18, 2, 13); reef('spiky', 300, 330, 0.19, 2, 14); reef('spiky', 120, 470, 0.17, 2, 15); okto(220, 230); hud(); label(4, 'Sivri uçlu üç askıda ada', 'Oyunda: altı sivri "askıda resif" türü; farklı yükseklik ve konumlarda.'); },
+  () => { sea(2); ledge(-1, 240, 0.3, 2); ledge(1, 400, 0.3, 2, 6); ent('jelly', 200, 300); ent('jelly', 250, 360); okto(190, 180); hud(); label(5, 'Mercanlı geniş taş platformlar', 'Oyunda: Mercan Kanyonu çıkıntıları (uzun olanlar), denizanası bölgesi.'); },
+  () => { sea(1); reef('cave', 80, 260, 0.24, 1, 16); reef('cave', 310, 430, 0.23, 1, 17); okto(200, 330); hud(); label(6, 'Mağara biçimli kayalar', 'Oyunda: mağaralı ada; parlayan ağza girince hazine. Ortada açık koridor.'); },
+  () => { sea(1); reef('mossy', 50, 260, 0.16, 1, 18); reef('mossy', 340, 330, 0.16, 1, 19); OktoReef.drawSeabed(ctx, W, H, 1, 1, 1); okto(200, 260); hud(); label(7, 'Kenarlarda bitkili kaya kümeleri', 'Oyunda: açık su bölgelerinde kenarlarda tek resif; canavar sahnesinde parlak kum tabanı.'); },
+  () => { sea(1); sil('reef', 80, 300, 0.4); sil('reef', 300, 420, 0.45); sil('school', 220, 220, 0.35); okto(200, 330); hud(); label(8, 'Uzak resif silüetleri, açık su', 'Oyunda: uzak katman (0,35x hız) resif silüetleri ve balık sürüleri.'); },
+  () => { sea(1); OktoReef.drawSeabed(ctx, W, H, 1, 1, 1); reef('spiky', 300, 260, 0.16, 1, 21); ent('star', 90, 380); ent('star', 260, 470); okto(170, 250); hud(); label(9, 'Deniz yıldızları ve kum tabanı', 'Oyunda: deniz yıldızı (mürekkebi doldurur), seyrek askıda resif, deniz tabanı.'); },
+  () => { sea(2); sil('wreck', 200, 330, 0.7, 2); reef('mossy', 70, 220, 0.15, 2, 22); reef('spiky', 320, 300, 0.15, 2, 23); reef('mossy', 120, 470, 0.15, 2, 24); okto(230, 420); hud(); label(10, 'Batık silüeti ve üç askıda resif', 'Oyunda: uzak katmanda batık gemi silüeti + Batık Gemi bölgesi (gizli oda).'); },
+  () => { sea(2); reef('mossy', 320, 230, 0.14, 2, 25); okto(150, 200); bossOf('jelly', 200, 560); hud('ELEKTRİKLİ DENİZANASI'); label(11, 'Sade denizanası savaşı', 'Oyunda: canavar gelince kayalar arenadan çekilir, sade savaş alanı.'); },
+  () => { sea(1); OktoReef.drawCanyon(ctx, W, H, 120, 1, 1, W * 0.13); ledge(-1, 300, 0.24); ledge(1, 420, 0.22, 1, 7); okto(200, 220); bossOf('puffer', 200, 590); hud('DEV BALON BALIĞI'); label(12, 'Kayalık tünel ve balon balığı', 'Oyunda: Mercan Kanyonu duvarları + Dev Balon Balığı savaşı.'); },
+  () => { sea(2); reef('cave', 90, 280, 0.22, 2, 26); reef('cave', 300, 430, 0.22, 2, 27); ent('jelly', 220, 250); ent('jelly', 160, 380); okto(200, 170); hud(); label(13, 'Mercanlı mağara geçitleri', 'Oyunda: mağaralı resif + denizanası; Karanlık Mağara bölgesinde ışıkla keşif.'); },
+  () => { sea(2); OktoReef.drawCanyon(ctx, W, H, 300, 1, 2, W * 0.14); ledge(-1, 230, 0.3, 2); ledge(1, 380, 0.28, 2, 8); ledge(-1, 520, 0.22, 2, 9); okto(220, 300); hud(); label(14, 'Kenarlardan uzanan büyük kayalar', 'Oyunda: Mercan Kanyonu: dekor duvarlar + küçük çarpışılabilir çıkıntılar.'); },
+  () => { sea(1); reef('mossy', 60, 220, 0.13, 1, 28); reef('mossy', 330, 330, 0.13, 1, 29); reef('mossy', 70, 470, 0.13, 1, 30); okto(200, 300); hud(); label(15, 'Ortası açık, üç küçük resif', 'Oyunda: en fazla 3 çarpışılabilir resif kuralı ve garanti koridor.'); },
+  () => { sea(2); reef('mossy', 60, 240, 0.16, 2, 31); reef('cave', 330, 330, 0.18, 2, 32); okto(200, 180); bossOf('jelly', 200, 560); hud('ELEKTRİKLİ DENİZANASI'); label(16, 'Resiflerle çevrili denizanası', 'Oyunda: yıldızlı ilerleme çubuğu ve canavar can barı; sade HUD.'); },
+  () => { sea(1); reef('mossy', 80, 230, 0.12, 1, 33); reef('spiky', 300, 340, 0.12, 1, 34); reef('mossy', 120, 460, 0.12, 1, 35); okto(250, 230); hud(); label(17, 'Küçük kaya adaları, geniş koridor', 'Oyunda: Bölüm 1 küçük boyutlar; koridor kontrolü her yükseklikte.'); },
+  () => { sea(1); reef('mossy', 70, 230, 0.14, 1, 36); reef('mossy', 320, 300, 0.14, 1, 37); reef('mossy', 90, 420, 0.13, 1, 38); okto(220, 200, { accessory: 'sunglasses' });
+    const px = W / 2 - 70, py = 470; ctx.fillStyle = '#c98a00'; ctx.beginPath(); ctx.roundRect(px, py + 6, 140, 54, 27); ctx.fill(); const g = ctx.createLinearGradient(0, py, 0, py + 54); g.addColorStop(0, '#ffe35a'); g.addColorStop(1, '#ffb300'); ctx.fillStyle = g; ctx.beginPath(); ctx.roundRect(px, py, 140, 54, 27); ctx.fill(); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.moveTo(px + 60, py + 14); ctx.lineTo(px + 86, py + 27); ctx.lineTo(px + 60, py + 40); ctx.fill();
+    hud(); label(18, 'Üç küçük resif, büyük başlat düğmesi', 'Oyunda: açılış ekranının büyük oyna düğmesi; sevimli Okto ve güneş gözlüğü.'); },
+  () => { sea(2); ledge(-1, 260, 0.2, 2, 11); ledge(1, 430, 0.2, 2, 12); ent('jelly', 180, 260); ent('jelly', 250, 330); ent('jelly', 200, 420); okto(190, 170); hud(); label(19, 'Denizanaları ve yan kayalıklar', 'Oyunda: açık dalış + kenar çıkıntıları; denizanaları mürekkeple sersemletilir.'); },
+];
+window.render = i => { ctx.setTransform(2, 0, 0, 2, 0, 0); ctx.clearRect(0, 0, W, H); SC[i](); return c.toDataURL('image/png'); };
+window.count = SC.length;
+document.fonts.load('700 20px Fredoka', 'ŞşİıĞğ').then(() => window.ready = true);
+</script></body></html>

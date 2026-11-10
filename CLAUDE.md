@@ -62,6 +62,7 @@ Tasarım brifi: `docs/BRIF.md` ("OKTO – UNDERWATER DESCENT", kullanıcının 1
 | `fonts/` | Fredoka yazı tipi (OFL) |
 | `preview/` | Deneme sayfaları: `concepts.html` (bölge konsept panosu), `splash-gen.html`, `reef-test.html`, `title.html` |
 | `docs/BRIF.md` | Tasarım brifi |
+| `docs/REFERANSLAR.md` | 19 referansın tek tek değerlendirmesi ve sahneleri (`docs/referanslar/`) |
 | `YAPILACAKLAR.md` | Yapılacaklar ve fikir havuzu |
 
 ## Brif karşılaştırması ve eksikler (s16)
@@ -81,7 +82,7 @@ karışık boyutlar; bölge içinde de küçük-büyük karışımı.
 
 **Eksik (kullanıcıya hatırlat, sonra konuşulacak):**
 - [x] Varlıklar ayrı dosyalarda (s20): okto.js, enemies.js, bosses.js, reef.js, zones.js, title.js + 44 PNG (`assets/png`)
-- 19 referans tasarımın her biri için ayrı sahne / değerlendirme (şimdilik özet tablo yapıldı).
+- [x] 19 referans tasarımın her biri için ayrı sahne ve değerlendirme: `docs/REFERANSLAR.md`, `docs/referanslar/`
 - [x] Bölgeler (s19, `zones.js`): Güçlü Akıntı, Karanlık Mağara, Batık Gemi (gizli oda), Sıcak Bacalar, Yosun Ormanı, Mayın Tarlası, Kaçış Sahnesi. Bölüm 1: resif/kanyon/akıntı/yosun; Bölüm 2: + baca/gemi/mayın; Bölüm 3+: + mağara/kaçış
 - [x] Oyun içi müzik: 3 kademe, kodla üretilir (s18); `music/oyun.mp3` konursa o çalar
 - [ ] Kullanıcının kendi müzik dosyaları (`music/acilis.mp3`, `music/oyun.mp3`): altyapı hazır, **dosyayı kullanıcı verecek**

@@ -1422,14 +1422,16 @@ function drawSlams() {
       else ctx.fillText('!', s.x, H * 0.5);
       continue;
     }
-    if (s.kind === 'zap') { // yıldırım
+    if (s.kind === 'zap') { // yıldırım: şekil saniyede ~8 kez değişir (her karede değil: titreşim/göz yorgunluğu olmasın)
       if (!s.reach) continue;
-      ctx.save(); ctx.globalCompositeOperation = 'lighter';
-      ctx.fillStyle = 'rgba(255,245,150,.25)'; ctx.fillRect(s.x - s.w, 0, s.w * 2, H);
-      for (const [lw, col] of [[10 * S, 'rgba(200,170,255,.6)'], [4 * S, '#fffbe0']]) {
-        ctx.strokeStyle = col; ctx.lineWidth = lw; ctx.beginPath();
-        let x = s.x; ctx.moveTo(x, H);
-        for (let y = H; y > -20; y -= 26 * S) { x = s.x + rand(-s.w, s.w) * 0.8; ctx.lineTo(x, y); }
+      const step = Math.floor((s.t - s.warn) * 8);
+      if (s.zStep !== step) { s.zStep = step; s.path = []; for (let y = H; y > -20; y -= 26 * S) s.path.push([s.x + rand(-s.w, s.w) * 0.8, y]); }
+      const fade = clamp(1 - (s.t - s.warn) / 0.55, 0.35, 1);
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = fade;
+      ctx.fillStyle = 'rgba(255,245,150,.12)'; ctx.fillRect(s.x - s.w, 0, s.w * 2, H);
+      for (const [lw, col] of [[9 * S, 'rgba(200,170,255,.45)'], [3.5 * S, 'rgba(255,251,224,.85)']]) {
+        ctx.strokeStyle = col; ctx.lineWidth = lw; ctx.lineJoin = 'round'; ctx.beginPath(); ctx.moveTo(s.x, H);
+        for (const [x, y] of s.path) ctx.lineTo(x, y);
         ctx.stroke();
       }
       ctx.restore();

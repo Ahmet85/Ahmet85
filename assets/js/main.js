@@ -80,7 +80,9 @@ const SCENES = {
     ]
   },
   dededen: {
-    name: 'Özmermer Dededen Pidelik Un', bg: null, pack: 'dededen', packDim: [599, 79, 441],
+    name: 'Özmermer Dededen Pidelik Un', bg: 'sahne-dededen.jpg', pack: 'dededen', packDim: [599, 79, 441],
+    base: { x: 1330, y: 800, h: 300 }, pinch: [[520, 470], [570, 485], [610, 500], [640, 515]],
+    floor: 640, lightX: 620, startX: 520, rate: 12,
     caps: [
       ['DEDEDEN PİDELİK UN · ÖZMERMER', 'Tırnak pidesi,<br>ustanın imzasıdır.'],
       ['PROTEİN EN AZ %11 · KÜL EN ÇOK %0,55', 'Yoğururken çabuk<br>kıvama gelir.'],
@@ -88,7 +90,9 @@ const SCENES = {
     ]
   },
   pideci: {
-    name: 'Özmermer Pideci Un', bg: null, pack: 'pideci', packDim: [602, 80, 443],
+    name: 'Özmermer Pideci Un', bg: 'sahne-pideci.jpg', pack: 'pideci', packDim: [602, 80, 443],
+    base: { x: 1310, y: 770, h: 290 }, pinch: [[620, 420], [650, 428], [680, 436]],
+    floor: 600, lightX: 700, startX: 560, rate: 9,
     caps: [
       ['PİDECİ UN · ÖZMERMER', 'Pide, fırının<br>ağzında pişer.'],
       ['PROTEİN EN AZ %11 · KÜL EN ÇOK %0,68', 'Çabuk ve kolay<br>kıvama gelir.'],
@@ -96,7 +100,9 @@ const SCENES = {
     ]
   },
   'luks-francalik': {
-    name: 'Lüks Francalık Un', bg: null, pack: 'luks-francalik', packDim: [601, 79, 442],
+    name: 'Lüks Francalık Un', bg: 'sahne-luks-francalik.jpg', pack: 'luks-francalik', packDim: [601, 79, 442],
+    base: { x: 1330, y: 800, h: 300 }, pinch: [[600, 520], [630, 535], [655, 550]],
+    floor: 690, lightX: 680, startX: 560, rate: 10,
     caps: [
       ['LÜKS FRANCALIK UN · ÖZMERMER', 'Ekmek, fırının<br>ateşinde olgunlaşır.'],
       ['PROTEİN EN AZ %11 · KÜL %0,7–0,8', 'Katkıya ve geliştiriciye<br>ihtiyaç duymaz.'],
@@ -104,7 +110,9 @@ const SCENES = {
     ]
   },
   'tam-bugday': {
-    name: 'Tam Buğday Unu', bg: null, pack: 'tam-bugday', packDim: [576, 76, 424],
+    name: 'Tam Buğday Unu', bg: 'sahne-tam-bugday.jpg', pack: 'tam-bugday', packDim: [576, 76, 424],
+    base: { x: 1320, y: 785, h: 300 }, pinch: [[680, 388], [692, 395], [705, 400], [718, 403]],
+    floor: 610, lightX: 620, startX: 640,
     caps: [
       ['TAM BUĞDAY UNU · ÖZMERMER', 'Buğdayın tamamı,<br>ekmeğin özü.'],
       ['PROTEİN EN AZ %11 · KÜL EN ÇOK %1,2', 'Rafine edilmeden<br>üretilir.'],
@@ -237,7 +245,7 @@ function chefScene(root, cfg, getProgress) {
     const dt = Math.min(0.05, last ? (ms - last) / 1000 : 0.016); last = ms;
     const p = getProgress();
     const t = range(p, 0.1, 0.82);
-    camera(t); setCaption(p); flour(dt, 24 * (1 - t * 0.6));
+    camera(t); setCaption(p); flour(dt, (cfg.rate || 24) * (1 - t * 0.6));
     requestAnimationFrame(frame);
   }
   measure(); camera(0);
@@ -292,8 +300,8 @@ function sceneMarkup(key, cfg) {
     const cfg = SCENES[key]; if (!cfg || !cfg.bg) return;
     opener = btn;
     scroller.innerHTML = sceneMarkup(key, cfg);
-    scroller.scrollTop = 0;
     modal.hidden = false; document.body.classList.add('scene-lock');
+    scroller.scrollTop = 0; // pencere görünür olduktan sonra başa sar
     current = chefScene(scroller, cfg, () => Math.min(1, Math.max(0, scroller.scrollTop / ((scroller.scrollHeight - scroller.clientHeight) || 1))));
     if (reduce) current.still(); else current.start();
     closeBtn.focus();

@@ -35,6 +35,9 @@
     padding:max(24px,env(safe-area-inset-top)) 20px max(24px,env(safe-area-inset-bottom)); text-align:center;
     background:radial-gradient(ellipse at center, rgba(4,33,61,.55), rgba(2,12,26,.85)); backdrop-filter:blur(2px); z-index:5; }
   .hidden { display:none !important; }
+  /* Nasıl oynanır: içerik ekrandan uzunsa kart kendi içinde kayar, başlık ve düğme hep görünür */
+  #help h2, #help .btn { flex-shrink:0; }
+  #help .card { min-height:0; overflow-y:auto; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; touch-action:pan-y; }
   h1 { margin:0; font-size:clamp(40px,12vw,72px); line-height:1; letter-spacing:1px;
     background:linear-gradient(180deg,#ffd1e8,#ff7eb6 55%,#c04dff); -webkit-background-clip:text; background-clip:text; color:transparent;
     filter:drop-shadow(0 4px 0 rgba(0,0,0,.25)); }
@@ -70,7 +73,8 @@
     border:3px solid #0f3d8c; background:#fff; color:#0f3d8c; font:700 17px Fredoka,"Trebuchet MS",sans-serif; cursor:pointer; box-shadow:0 4px 0 #0f3d8c; }
   #musicBtn.hint { animation:pulse .7s infinite alternate; }
   #musicBtn.icon { width:46px; padding:0; font-size:20px; }
-  #diffBtn { pointer-events:auto; position:absolute; top:calc(max(12px,env(safe-area-inset-top)) + 56px); left:max(12px,env(safe-area-inset-left)); height:32px; padding:0 12px; border-radius:16px;
+  /* Zorluk düğmesi üst sırada, yardım düğmesinin solunda: başlık yazısını örtmesin */
+  #diffBtn { pointer-events:auto; position:absolute; top:calc(max(12px,env(safe-area-inset-top)) + 7px); right:calc(max(12px,env(safe-area-inset-right)) + 56px); height:32px; padding:0 12px; border-radius:16px;
     border:2px solid #0f3d8c; background:rgba(255,255,255,.9); color:#0f3d8c; font:700 13px Fredoka,"Trebuchet MS",sans-serif; cursor:pointer; box-shadow:0 3px 0 #0f3d8c; }
   #helpBtn:active { transform:translateY(3px); box-shadow:0 1px 0 #0f3d8c; }
   #menuBest { position:absolute; left:0; right:0; bottom:max(14px,env(safe-area-inset-bottom)); text-align:center; font:700 17px Fredoka,"Trebuchet MS",sans-serif; color:#5a3410; opacity:1; text-shadow:0 1px 0 rgba(255,255,255,.6); }
@@ -135,7 +139,7 @@
   <button id="shopBtn" class="roundBtn" aria-label="Mağaza">🛍️<span>Mağaza</span></button>
   <button id="missionBtn" class="roundBtn" aria-label="Görevler">📋<span>Görevler</span><b id="missionBadge" class="badge hidden">!</b></button>
   <div id="menuBest" class="best"></div>
-  <div id="ver" class="ver">s22</div>
+  <div id="ver" class="ver">s23</div>
 </div>
 
 <div id="shop" class="overlay panel hidden">
@@ -164,7 +168,7 @@
     🪨 <b>Kayalıklara</b> dikkat: resif adacıklarına ve kanyon çıkıntılarına çarpınca can gider. Parlayan <b>mağara ağzına</b> yüzersen hazine çıkar!<br>
     🎁 Yok ettiğin bazı düşmanlardan <b>hediye</b> düşer: içinden çıkan <b>Altın Karides</b>i ye, 6 saniye <b>Dev Okto</b> ol ve düşmanları ez!<br>
         🌊 Bölümlerde özel bölgeler var: <b>Akıntı, Karanlık Mağara, Batık Gemi</b> (gizli oda!), <b>Sıcak Bacalar, Yosun Ormanı, Mayın Tarlası</b> ve <b>Kaçış</b>.<br>
-    🎚️ Sol üstteki <b>Zorluk</b> düğmesiyle Kolay / Normal / Zor seçebilirsin.<br>
+    🎚️ Üstteki <b>Zorluk</b> düğmesiyle Kolay / Normal / Zor seçebilirsin.<br>
     🏁 Her <b>bölümün</b> sonunda bir canavar seni bekler: Dev Balon Balığı, Elektrikli Denizanası, Dev Kalamar. Yen, yıldızları topla, girdaba dal!<br>
     💾 Yanarsan ulaştığın <b>bölümün başından</b> devam edebilirsin.
   </div>
@@ -206,17 +210,17 @@
   </div>
 </div>
 
-<script src="okto.js?v=22"></script>
-<script src="reef.js?v=22"></script>
-<script src="zones.js?v=22"></script>
-<script src="enemies.js?v=22"></script>
-<script src="bosses.js?v=22"></script>
-<script src="title.js?v=22"></script>
-<script src="music.js?v=22"></script>
-<script src="campaign.js?v=22"></script>
-<script src="boss-ai.js?v=22"></script>
-<script src="cinema.js?v=22"></script>
-<script src="game.js?v=22"></script>
+<script src="okto.js?v=23"></script>
+<script src="reef.js?v=23"></script>
+<script src="zones.js?v=23"></script>
+<script src="enemies.js?v=23"></script>
+<script src="bosses.js?v=23"></script>
+<script src="title.js?v=23"></script>
+<script src="music.js?v=23"></script>
+<script src="campaign.js?v=23"></script>
+<script src="boss-ai.js?v=23"></script>
+<script src="cinema.js?v=23"></script>
+<script src="game.js?v=23"></script>
 <script>
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
     window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));

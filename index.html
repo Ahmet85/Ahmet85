@@ -13,7 +13,7 @@
   <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,300;1,400&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
@@ -72,24 +72,30 @@
       </div>
     </section>
 
-    <!-- VENTUS SAHNESİ: kaydırmaya bağlı animasyon -->
-    <section class="scene" id="ventus-sahne" aria-labelledby="scene-title">
-      <div class="scene-sticky">
-        <div class="container scene-inner">
-          <div class="scene-text">
-            <p class="eyebrow eyebrow-light">VENTUS PİZZALIK UN</p>
-            <h2 id="scene-title">Pizzacının unu</h2>
-            <ol class="scene-steps">
-              <li class="is-active"><strong>Kuvvetli, dirençli hamur</strong><span>Hamur yüksek elastikiyete sahiptir.</span></li>
-              <li><strong>Kolay açılır, yırtılmaz</strong><span>İşlenebilirliği kolaydır.</span></li>
-              <li><strong>Pişerken kabarma yapmaz</strong><span>Protein en az %13 · 25 kg kraft ambalaj</span></li>
-            </ol>
-            <a class="btn btn-light" href="https://wa.me/905302220090?text=Merhaba%2C%20Ventus%20Pizzal%C4%B1k%20Un%20i%C3%A7in%20fiyat%20almak%20istiyorum.">Ventus için fiyat sorun</a>
+    <!-- VENTUS SAHNESİ: kaydırmaya bağlı un ve ışık sahnesi -->
+    <section class="art" id="ventus-sahne" aria-labelledby="art-title">
+      <div class="art-sticky">
+        <div class="art-stage">
+          <img class="art-pizza" src="assets/img/urunler/ventus-foto.jpg" width="640" height="640" alt="">
+          <canvas class="art-canvas" aria-hidden="true"></canvas>
+          <div class="art-grain" aria-hidden="true"></div>
+          <div class="art-vignette" aria-hidden="true"></div>
+        </div>
+        <div class="container art-captions">
+          <h2 class="visually-hidden" id="art-title">Ventus Pizzalık Un</h2>
+          <div class="art-cap is-active">
+            <p class="art-kicker">VENTUS PİZZALIK UN · ÖZMERMER</p>
+            <p class="art-line">Un, ışıkta<br>asılı kalır.</p>
+            <p class="art-hint">Kaydırın</p>
           </div>
-          <div class="scene-stage" aria-hidden="true">
-            <div class="scene-dough"><img class="scene-pizza" src="assets/img/urunler/ventus-foto.jpg" width="640" height="640" alt=""></div>
-            <canvas class="scene-flour"></canvas>
-            <img class="scene-bag" src="assets/img/urunler/ventus-cuval.png" width="347" height="560" alt="">
+          <div class="art-cap">
+            <p class="art-kicker">PROTEİN EN AZ %13 · KÜL EN ÇOK %0,57</p>
+            <p class="art-line">Kuvvetli ve dirençli<br>bir hamur.</p>
+          </div>
+          <div class="art-cap">
+            <p class="art-kicker">25 KG KRAFT AMBALAJ</p>
+            <p class="art-line">Kolay açılır, yırtılmaz.<br>Fırında kabarmaz.</p>
+            <a class="art-cta" href="https://wa.me/905302220090?text=Merhaba%2C%20Ventus%20Pizzal%C4%B1k%20Un%20i%C3%A7in%20fiyat%20almak%20istiyorum.">Ventus için fiyat sorun</a>
           </div>
         </div>
       </div>

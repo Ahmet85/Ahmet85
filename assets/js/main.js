@@ -64,7 +64,9 @@ const SCENES = {
     ]
   },
   antebin: {
-    name: 'Antebin Baklavalık Un', bg: null, pack: 'antebin', packDim: [595, 79, 437],
+    name: 'Antebin Baklavalık Un', bg: 'sahne-antebin.jpg', pack: 'antebin', packDim: [595, 79, 437],
+    base: { x: 1330, y: 765, h: 290 }, pinch: [[350, 380], [365, 388], [378, 394]],
+    floor: 600, lightX: 380, startX: 420, rate: 18,
     caps: [
       ['ANTEBİN BAKLAVALIK UN · ÖZMERMER', 'Baklava, yufkanın<br>inceliğinde saklı.'],
       ['PROTEİN EN AZ %12 · KÜL EN ÇOK %0,65', 'Açımda kurumaz,<br>yapışmaz.'],
@@ -72,7 +74,9 @@ const SCENES = {
     ]
   },
   albina: {
-    name: 'Albina Pastalık-Böreklik Un', bg: null, pack: 'albina', packDim: [593, 78, 436],
+    name: 'Albina Pastalık-Böreklik Un', bg: 'sahne-albina.jpg', pack: 'albina', packDim: [593, 78, 436],
+    base: { x: 1300, y: 800, h: 290 }, pinch: [[505, 268], [530, 274], [555, 276], [580, 274], [605, 268]],
+    floor: 610, lightX: 620, startX: 520, rate: 30,
     caps: [
       ['ALBİNA PASTALIK-BÖREKLİK UN · ÖZMERMER', 'Pastanenin sabahı<br>unla başlar.'],
       ['PROTEİN EN AZ %12 · KÜL EN ÇOK %0,55', 'Hamur güzel kabarır,<br>iyi hacim alır.'],

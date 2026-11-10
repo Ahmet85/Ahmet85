@@ -18,7 +18,7 @@ Tasarım brifi: `docs/BRIF.md` ("OKTO – UNDERWATER DESCENT", kullanıcının 1
 - Dal: `claude/octopus-mobile-game-0is63u` → GitHub Pages: https://ahmet85.github.io/Ahmet85/
 - Aynı dalda başka bir oturumun `ritim/` klasörü var; **ona dokunma**, push öncesi `git fetch` + `git rebase` yap.
 - **Her yayında sürümü artır:** `index.html` içindeki tüm `?v=` ekleri, menüdeki `s<sürüm>` etiketi ve `sw.js` içindeki
-  `okto-v<sürüm>` birlikte. Kullanıcı sağ alttaki `s<sürüm>` ile güncellemenin geldiğini kontrol ediyor. Son sürüm: **s18**.
+  `okto-v<sürüm>` birlikte. Kullanıcı sağ alttaki `s<sürüm>` ile güncellemenin geldiğini kontrol ediyor. Son sürüm: **s19**.
 - Telefonda güncelleme: uygulamayı kapat-aç (gerekirse iki kez). Açılış görseli/simge değişirse sil-yeniden kur gerekir.
 
 ## Alınan kararlar
@@ -50,6 +50,7 @@ Tasarım brifi: `docs/BRIF.md` ("OKTO – UNDERWATER DESCENT", kullanıcının 1
 | `index.html` | Ekranlar (menü, yardım, mağaza, görevler, duraklatma, bölüm kartı, oyun sonu), stiller, açılış görseli bağlantıları |
 | `game.js` | Oyun motoru: girdi, sesler (3 kademe, dalgıç nefesi), düşmanlar, bölümler, canavarlar, resif dünyası entegrasyonu, hediye/Dev Okto, mağaza ve görevler, HUD |
 | `okto.js` | Okto karakter çizimi; ifadeler; 7 renk ve 7 aksesuar (`OktoChar.CATALOG`) |
+| `zones.js` | 7 özel bölgenin mantığı ve çizimleri (akıntı, mağara karanlığı, batık gemi, bacalar, yosun, mayınlar, kovalayan fener balığı) |
 | `reef.js` | Resif varlıkları (yosunlu/sivri/mağaralı ada, kanyon çıkıntısı), kanyon duvarı, uzak silüetler, ön plan mercanları, deniz tabanı |
 | `title.js` | Animasyonlu, dokunmaya tepki veren açılış ekranı |
 | `music.js` | Kodla üretilen açılış müziği; `music/acilis.mp3` varsa onu çalar |
@@ -77,7 +78,7 @@ karışık boyutlar; bölge içinde de küçük-büyük karışımı.
 
 **Eksik (kullanıcıya hatırlat, sonra konuşulacak):**
 - 19 referans tasarımın her biri için ayrı sahne / değerlendirme (şimdilik özet tablo yapıldı).
-- Bölgeler: Güçlü Akıntı, Karanlık Mağara, Batık Gemi (gizli oda), Sıcak Bacalar, Yosun Ormanı, Mayın Tarlası, Kaçış Sahnesi.
+- [x] Bölgeler (s19, `zones.js`): Güçlü Akıntı, Karanlık Mağara, Batık Gemi (gizli oda), Sıcak Bacalar, Yosun Ormanı, Mayın Tarlası, Kaçış Sahnesi. Bölüm 1: resif/kanyon/akıntı/yosun; Bölüm 2: + baca/gemi/mayın; Bölüm 3+: + mağara/kaçış
 - [x] Oyun içi müzik: 3 kademe, kodla üretilir (s18); `music/oyun.mp3` konursa o çalar
 - [ ] Kullanıcının kendi müzik dosyaları (`music/acilis.mp3`, `music/oyun.mp3`): altyapı hazır, **dosyayı kullanıcı verecek**
 - [x] Yıldızlı büyük bölüm ilerleme çubuğu (s17) · [x] zorluk ayarı: menüde Kolay / Normal / Zor (s17)

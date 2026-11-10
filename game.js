@@ -248,6 +248,7 @@ function reset() {
   rocks = []; farL = []; nearL = []; plan = []; zone = 'open'; worldY = 0; rockT = 1.5; farT = 0; nearT = 0.5; canyonAmt = 0; seabedAmt = 0;
   depth = 0; score = 0; pearls = 0; lives = 3; combo = 0; comboTimer = 0; bonusPearls = 0;
   spawnTimer = 0.5; inkCharge = 0.5; shieldTime = 0; invuln = 1.5; time = 0; shake = 0; flash = 0; winkT = 0;
+  if (window.OktoZones) OktoZones.exit();
   tier = 1; Sound.tier = 1; boss = null; bossesBeaten = 0; breathT = 1.2; blipT = 0; banked = false;
   levelN = 1; phase = 'dive'; levelHits = 0; levelPearls = 0; trans = null;
 }
@@ -450,6 +451,9 @@ function spawn() {
     ['puffer', d > 40 ? 12 : 0], ['shark', d > 150 ? 5 + d * 0.006 : 0], ['angler', d > 400 ? 6 : 0],
     ['shield', 2.2], ['star', 3], ['heart', lives < 3 ? 1.6 : 0], ['glow', d > 30 ? 1.3 : 0],
   ];
+  // özel bölgelerde düşman karışımı değişir
+  const zk = { yosun: { shark: 0, angler: 0.3 }, magara: { angler: 3, jelly: 0.6 }, mayin: { jelly: 0.5, urchin: 0.3, puffer: 0.5 }, kacis: { jelly: 0.6, urchin: 0.4, shark: 0.3 }, baca: { urchin: 0.4 }, gemi: { shark: 0.5 } }[zone];
+  if (zk && !calm) for (const row of table) if (zk[row[0]] !== undefined) row[1] = row[1] * zk[row[0]] + (row[0] === 'angler' && zone === 'magara' ? 8 : 0);
   const total = table.reduce((s, t) => s + t[1], 0);
   let roll = Math.random() * total, type = 'pearl';
   for (const [t, w] of table) { roll -= w; if (roll <= 0) { type = t; break; } }
@@ -542,6 +546,7 @@ function useInk() {
       if (e.type === 'shark') { e.warn = 0; e.sp *= 0.35; }
     }
   }
+  if (window.OktoZones && OktoZones.active()) OktoZones.onInk(player.x, player.y, R, zoneEnv(0, 0));
   if (stunned) { const p = stunned * 15; score += p; addFloater(player.x, player.y - 40 * S, `+${p} sersem!`, '#c9b6ff'); Missions.track('stun_day', stunned); }
   // dev kalamar varsa ona mürekkep topu fırlat
   if (boss && boss.phase === 'fight') shots.push({ x: player.x, y: player.y, vx: 0, vy: 260 * S, life: 3 });
@@ -562,6 +567,7 @@ function lightBomb(x, y) {
     burst(e.x, e.y, '#fff3a0', 14, 160); burst(e.x, e.y, '#ffffff', 6, 80);
   }
   for (const s of slams) s.cancel = true;
+  if (window.OktoZones && OktoZones.active()) OktoZones.onBomb(zoneEnv(0, 0));
   if (n) { score += n * 20; addFloater(x, y - 60 * S, `+${n * 20} ışık!`, '#fff3a0'); }
   banner('IŞIK BOMBASI!', n ? `${n} düşman yok oldu` : '', '#fff3a0', 1.6);
   Missions.track('bomb_day', 1);
@@ -626,16 +632,33 @@ function makePlan(L) { // bölüm: açık su ile başlar, özel bölgeler arası
   const segs = [], end = L.end - 16; let d = L.start, last = '';
   const add = (type, len) => { const b = Math.min(d + len, end); if (b > d) segs.push({ type, a: d, b }); d = b; };
   add('open', 18);
+  // bölüme göre açılan bölgeler; her bölümde karışık sırayla, aynısı arka arkaya gelmez
+  const pool = L.n === 1 ? ['reefs', 'canyon', 'akinti', 'yosun']
+    : L.n === 2 ? ['reefs', 'canyon', 'akinti', 'yosun', 'baca', 'gemi', 'mayin']
+    : ['reefs', 'canyon', 'akinti', 'yosun', 'baca', 'gemi', 'mayin', 'magara', 'kacis'];
+  let bag = [];
   while (d < end) {
-    const opts = ['reefs', 'canyon'].filter(t => t !== last), type = L.n === 1 && !last ? 'reefs' : opts[Math.floor(Math.random() * opts.length)];
-    add(type, rand(38, 60)); last = type;
-    add('open', rand(14, 24));
+    if (!bag.length) bag = pool.slice().sort(() => Math.random() - 0.5);
+    let i = bag.findIndex(t => t !== last); if (i < 0) i = 0;
+    const type = L.n === 1 && !last ? 'reefs' : bag.splice(i, 1)[0];
+    add(type, type === 'kacis' ? rand(60, 75) : rand(45, 65)); last = type;
+    add('open', rand(14, 22));
   }
   segs.push({ type: 'open', a: d, b: L.end + 1000 });
   return segs;
 }
+function zoneEnv(dt, scroll) {
+  return {
+    W, H, S, dt, time, scroll, tier, safeTop, player, target, entities, rocks, sound: Sound, big: player.bigT > 0,
+    hurt: () => hurt(), push: (dx, dy) => pushTarget(dx, dy), burst, floater: addFloater, toast, banner,
+    addScore: n => { score += n; }, freeAt,
+    pearls: (x, y, n, sp) => { for (let i = 0; i < n; i++) entities.push({ type: 'pearl', x: clamp(sp ? x + i * sp : x + rand(-40, 40) * S, 16, W - 16), y: sp ? y : y + rand(-30, 30) * S, r: 8 * S, t: Math.random() * 9 }); },
+    gift: (x, y) => entities.push({ type: 'gift', x: clamp(x, 24 * S, W - 24 * S), y, r: 14 * S, t: 0, hue: 45 }),
+  };
+}
 function zoneAt(d) { for (const s of plan) if (d >= s.a && d < s.b) return s.type; return 'open'; }
 function freeAt(x, y, r) {
+  if (window.OktoZones && !OktoZones.freeOf(x, y, r)) return false;
   for (const k of rocks) for (const h of k.hit) if (Math.hypot(x - (k.x + h.x), y - (k.y + h.y)) < h.r + r + 8 * S) return false;
   return true;
 }
@@ -698,7 +721,12 @@ function updateWorld(dt, scroll) {
   worldY += scroll * dt;
   // bölge değişimi
   const z = phase === 'dive' ? zoneAt(depth) : 'open';
-  if (z !== zone) { zone = z; if (ZONE_NAMES[z]) toast(ZONE_NAMES[z]); }
+  if (z !== zone) {
+    if (window.OktoZones && OktoZones.active()) OktoZones.exit();
+    zone = z;
+    if (ZONE_NAMES[z]) toast(ZONE_NAMES[z]);
+    else if (window.OktoZones && OktoZones.NAMES[z]) OktoZones.enter(z, zoneEnv(dt, scroll));
+  }
   canyonAmt = lerp(canyonAmt, zone === 'canyon' ? 1 : 0, 1 - Math.pow(0.25, dt));
   seabedAmt = lerp(seabedAmt, boss && boss.phase !== 'dying' ? 1 : 0, 1 - Math.pow(0.3, dt));
   // kaya doğurma (canavar sahnesinde yok)
@@ -770,6 +798,17 @@ function drawRocks() {
       ctx.fillStyle = g; ctx.beginPath(); ctx.arc(mx, my, k.mouth.r * 2.2, 0, TAU); ctx.fill(); ctx.restore();
     }
   }
+}
+function zoneLights() { // karanlık mağarada ışık saçan şeyler
+  const L = [];
+  for (const e of entities) {
+    if (e.type === 'pearl') L.push({ x: e.x, y: e.y, r: 34 * S, a: 0.7 });
+    else if (e.type === 'glow' || e.type === 'treat' || e.type === 'gift') L.push({ x: e.x, y: e.y, r: 80 * S, a: 0.9 });
+    else if (e.type === 'angler') L.push({ x: e.x + e.r * 0.9, y: e.y - e.r * 1.4, r: 55 * S, a: 0.9 });
+    else if (e.type === 'jelly') L.push({ x: e.x, y: e.y, r: 40 * S, a: 0.5 });
+  }
+  for (const r of rings) L.push({ x: r.x, y: r.y, r: Math.max(10, r.r), a: r.life });
+  return L;
 }
 function drawWorldFront() { for (const f of nearL) ctx.drawImage(f.a.img, f.x - f.a.ox, f.y - f.a.oy, f.a.cw, f.a.ch); }
 
@@ -949,6 +988,7 @@ function updateTransition(dt) {
     T.switched = true; levelN++;
     const L = levelInfo(levelN);
     depth = L.start; tier = L.tier; Sound.tier = L.tier;
+    if (window.OktoZones) OktoZones.exit();
     entities = []; slams = []; shots = []; inkClouds = []; particles = []; rocks = []; nearL = []; plan = makePlan(L); zone = 'open'; canyonAmt = 0; seabedAmt = 0;
     levelHits = 0; levelPearls = 0; inkCharge = 1; phase = 'dive'; gameMusic();
   } else { // girdaptan fırlayış
@@ -992,6 +1032,7 @@ function update(dt) {
   time += dt;
   let scroll = (70 + Math.min(depth, 900) * 0.18) * S * diff().scroll; // piksel/sn
   if (boss) scroll *= 0.35;
+  if (window.OktoZones) scroll *= OktoZones.speed();
   // bölüm ilerleyişi: sona gelince canavar çıkar, derinlik canavar yenilene kadar durur
   const L = levelInfo(levelN);
   if (phase === 'dive') {
@@ -1004,7 +1045,7 @@ function update(dt) {
   const kx = (keys.ArrowRight || keys.d ? 1 : 0) - (keys.ArrowLeft || keys.a ? 1 : 0);
   const ky = (keys.ArrowDown || keys.s ? 1 : 0) - (keys.ArrowUp || keys.w ? 1 : 0);
   if (kx || ky) { target.x = clamp(target.x + kx * 430 * S * dt, b.x0, b.x1); target.y = clamp(target.y + ky * 430 * S * dt, b.y0, b.y1); }
-  const ox = p.x, oy = p.y, k = 1 - Math.pow(0.0005, dt);
+  const ox = p.x, oy = p.y, k = 1 - Math.pow(0.0005, dt * (window.OktoZones ? OktoZones.slow() : 1) * (p.bigT > 0 ? 1.4 : 1));
   p.x = clamp(lerp(p.x, target.x, k), b.x0, b.x1); p.y = clamp(lerp(p.y, target.y, k), b.y0, b.y1);
   p.vx = lerp(p.vx, (p.x - ox) / Math.max(dt, 1e-3), 0.3); p.vy = lerp(p.vy, (p.y - oy) / Math.max(dt, 1e-3), 0.3);
   const v = Math.hypot(p.vx, p.vy);
@@ -1040,6 +1081,7 @@ function update(dt) {
   if (Math.floor(depth / 5) !== lastDepthMark) { lastDepthMark = Math.floor(depth / 5); Missions.track('depth_run', Math.floor(depth)); }
 
   updateWorld(dt, scroll);
+  if (window.OktoZones && OktoZones.active()) OktoZones.update(zoneEnv(dt, scroll));
   // Doğurma
   spawnTimer -= dt;
   if (spawnTimer <= 0) { spawn(); spawnTimer = (boss ? 1.3 : Math.max(0.32, 1.0 - depth * 0.0013)) * rand(0.7, 1.3) * diff().spawn; }
@@ -1061,6 +1103,7 @@ function update(dt) {
         break;
       }
       case 'angler': if (!e.stunned) {
+        if (e.blind) { e.x += Math.sin(e.t * 0.8) * 20 * S * dt; break; } // yosunda Okto'yu göremez
         const dx = p.x - e.x, dy = p.y - e.y, d = Math.hypot(dx, dy) || 1;
         e.x += dx / d * 40 * S * dt; e.y += dy / d * 25 * S * dt;
       } break;
@@ -1085,6 +1128,7 @@ function update(dt) {
     } else if (d < e.r + p.r * (0.9 + 0.8 * p.big) && !(e.type === 'treat' && e.t < 0.35)) { e.dead = true; collect(e); }
   }
   rockCollisions();
+  if (window.OktoZones && OktoZones.active()) OktoZones.collide(zoneEnv(dt, scroll));
   if (boss && boss.phase === 'fight') { const cy = boss.y - boss.r * (boss.kind === 'puffer' ? 0 : boss.kind === 'jelly' ? 0.3 : 0.2); if (Math.hypot(boss.x - p.x, cy - p.y) < bossContactR() + p.r * (0.6 + 0.85 * p.big)) {
     if (p.bigT > 0) { if (p.bossBumpT <= 0) { p.bossBumpT = 1; damageBoss(1); pushTarget(0, -90 * S); } } else hurt();
   } }
@@ -1792,13 +1836,17 @@ function drawFrame() {
   else {
     drawBackground();
     drawWorldBack();
+    const zenv = window.OktoZones && OktoZones.active() ? zoneEnv(0, 0) : null;
+    if (zenv) OktoZones.drawBack(ctx, zenv);
     drawRocks();
+    if (zenv) OktoZones.drawMid(ctx, zenv);
     if (boss) drawBoss();
     drawSlams();
     for (const e of entities) { try { drawEntity(e); } catch (err) { e.dead = true; reportError('nesne çizimi ' + e.type, err); try { ctx.restore(); } catch {} } }
     drawParticles();
     drawPlayer();
     drawWorldFront();
+    if (zenv) { OktoZones.drawFront(ctx, zenv); OktoZones.overlay(ctx, zenv, zoneLights()); }
     drawFx();
     if (state === 'transition') drawTransition();
   }
@@ -1822,7 +1870,7 @@ requestAnimationFrame(frame);
 // Test/hata ayıklama için
 window.__okto = {
   get state() { return state; }, get score() { return score; }, get depth() { return depth; }, set depth(v) { depth = v; },
-  get lives() { return lives; }, diff: () => diff(), get safeTop() { return safeTop; }, get rocks() { return rocks; }, rockStats: () => ({ onScreen: rocks.filter(onScreen).length, all: rocks.length }), corridorNow: () => { let worst = 1e9; for (let y = 0; y < H; y += 4) worst = Math.min(worst, widestGap(blockedAt(y, rocks))); return worst; }, get plan() { return plan; }, get zone() { return zone; }, get shake() { return shake; }, set lives(v) { lives = v; }, set invuln(v) { invuln = v; }, get boss() { return boss; }, get tier() { return tier; }, get levelN() { return levelN; }, get phase() { return phase; }, damageBoss, startTransition,
+  get lives() { return lives; }, diff: () => diff(), get safeTop() { return safeTop; }, get rocks() { return rocks; }, get zoneName() { return zone; }, setZone: z => { plan = [{ type: 'open', a: 0, b: depth + 1 }, { type: z, a: depth + 1, b: depth + 200 }, { type: 'open', a: depth + 200, b: 1e6 }]; }, rockStats: () => ({ onScreen: rocks.filter(onScreen).length, all: rocks.length }), corridorNow: () => { let worst = 1e9; for (let y = 0; y < H; y += 4) worst = Math.min(worst, widestGap(blockedAt(y, rocks))); return worst; }, get plan() { return plan; }, get zone() { return zone; }, get shake() { return shake; }, set lives(v) { lives = v; }, set invuln(v) { invuln = v; }, get boss() { return boss; }, get tier() { return tier; }, get levelN() { return levelN; }, get phase() { return phase; }, damageBoss, startTransition,
   Sound, TIERS, startGame, useInk, lightBomb: () => lightBomb(player.x, player.y), get entities() { return entities; }, get player() { return player; }, get target() { return target; },
   Profile, Missions, spawnGift: () => entities.push({ type: 'gift', x: player.x, y: player.y + 70 * S, r: 14 * S, t: 0, hue: 330 }), spawnGlow: () => entities.push({ type: 'glow', x: player.x, y: player.y + 80 * S, r: 15 * S, t: 0 }),
 };

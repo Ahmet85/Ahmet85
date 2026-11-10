@@ -56,7 +56,7 @@ Tasarım brifi: `docs/BRIF.md` ("OKTO – UNDERWATER DESCENT", kullanıcının 1
 | `assets/` | Varlık listesi (`assets/README.md`) ve saydam PNG kopyaları (`assets/png`, `tools/export-assets.js` ile üretilir) |
 | `reef.js` | Resif varlıkları (yosunlu/sivri/mağaralı ada, kanyon çıkıntısı), kanyon duvarı, uzak silüetler, ön plan mercanları, deniz tabanı |
 | `title.js` | Animasyonlu, dokunmaya tepki veren açılış ekranı |
-| `music.js` | Kodla üretilen açılış müziği; `music/acilis.mp3` varsa onu çalar |
+| `music.js` | Kodla üretilen açılış ve oyun içi müzikler (kullanıcı onayladı, kendi dosyası şimdilik iptal) |
 | `sw.js`, `manifest.json` | Çevrimdışı çalışma ve kurulum |
 | `splash/`, `apple-touch-icon.png`, `icon.svg` | iPhone açılış görselleri ve simgeler |
 | `fonts/` | Fredoka yazı tipi (OFL) |
@@ -86,6 +86,5 @@ karışık boyutlar; bölge içinde de küçük-büyük karışımı.
 - [x] 19 referans tasarımın her biri için ayrı sahne ve değerlendirme: `docs/REFERANSLAR.md`, `docs/referanslar/`
 - [x] Bölgeler (s19, `zones.js`): Güçlü Akıntı, Karanlık Mağara, Batık Gemi (gizli oda), Sıcak Bacalar, Yosun Ormanı, Mayın Tarlası, Kaçış Sahnesi. Bölüm 1: resif/kanyon/akıntı/yosun; Bölüm 2: + baca/gemi/mayın; Bölüm 3+: + mağara/kaçış
 - [x] Oyun içi müzik: 3 kademe, kodla üretilir (s18); `music/oyun.mp3` konursa o çalar
-- [ ] Kullanıcının kendi müzik dosyaları (`music/acilis.mp3`, `music/oyun.mp3`): altyapı hazır, **dosyayı kullanıcı verecek**
 - [x] Yıldızlı büyük bölüm ilerleme çubuğu (s17) · [x] zorluk ayarı: menüde Kolay / Normal / Zor (s17)
 - [x] App Store / Google Play paketleme hazırlığı (Capacitor 6): `package.json`, `capacitor.config.json`, `scripts/build-www.js`, adım adım `docs/MAGAZA.md` (Android projesi oluşturma test edildi). Mağazaya yükleme kullanıcının Apple/Google hesabıyla yapılır.

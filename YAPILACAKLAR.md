@@ -3,7 +3,7 @@
 Oyun yayında: https://ahmet85.github.io/Ahmet85/ (GitHub Pages, dal: `claude/octopus-mobile-game-0is63u`)
 
 ## Sıradaki işler
-- [ ] **Müzik:** Ahmet kendi açılış müziğini yapıp verecek → `music/acilis.mp3` olarak eklenecek. Oyun içi müzik de yapılacak (kademelere göre değişebilir).
+- [x] **Müzik:** Kodla üretilen müzikler kalıyor (kullanıcı kararı); kendi dosyası şimdilik iptal. İstenirse `music/README.md`.
 - [ ] **Kol fırlatma yerine yeni bir hareket:** karar verilecek (fikirler: hızlı atılma/dash, mürekkep kalkanı, kabarcık tuzağı).
 - [ ] Oyunu gerçek telefonda deneyip zorluk ayarı (dev kalamar canı, düşman sıklığı, mağaza fiyatları).
 

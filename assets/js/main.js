@@ -61,8 +61,6 @@ if (tabs.length) selectTab(0, false);
 
   const IW = 1680, IH = 944;                 // görselin koordinatları
   const PACK = { x: 1300, y: 600, h: 310 };  // paketin merkezi ve yüksekliği
-  const HAND = { x: 470, y: 292, w: 130 };   // şefin parmak uçları
-  const DOUGH_Y = 705;
 
   const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
   const smooth = (t) => t * t * (3 - 2 * t);
@@ -107,30 +105,77 @@ if (tabs.length) selectTab(0, false);
     bg.style.filter = blur > 0.05 ? 'blur(' + (blur / S).toFixed(2) + 'px) brightness(' + (1 - t * 0.18).toFixed(3) + ')' : '';
   }
 
-  // şefin elinden dökülen un
-  let parts = [];
+  // şefin parmaklarından dökülen un: ince akış + havada asılı toz bulutu
+  const PINCH = [[556, 312], [572, 318], [586, 322], [544, 306]]; // parmak uçları
+  const haze = document.createElement('canvas'); haze.width = haze.height = 64;
+  (function () {
+    const hc = haze.getContext('2d');
+    const g = hc.createRadialGradient(32, 32, 0, 32, 32, 32);
+    g.addColorStop(0, 'rgba(255,232,200,1)'); g.addColorStop(1, 'rgba(255,232,200,0)');
+    hc.fillStyle = g; hc.fillRect(0, 0, 64, 64);
+  })();
+  const gauss = () => (Math.random() + Math.random() + Math.random() - 1.5) / 1.5;
+  const lightAt = (x) => clamp(1.2 - (x - 420) / 420, 0.3, 1); // ışık soldan gelir
+  let dust = [], clouds = [], clock = 0;
+
   function flour(dt, rate) {
-    const n = Math.round(rate * dt * 60);
+    clock += dt;
+    const k = dt * 60;
+    // ince taneler
+    const n = Math.round(rate * k);
     for (let i = 0; i < n; i++) {
-      parts.push({
-        x: HAND.x + Math.random() * HAND.w, y: HAND.y + Math.random() * 30,
-        vx: (Math.random() - 0.35) * 0.5, vy: 0.4 + Math.random() * 1.1,
-        s: 0.5 + Math.random() * 1.6, a: 0.35 + Math.random() * 0.55, ph: Math.random() * 6.28
+      const o = PINCH[(Math.random() * PINCH.length) | 0];
+      dust.push({
+        x: o[0] + gauss() * 16, y: o[1] + gauss() * 8 + Math.random() * 14,
+        vx: gauss() * 0.4 - 0.16, vy: 0.1 + Math.random() * 0.4,
+        s: 0.3 + Math.pow(Math.random(), 2.2) * 1.0,
+        a: 0.12 + Math.random() * 0.4,
+        term: 0.9 + Math.random() * 1.4, ph: Math.random() * 6.28
       });
     }
+    // toz bulutu
+    if (Math.random() < 0.06 * k * Math.min(1, rate / 30)) {
+      clouds.push({ x: 470 + Math.random() * 200, y: 380 + Math.random() * 260, r: 22 + Math.random() * 46,
+        vx: (Math.random() - 0.4) * 0.12, vy: 0.05 + Math.random() * 0.1, life: 0, max: 4 + Math.random() * 4 });
+    }
+
     ctx.clearRect(0, 0, IW, IH);
     ctx.globalCompositeOperation = 'lighter';
+
+    const keepC = [];
+    for (const c of clouds) {
+      c.life += dt; c.x += c.vx * k; c.y += c.vy * k; c.r += 0.04 * k;
+      if (c.life > c.max) continue;
+      const f = Math.sin(Math.PI * c.life / c.max);
+      ctx.globalAlpha = 0.05 * f * lightAt(c.x);
+      ctx.drawImage(haze, c.x - c.r, c.y - c.r, c.r * 2, c.r * 2);
+      keepC.push(c);
+    }
+    clouds = keepC;
+
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#F7DDB6';
     const keep = [];
-    for (const q of parts) {
-      q.vy += 0.035 * dt * 60; q.x += (q.vx + Math.sin(q.y / 30 + q.ph) * 0.15) * dt * 60; q.y += q.vy * dt * 60;
-      if (q.y > DOUGH_Y - Math.random() * 20) continue;
-      const fade = 1 - clamp((q.y - 560) / 150, 0, 1) * 0.6;
-      ctx.globalAlpha = q.a * fade;
-      ctx.fillStyle = '#FFEBD2';
-      ctx.beginPath(); ctx.arc(q.x, q.y, q.s, 0, 6.283); ctx.fill();
+    for (const q of dust) {
+      // hava akımı: yavaş değişen girdap
+      const turb = Math.sin(q.y * 0.021 + clock * 0.9 + q.ph) * 0.022 + Math.sin(q.y * 0.009 - clock * 0.5 + q.ph * 2) * 0.014;
+      const fallen = clamp((q.y - 320) / 340, 0, 1);
+      q.vx = (q.vx + turb * (0.6 + 1.6 * fallen) * k + gauss() * 0.02 * k) * Math.pow(0.99, k);
+      q.vy = Math.min(q.vy + 0.012 * k, q.term);
+      q.x += q.vx * k; q.y += q.vy * k;
+      if (q.y > 690 - q.ph * 3) continue;
+      const fade = (1 - fallen * 0.55) * clamp((q.y - 300) / 25, 0, 1);
+      const al = q.a * fade * lightAt(q.x);
+      if (al < 0.01) { keep.push(q); continue; }
+      ctx.globalAlpha = al;
+      ctx.lineWidth = q.s;
+      ctx.beginPath();
+      ctx.moveTo(q.x - q.vx * 2.2, q.y - q.vy * 2.2); // hafif hareket izi
+      ctx.lineTo(q.x, q.y);
+      ctx.stroke();
       keep.push(q);
     }
-    parts = keep.length > 2600 ? keep.slice(-2600) : keep;
+    dust = keep.length > 9000 ? keep.slice(-9000) : keep;
     ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
   }
 
@@ -145,7 +190,7 @@ if (tabs.length) selectTab(0, false);
     const t = range(p, 0.1, 0.82);
     camera(t);
     setCaption(p);
-    flour(dt, 5 * (1 - t * 0.7));
+    flour(dt, 24 * (1 - t * 0.6));
     if (running) requestAnimationFrame(frame); else last = 0;
   }
 

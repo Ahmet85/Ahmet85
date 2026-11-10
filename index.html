@@ -118,6 +118,7 @@
 </head>
 <body>
 <canvas id="c"></canvas>
+<div id="safeProbe" style="position:fixed;top:0;left:0;width:1px;height:env(safe-area-inset-top,0px);visibility:hidden;pointer-events:none"></div>
 
 <button id="pauseBtn" class="hidden" aria-label="Duraklat">II</button>
 <button id="muteBtn" class="hidden" aria-label="Ses">🔊</button>
@@ -131,7 +132,7 @@
   <button id="shopBtn" class="roundBtn" aria-label="Mağaza">🛍️<span>Mağaza</span></button>
   <button id="missionBtn" class="roundBtn" aria-label="Görevler">📋<span>Görevler</span><b id="missionBadge" class="badge hidden">!</b></button>
   <div id="menuBest" class="best"></div>
-  <div id="ver" class="ver">s13</div>
+  <div id="ver" class="ver">s14</div>
 </div>
 
 <div id="shop" class="overlay panel hidden">
@@ -200,11 +201,11 @@
   </div>
 </div>
 
-<script src="okto.js?v=13"></script>
-<script src="reef.js?v=13"></script>
-<script src="title.js?v=13"></script>
-<script src="music.js?v=13"></script>
-<script src="game.js?v=13"></script>
+<script src="okto.js?v=14"></script>
+<script src="reef.js?v=14"></script>
+<script src="title.js?v=14"></script>
+<script src="music.js?v=14"></script>
+<script src="game.js?v=14"></script>
 <script>
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
     window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));

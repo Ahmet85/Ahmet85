@@ -30,9 +30,12 @@ function resize() {
   cvs.style.width = W + 'px'; cvs.style.height = H + 'px';
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   S = clamp(Math.min(W, H) / 400, 0.75, 1.6);
-  safeTop = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sat')) || 0;
+  safeTop = readSafeTop();
   layoutMenuButtons();
 }
+// Çentik payı: iPhone ilk açılışta geç bildirebiliyor; gizli bir kutunun yüksekliğinden okunur, yarım saniyede bir yenilenir
+function readSafeTop() { const el = document.getElementById('safeProbe'); return el ? Math.round(el.getBoundingClientRect().height) : 0; }
+function refreshSafeTop() { const v = readSafeTop(); if (v !== safeTop) { safeTop = v; layoutMenuButtons(); } }
 // iPhone'un oyuna vermediği en alt şerit, sayfanın zemin rengiyle boyanır: sahnenin alt rengine eşitle
 let edgeColor = '';
 function setEdgeColor(c) { if (c !== edgeColor) { edgeColor = c; document.documentElement.style.background = c; document.body.style.background = c; } }
@@ -427,7 +430,7 @@ function spawn() {
   const d = depth;
   const calm = boss || phase !== 'dive' || levelInfo(levelN).end - d < 14;
   const table = calm ? [
-    ['pearl', 30], ['star', boss ? 6 : 1], ['glow', boss && boss.phase === 'fight' ? 5 : 0], ['heart', lives < 3 ? 3 : 0], ['shield', boss ? 2 : 0],
+    ['pearl', 30], ['star', boss ? 6 : 1], ['glow', boss && boss.phase === 'fight' && !entities.some(e => e.type === 'glow') ? 2 : 0], ['heart', lives < 3 ? 3 : 0], ['shield', boss ? 2 : 0],
   ] : [
     ['pearl', 38], ['pearlRow', 10], ['fish', 14], ['jelly', 18 + d * 0.02], ['urchin', 9],
     ['puffer', d > 40 ? 12 : 0], ['shark', d > 150 ? 5 + d * 0.006 : 0], ['angler', d > 400 ? 6 : 0],
@@ -1687,7 +1690,7 @@ function frame(now) {
 }
 function stepFrame(now, dt) {
   if (shake > 0 && state !== 'play') shake = Math.max(0, shake - dt * 40); // ölünce/menüde sarsıntı sönsün
-  if ((sizeCheckT += dt) > 0.5) { sizeCheckT = 0; edgeDue = true; }
+  if ((sizeCheckT += dt) > 0.5) { sizeCheckT = 0; edgeDue = true; refreshSafeTop(); }
   if (state === 'play') update(dt);
   else if (state === 'transition') { updateTransition(dt); updateFx(dt); for (const q of particles) { q.x += q.vx * dt; q.y += q.vy * dt; q.life -= q.decay * dt; } particles = particles.filter(q => q.life > 0); }
   else if (state === 'clear') { time += dt; updateFx(dt); }
@@ -1707,7 +1710,11 @@ function updateEdge() { // tuvalin en alt orta pikselini oku, şeridi aynı reng
   const open = id => !$(id).classList.contains('hidden');
   if (open('shop') || open('missions')) return setEdgeColor('#06223f');
   let r, g, b;
-  try { const d = ctx.getImageData(Math.floor(cvs.width / 2), cvs.height - 2, 1, 1).data; r = d[0]; g = d[1]; b = d[2]; }
+  try {
+    const d = ctx.getImageData(0, cvs.height - 2, cvs.width, 1).data, R = [], G = [], B = [];
+    for (let i = 0; i < 9; i++) { const x = Math.floor(cvs.width * (0.04 + i * 0.09)); R.push(d[x * 4]); G.push(d[x * 4 + 1]); B.push(d[x * 4 + 2]); }
+    const med = a => a.sort((p, q) => p - q)[4]; r = med(R); g = med(G); b = med(B);
+  }
   catch { const c = sceneBottomColor(); return setEdgeColor(c); }
   if (open('pauseMenu') || open('over') || open('clear') || open('help')) { // koyu perdeyle aynı oranda karart
     const k = 0.8; r = r * (1 - k) + 2 * k; g = g * (1 - k) + 12 * k; b = b * (1 - k) + 26 * k;
@@ -1752,7 +1759,7 @@ requestAnimationFrame(frame);
 // Test/hata ayıklama için
 window.__okto = {
   get state() { return state; }, get score() { return score; }, get depth() { return depth; }, set depth(v) { depth = v; },
-  get lives() { return lives; }, get rocks() { return rocks; }, get plan() { return plan; }, get zone() { return zone; }, get shake() { return shake; }, set lives(v) { lives = v; }, set invuln(v) { invuln = v; }, get boss() { return boss; }, get tier() { return tier; }, get levelN() { return levelN; }, get phase() { return phase; }, damageBoss, startTransition,
+  get lives() { return lives; }, get safeTop() { return safeTop; }, get rocks() { return rocks; }, get plan() { return plan; }, get zone() { return zone; }, get shake() { return shake; }, set lives(v) { lives = v; }, set invuln(v) { invuln = v; }, get boss() { return boss; }, get tier() { return tier; }, get levelN() { return levelN; }, get phase() { return phase; }, damageBoss, startTransition,
   Sound, TIERS, startGame, useInk, lightBomb: () => lightBomb(player.x, player.y), get entities() { return entities; }, get player() { return player; }, get target() { return target; },
   Profile, Missions, spawnGift: () => entities.push({ type: 'gift', x: player.x, y: player.y + 70 * S, r: 14 * S, t: 0, hue: 330 }), spawnGlow: () => entities.push({ type: 'glow', x: player.x, y: player.y + 80 * S, r: 15 * S, t: 0 }),
 };

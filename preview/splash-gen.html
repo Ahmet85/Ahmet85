@@ -6,8 +6,9 @@ html,body{margin:0;overflow:hidden}canvas{display:block}
 </style></head><body><canvas id="c"></canvas>
 <script src="../okto.js"></script><script src="../title.js"></script>
 <script>
+// açılış görselinde Okto yok (?okto ile eklenir): oyuncunun rengi neyse Okto o renkle oyunda kumdan yükselir
 const q = new URLSearchParams(location.search), top0 = +q.get('top') || 0;
 const c = document.getElementById('c'), ctx = c.getContext('2d'), W = innerWidth, H = innerHeight, D = devicePixelRatio;
 c.width = W * D; c.height = H * D; c.style.width = W + 'px'; c.style.height = H + 'px';
-document.fonts.load('700 40px Fredoka', 'ŞşİıĞğ').then(() => { ctx.setTransform(D, 0, 0, D, 0, 0); OktoTitle.draw(ctx, W, H, 0, { palette: 'pink', accessory: 'goggles', top: top0 }); window.ready = true; });
+document.fonts.load('700 40px Fredoka', 'ŞşİıĞğ').then(() => { ctx.setTransform(D, 0, 0, D, 0, 0); OktoTitle.draw(ctx, W, H, 0, { palette: 'pink', accessory: 'goggles', top: top0, hideOkto: !q.has('okto') }); window.ready = true; });
 </script></body></html>

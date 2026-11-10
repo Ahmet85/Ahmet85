@@ -1,4 +1,4 @@
-/* OKTO becerileri ve yetenek halkası (DENEME: yalnızca test adresinde açılır: ?beceri)
+/* OKTO becerileri ve yetenek halkası (s27'den beri normal oyunda; eski mürekkep düğmesi için test adresi: ?murekkep)
    - 12 beceri tanımlı; ilk denemede 3'ü çalışıyor: Mürekkep Yelpazesi, İnci Atışı, Kalkan Açılımı.
    - Oyuncu 3 beceri kuşanır. Sağ alttaki tek düğme:
        basılı tut  → Okto'nun çevresinde halka açılır (oyun yavaşlar)
@@ -89,7 +89,8 @@ function activate(E) {
   const P = E.player, S = E.S;
   if (id === 'inkFan') {
     E.sound.ink && E.sound.ink();
-    const grp = { hitBoss: false }; // dört bulut canavara en fazla bir kez vurur
+    const grp = { hitBoss: true }; // canavara bulutlar değil, eskisi gibi güdümlü mürekkep topu vurur
+    E.inkShot && E.inkShot();
     for (const [dx, dy] of DIRS) st.fx.push({ kind: 'ink', x: P.x, y: P.y, dx, dy, t: 0, life: 1.5, dist: 120 * S, r: 36 * S, grp });
   } else if (id === 'pearlShot') {
     E.sound.tone(1200, 0.12, 'triangle', 0.08, -500); E.sound.tone(900, 0.1, 'sine', 0.06, 300, 0.04);
@@ -119,7 +120,7 @@ function update(E, dt) {
       if (f.t < 1.0) for (const e of E.entities) {
         if (!E.enemies.has(e.type) || e.dead || Math.hypot(e.x - f.cx, e.y - f.cy) > f.r + e.r) continue;
         if (isShot(e)) { e.dead = true; E.burst(e.x, e.y, '#6b3fa0', 8, 90); continue; }
-        if (!e.stunned) { e.stunned = true; e.skStun = 2.5; E.addScore(15); if (e.type === 'shark') { e.warn = 0; e.sp *= 0.35; } }
+        if (!e.stunned) { e.stunned = true; e.skStun = 2.5; E.addScore(15); E.track && E.track('stun_day', 1); if (e.type === 'shark') { e.warn = 0; e.sp *= 0.35; } }
       }
       const B = E.boss;
       if (!f.grp.hitBoss && f.t < 1.0 && B && B.phase === 'fight' && Math.hypot(B.x - f.cx, B.y - B.r * 0.3 - f.cy) < B.r * 0.85 + f.r) { f.grp.hitBoss = true; E.damageBoss(1); }
@@ -245,6 +246,7 @@ function toggleEquip(prof, id) { // menüden kuşan / çıkar; en az bir beceri 
 window.OktoSkills = {
   DEFS, ICONS, state: st, byId, unlockedIds, nextUnlock, load, addXp, toggleEquip,
   get selected() { return st.equipped[st.sel]; }, get ringOpen() { return !!(st.hold && st.hold.open); },
+  refill() { st.cd = {}; }, // deniz yıldızı: bütün bekleme süreleri dolar
   setEquipped(list) { if (Array.isArray(list) && list.length === 3) st.equipped = list.slice(); },
   select(i) { st.sel = clamp(i | 0, 0, 2); },
   down, move, up, cancel, activate, update, drawFx, drawRing, drawButton, shielding, timeScale, reset,

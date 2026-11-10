@@ -11,16 +11,16 @@
 <title>Okto: Derinlerin Kaşifi</title>
 <link rel="manifest" href="manifest.json">
 <!-- iPhone açılış görselleri: beyaz flaş yerine menünün ilk karesi görünür -->
-<link rel="apple-touch-startup-image" media="screen and (device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/splash-1170x2532.png">
-<link rel="apple-touch-startup-image" media="screen and (device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/splash-1179x2556.png">
-<link rel="apple-touch-startup-image" media="screen and (device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/splash-1290x2796.png">
-<link rel="apple-touch-startup-image" media="screen and (device-width: 402px) and (device-height: 874px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/splash-1206x2622.png">
-<link rel="apple-touch-startup-image" media="screen and (device-width: 440px) and (device-height: 956px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/splash-1320x2868.png">
-<link rel="apple-touch-startup-image" media="screen and (device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/splash-1284x2778.png">
-<link rel="apple-touch-startup-image" media="screen and (device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/splash-1125x2436.png">
-<link rel="apple-touch-startup-image" media="screen and (device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/splash-1242x2688.png">
-<link rel="apple-touch-startup-image" media="screen and (device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="splash/splash-828x1792.png">
-<link rel="apple-touch-startup-image" media="screen and (device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="splash/splash-750x1334.png">
+<link rel="apple-touch-startup-image" media="screen and (device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/splash-1170x2532.png?v=27">
+<link rel="apple-touch-startup-image" media="screen and (device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/splash-1179x2556.png?v=27">
+<link rel="apple-touch-startup-image" media="screen and (device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/splash-1290x2796.png?v=27">
+<link rel="apple-touch-startup-image" media="screen and (device-width: 402px) and (device-height: 874px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/splash-1206x2622.png?v=27">
+<link rel="apple-touch-startup-image" media="screen and (device-width: 440px) and (device-height: 956px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/splash-1320x2868.png?v=27">
+<link rel="apple-touch-startup-image" media="screen and (device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/splash-1284x2778.png?v=27">
+<link rel="apple-touch-startup-image" media="screen and (device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/splash-1125x2436.png?v=27">
+<link rel="apple-touch-startup-image" media="screen and (device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/splash-1242x2688.png?v=27">
+<link rel="apple-touch-startup-image" media="screen and (device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="splash/splash-828x1792.png?v=27">
+<link rel="apple-touch-startup-image" media="screen and (device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="splash/splash-750x1334.png?v=27">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>
@@ -43,7 +43,10 @@
   .item.lock { opacity:.5; } .item.soon { opacity:.75; } .item.eq { border-color:#7dffb0; background:rgba(125,255,176,.18); }
   .item .ds { font-size:10px; opacity:.8; line-height:1.15; padding:0 2px; }
   /* Nasıl oynanır: içerik ekrandan uzunsa kart kendi içinde kayar, başlık ve düğme hep görünür */
-  #help h2, #help .btn { flex-shrink:0; }
+  #help h2, #help .btn, #help .savebox { flex-shrink:0; }
+  .savebox { width:100%; max-width:380px; display:flex; flex-direction:column; gap:6px; font-size:14px; text-align:left; }
+  .savebox .row { justify-content:flex-start; gap:8px; }
+  #saveBox { width:100%; box-sizing:border-box; font:12px monospace; border-radius:10px; border:0; padding:6px; user-select:text; -webkit-user-select:text; }
   #help .card { min-height:0; overflow-y:auto; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; touch-action:pan-y; }
   h1 { margin:0; font-size:clamp(40px,12vw,72px); line-height:1; letter-spacing:1px;
     background:linear-gradient(180deg,#ffd1e8,#ff7eb6 55%,#c04dff); -webkit-background-clip:text; background-clip:text; color:transparent;
@@ -147,7 +150,7 @@
   <button id="skillBtn" class="roundBtn hidden" aria-label="Beceriler">✨<span>Beceriler</span><b id="skillBadge" class="badge hidden">!</b></button>
   <button id="missionBtn" class="roundBtn" aria-label="Görevler">📋<span>Görevler</span><b id="missionBadge" class="badge hidden">!</b></button>
   <div id="menuBest" class="best"></div>
-  <div id="ver" class="ver">s26</div>
+  <div id="ver" class="ver">s27</div>
 </div>
 
 <div id="shop" class="overlay panel hidden">
@@ -170,8 +173,8 @@
     👆 <b>Parmağını sürükle</b>: Okto parmağını takip eder.<br>
     ⚪ <b>İnci</b> ve 🐟 <b>balık</b> topla, art arda toplayınca çarpan artar.<br>
     🪼 Denizanası, 🐡 balon balığı, deniz kestanesi ve 🦈 köpekbalığından kaç!<br>
-    🖤 <b>Mürekkep</b> düğmesi dolunca bas, etraftaki düşmanlar sersemler.<br>
-    🫧 Kalkan, ⭐ deniz yıldızı ve ❤️ can toplanabilir.<br>
+    ✨ Sağ alttaki <b>beceri düğmesine</b> kısa dokun: seçili beceri çalışır. <b>Basılı tut</b>: Okto'nun çevresinde halka açılır, yukarı / sola / sağa sürükleyip bırakarak beceri seç. Puan topladıkça yeni beceriler açılır (menüde <b>Beceriler</b>).<br>
+    🫧 Kalkan, ⭐ deniz yıldızı (becerileri hemen doldurur) ve ❤️ can toplanabilir.<br>
     ✨ <b>Işık Midyesi</b>: ye, ışık bombası patlasın, ekrandaki tüm düşmanlar yok olsun!<br>
     🪨 <b>Kayalıklara</b> dikkat: resif adacıklarına ve kanyon çıkıntılarına çarpınca can gider. Parlayan <b>mağara ağzına</b> yüzersen hazine çıkar!<br>
     🎁 Yok ettiğin bazı düşmanlardan <b>hediye</b> düşer: içinden çıkan <b>Altın Karides</b>i ye, 6 saniye <b>Dev Okto</b> ol ve düşmanları ez!<br>
@@ -179,6 +182,12 @@
     🎚️ Üstteki <b>Zorluk</b> düğmesiyle Kolay / Normal / Zor seçebilirsin.<br>
     🏁 Her <b>bölümün</b> sonunda bir canavar seni bekler: Dev Balon Balığı, Elektrikli Denizanası, Dev Kalamar. Yen, yıldızları topla, girdaba dal!<br>
     💾 Yanarsan ulaştığın <b>bölümün başından</b> devam edebilirsin.
+  </div>
+  <div class="savebox">
+    <b>💾 Kayıt kodu</b> <small>(oyunu silip yeniden kurmadan önce kopyala; incilerin, kostümlerin ve becerilerin taşınır)</small>
+    <div class="row"><button id="saveCopy" class="tab">Kaydımı kopyala</button><button id="saveLoad" class="tab">Kaydı yükle</button></div>
+    <textarea id="saveBox" class="hidden" rows="2" spellcheck="false"></textarea>
+    <small id="saveMsg"></small>
   </div>
   <button id="helpClose" class="btn">Anladım!</button>
 </div>
@@ -230,18 +239,18 @@
   <div id="skGrid" class="grid"></div>
 </div>
 
-<script src="okto.js?v=26"></script>
-<script src="reef.js?v=26"></script>
-<script src="zones.js?v=26"></script>
-<script src="enemies.js?v=26"></script>
-<script src="bosses.js?v=26"></script>
-<script src="title.js?v=26"></script>
-<script src="music.js?v=26"></script>
-<script src="campaign.js?v=26"></script>
-<script src="boss-ai.js?v=26"></script>
-<script src="cinema.js?v=26"></script>
-<script src="skills.js?v=26"></script>
-<script src="game.js?v=26"></script>
+<script src="okto.js?v=27"></script>
+<script src="reef.js?v=27"></script>
+<script src="zones.js?v=27"></script>
+<script src="enemies.js?v=27"></script>
+<script src="bosses.js?v=27"></script>
+<script src="title.js?v=27"></script>
+<script src="music.js?v=27"></script>
+<script src="campaign.js?v=27"></script>
+<script src="boss-ai.js?v=27"></script>
+<script src="cinema.js?v=27"></script>
+<script src="skills.js?v=27"></script>
+<script src="game.js?v=27"></script>
 <script>
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
     window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));

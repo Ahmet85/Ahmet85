@@ -404,8 +404,17 @@ function draw(ctx, W, H, t, opts = {}) {
   ctx.save(); ctx.globalAlpha = f2.a; blueTang(ctx, f2.x, f2.y, 0.95 * u, f2.dir, f2.a < 1 || abs - I.fish[1].escT > 3.8 ? tc : tc * 3); ctx.restore();
   I.hits.fish = [{ x: f1.x, y: f1.y, r: 34 * u }, { x: f2.x, y: f2.y, r: 34 * u }];
 
-  // OKTO
-  drawOkto(ctx, W / 2, oy, R, tc, look, abs);
+  // OKTO (opts.hideOkto: açılış görseli için Okto'suz sahne; opts.intro 0→1: uygulama açılınca kumdan yükselip belirir)
+  if (!opts.hideOkto) {
+    const k = opts.intro == null ? 1 : clamp(opts.intro, 0, 1);
+    if (k < 1) {
+      const e = 1 - Math.pow(1 - k, 3), sc = 0.55 + 0.45 * e + Math.sin(k * Math.PI) * 0.08;
+      ctx.save(); ctx.globalAlpha = clamp(k * 2.5, 0, 1);
+      ctx.translate(W / 2, oy + (1 - e) * R * 1.7); ctx.scale(sc, sc); ctx.translate(-W / 2, -oy);
+      drawOkto(ctx, W / 2, oy, R, tc, look, abs); ctx.restore();
+      if (Math.random() < 0.5) addPart('bubble', W / 2 + (Math.random() - 0.5) * R * 1.6, oy + R * (0.6 + (1 - e)));
+    } else drawOkto(ctx, W / 2, oy, R, tc, look, abs);
+  }
 
   drawBubbles(true);
   drawParts(ctx, dtp, u);

@@ -18,8 +18,11 @@ Tasarım brifi: `docs/BRIF.md` ("OKTO – UNDERWATER DESCENT", kullanıcının 1
 - Dal: `claude/octopus-mobile-game-0is63u` → GitHub Pages: https://ahmet85.github.io/Ahmet85/
 - Aynı dalda başka bir oturumun `ritim/` klasörü var; **ona dokunma**, push öncesi `git fetch` + `git rebase` yap.
 - **Her yayında sürümü artır:** `index.html` içindeki tüm `?v=` ekleri, menüdeki `s<sürüm>` etiketi ve `sw.js` içindeki
-  `okto-v<sürüm>` birlikte. Kullanıcı sağ alttaki `s<sürüm>` ile güncellemenin geldiğini kontrol ediyor. Son sürüm: **s26**.
+  `okto-v<sürüm>` birlikte. Kullanıcı sağ alttaki `s<sürüm>` ile güncellemenin geldiğini kontrol ediyor. Son sürüm: **s27**.
 - Telefonda güncelleme: uygulamayı kapat-aç (gerekirse iki kez). Açılış görseli/simge değişirse sil-yeniden kur gerekir.
+- **Açılış görseli (s27):** Okto'suz sahne (oyuncunun rengi bilinemediği için); Okto oyunda oyuncunun renginle kumdan yükselir
+  (`title.js` opts.intro). Görseller `preview/splash-gen.html` ile üretilir. Silip yeniden kurmada kayıt silinebilir:
+  önce yardım (?) panelindeki **Kayıt kodu** ile kaydı kopyala, yeni kurulumda yapıştır.
 
 ## Alınan kararlar
 - **Tüm grafikler ve sesler kodla üretilir** (Canvas 2D, Web Audio). Resim/ses dosyası yok (istisna: açılış görselleri
@@ -41,7 +44,7 @@ Tasarım brifi: `docs/BRIF.md` ("OKTO – UNDERWATER DESCENT", kullanıcının 1
 - Test adresleri (hiçbir şey kaydetmez, sağ altta TEST yazar): `?boss=kimlik`, `?bolum=N`, `?plan=grup`; liste: `preview/boss-test.html`.
 - s22 yeniden düzenlemesinde mevcut canavarlar eski s21 koduyla aynı rastgele sayılarla yan yana oynatıldı: 4 bölümde birebir aynı.
 
-## Beceri halkası (s24, DENEME: yalnızca `?beceri`)
+## Beceri halkası (s24 deneme → **s27'den beri normal oyunda**, kullanıcı onayladı)
 - Kullanıcı isteği: 12 beceri, oyuncu 3'ünü kuşanır; menüden ve bölüm geçişinde ("Becerileri Değiştir") değiştirilir; seçim kayıtlı kalır.
 - Sağ altta tek düğme: basılı tut → Okto çevresinde halka (oyun 0,4 hızına yavaşlar), sürükle yukarı/sola/sağa → dilim, bırak → seçilir;
   kısa dokun → seçili beceri çalışır. Her becerinin kendi bekleme süresi var. Yönlü beceriler 4 yöne aynı anda yayılır.
@@ -51,7 +54,10 @@ Tasarım brifi: `docs/BRIF.md` ("OKTO – UNDERWATER DESCENT", kullanıcının 1
   Kanca 6500 · Işık 8500 · Dönen 11000 · Girdap 14000 · Dev Okto Darbesi 18000. Açılan beceri boş yuvaya kendiliğinden girer.
 - Menüde "Beceriler" paneli (kuşan/çıkar, kilitli olanlar ve eşikleri), bölüm kartında "Becerileri Değiştir", seçim profilde kayıtlı.
   Test adresinde `?beceri&xp=900` ile başlangıç puanı verilir (test adresi kaydetmez).
-- Normal oyun değişmedi (mürekkep düğmesi duruyor). Sırada: kalan 9 beceri, kullanıcı onayıyla normal oyuna geçiş.
+- s27: beceri düğmesi mürekkep düğmesinin yerini aldı. Mürekkep Yelpazesi canavara eski güdümlü mürekkep topunu da atar
+  (başta tek beceriyle 1. canavar ~3 basışta yenilir). Deniz yıldızı bütün bekleme sürelerini doldurur. İlk açılışta en iyi puan
+  Kaşif Puanı sayılır. Eski mürekkep düğmesi yalnızca test adresinde: `?murekkep` (eski s21 ile birebir aynılık testi bununla yapılır).
+- Sırada: kalan 9 beceri (panelde "yakında").
 
 ## iPhone'a özgü dersler (tekrar yaşama)
 - **Ekran ölçümüyle oynama**: basit `innerWidth/innerHeight` + `resize` olayı kalsın. Periyodik yeniden boyutlandırma ve

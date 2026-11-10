@@ -200,6 +200,32 @@ function serve() {
     await close();
   }
 
+  // 7) normal oyunda beceriler (s27) ve kayıt kodu
+  console.log('7. Normal oyunda beceriler ve kayıt kodu');
+  {
+    const { page, errors, close } = await open('', false);
+    ok(await page.isVisible('#skillBtn'), 'menüde Beceriler düğmesi');
+    ok(await page.evaluate(() => !!window.__okto.SK), 'beceri sistemi normal oyunda açık');
+    await page.evaluate(() => { const P = window.__okto.Profile.data; P.wallet = 123; P.palette = 'galaxy'; });
+    const code = await page.evaluate(() => { document.getElementById('helpBtn').click(); document.getElementById('saveCopy').click(); return document.getElementById('saveBox').value; });
+    ok(code.startsWith('OKTO-'), 'kayıt kodu üretildi');
+    await page.evaluate(() => { const P = window.__okto.Profile.data; P.wallet = 0; P.palette = 'pink'; });
+    await page.evaluate(c => { const b = document.getElementById('saveBox'); b.value = c; document.getElementById('saveLoad').click(); }, code);
+    ok(await page.evaluate(() => { const P = window.__okto.Profile.data; return P.wallet === 123 && P.palette === 'galaxy'; }), 'kayıt kodu geri yüklendi (inci ve renk)');
+    await page.evaluate(() => document.getElementById('helpClose').click());
+    await page.evaluate(() => window.__okto.startGame(1)); await page.waitForTimeout(1500);
+    const bb = await page.locator('#inkBtn').boundingBox();
+    await page.mouse.click(bb.x + bb.width / 2, bb.y + bb.height / 2); await page.waitForTimeout(150);
+    ok(await page.evaluate(() => window.__okto.SK.state.fx.some(f => f.kind === 'ink')), 'beceri düğmesi çalışıyor');
+    ok(errors.length === 0, 'hata yok' + (errors.length ? ': ' + errors.join(' / ') : ''));
+    await close();
+  }
+  {
+    const { page, close } = await open('?murekkep', false);
+    ok(await page.evaluate(() => !window.__okto.SK) && !(await page.isVisible('#skillBtn')), 'test adresi ?murekkep: eski mürekkep düğmesi');
+    await close();
+  }
+
   await browser.close(); srv.close();
   console.log(`\n${passes} geçti, ${fails} kaldı`);
   process.exit(fails ? 1 : 0);

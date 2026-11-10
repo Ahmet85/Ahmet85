@@ -11,11 +11,12 @@ const TAU = Math.PI * 2;
 // Test adresi (yalnızca geliştirme): ?plan=grup  ?bolum=N  ?boss=kimlik  ?test
 // Böyle açılınca hiçbir şey kaydedilmez; normal açılışta (parametresiz) hiçbir etkisi yoktur.
 const TEST = (() => {
-  const q = new URLSearchParams(location.search), on = ['plan', 'bolum', 'boss', 'test', 'beceri'].some(k => q.has(k));
-  return { on, plan: q.get('plan'), level: parseInt(q.get('bolum'), 10) || 0, boss: q.get('boss') || '', skills: q.has('beceri') };
+  const q = new URLSearchParams(location.search), on = ['plan', 'bolum', 'boss', 'test', 'beceri', 'murekkep', 'xp'].some(k => q.has(k));
+  return { on, plan: q.get('plan'), level: parseInt(q.get('bolum'), 10) || 0, boss: q.get('boss') || '', oldInk: q.has('murekkep') };
 })();
-// Beceri halkası (DENEME): yalnızca ?beceri ile açılır; açıkken mürekkep düğmesinin yerini beceri düğmesi alır
-const SK = TEST.skills && window.OktoSkills ? window.OktoSkills : null;
+// Beceri halkası (s27'den beri normal oyunda; kullanıcı onayladı): mürekkep düğmesinin yerini beceri düğmesi aldı.
+// Eski mürekkep düğmesi yalnızca test adresinde: ?murekkep
+const SK = !TEST.oldInk && window.OktoSkills ? window.OktoSkills : null;
 if (TEST.on && TEST.plan && window.OktoCampaign) OktoCampaign.setMode(TEST.plan);
 const store = {
   get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } },
@@ -27,6 +28,7 @@ function lerpColor(c1, c2, t) {
   return `rgb(${r},${g},${bl})`;
 }
 const FONT = 'Fredoka, "Trebuchet MS", sans-serif';
+const BOOT = performance.now(); // açılış anı: Okto menüde kumdan yükselerek belirir (açılış görselinde Okto yok)
 
 // ---------- Tuval ----------
 const cvs = $('c'), ctx = cvs.getContext('2d');
@@ -70,7 +72,11 @@ const Profile = {
 };
 const look = () => ({ palette: Profile.data.palette, accessory: Profile.data.accessory });
 // Beceri ilerlemesi (Kaşif Puanı ve kuşanılan beceriler) profilde saklanır; test adresinde ?xp=N ile başlangıç puanı verilebilir
-function skProf() { const D = Profile.data; if (!D.skills) D.skills = { xp: 0, equipped: ['inkFan'], seen: 1 }; return D.skills; }
+function skProf() { // ilk kez: şimdiye kadarki en iyi puan Kaşif Puanı olarak sayılır (eski oyuncular sıfırdan başlamasın)
+  const D = Profile.data;
+  if (!D.skills) { D.skills = { xp: 0, equipped: ['inkFan'], seen: 1 }; if (window.OktoSkills && D.best > 0) OktoSkills.addXp(D.skills, D.best); }
+  return D.skills;
+}
 if (SK) { const q = new URLSearchParams(location.search); SK.load(skProf()); if (q.has('xp')) { skProf().xp = 0; SK.addXp(skProf(), +q.get('xp') || 0); } }
 
 // ---------- Ses (WebAudio, derinliğe göre 3 kademe) ----------
@@ -313,7 +319,7 @@ cvs.addEventListener('pointerup', e => {
 cvs.addEventListener('pointercancel', endDrag);
 window.addEventListener('keydown', e => {
   keys[e.key] = true;
-  if (e.key === ' ' && state === 'play') { useInk(); e.preventDefault(); }
+  if (e.key === ' ' && state === 'play') { if (SK) SK.activate(skEnv()); else useInk(); e.preventDefault(); }
   if ((e.key === 'p' || e.key === 'Escape') && (state === 'play' || state === 'pause')) togglePause();
   if (e.key === 'Enter' && (state === 'menu' || state === 'over') && !anyPanelOpen()) startGame();
 });
@@ -385,6 +391,32 @@ function hitPlay(x, y) { const r = window.OktoTitle && OktoTitle.playRect; retur
 $('helpBtn').onclick = () => show(ui.help, true);
 $('diffBtn').onclick = () => { const k = ['kolay', 'normal', 'zor'], i = k.indexOf(Profile.data.difficulty || 'normal'); Profile.data.difficulty = k[(i + 1) % 3]; Profile.save(); refreshDiffBtn(); };
 $('helpClose').onclick = () => show(ui.help, false);
+// ---------- Kayıt kodu: inci, kostüm, bölüm ve beceri ilerlemesini başka kuruluma taşımak için ----------
+// (iPhone ana ekrandan silinen uygulamanın kaydını da silebilir; silmeden önce kod kopyalanır, yeni kurulumda yapıştırılır)
+const SAVE_KEYS = ['wallet', 'best', 'owned', 'palette', 'accessory', 'checkpoint', 'startLevel', 'difficulty', 'skills', 'trophies'];
+function saveCode() {
+  const D = Profile.data, o = {}; for (const k of SAVE_KEYS) if (D[k] !== undefined) o[k] = D[k];
+  return 'OKTO-' + btoa(unescape(encodeURIComponent(JSON.stringify(o))));
+}
+function loadCode(code) {
+  try {
+    const t = String(code).trim().replace(/^OKTO-/, ''), o = JSON.parse(decodeURIComponent(escape(atob(t))));
+    if (!o || typeof o !== 'object' || typeof o.wallet !== 'number') return false;
+    const D = Profile.data; for (const k of SAVE_KEYS) if (o[k] !== undefined) D[k] = o[k];
+    Profile.save(); if (SK) SK.load(skProf()); return true;
+  } catch { return false; }
+}
+$('saveCopy').onclick = async () => {
+  const code = saveCode(), box = $('saveBox'); box.value = code; show(box, true); box.select();
+  let ok = false; try { await navigator.clipboard.writeText(code); ok = true; } catch {}
+  $('saveMsg').textContent = ok ? 'Kayıt kodu kopyalandı! Notlar uygulamasına yapıştırıp sakla.' : 'Aşağıdaki kodu seçip kopyala ve sakla.';
+};
+$('saveLoad').onclick = () => {
+  const box = $('saveBox');
+  if (box.classList.contains('hidden') || !box.value.trim() || box.value === saveCode()) { box.value = ''; show(box, true); box.focus(); $('saveMsg').textContent = 'Kayıt kodunu kutuya yapıştır, sonra yine Kaydı yükle düğmesine bas.'; return; }
+  if (loadCode(box.value)) { $('saveMsg').textContent = 'Kayıt yüklendi!'; Sound.coin(); refreshMenu(); refreshDiffBtn(); }
+  else $('saveMsg').textContent = 'Bu kod okunamadı. Tamamını kopyaladığından emin ol.';
+};
 $('againBtn').onclick = () => startGame(levelN);
 $('clearNext').onclick = () => startTransition();
 $('levelPick').onclick = () => { const D = Profile.data, cp = D.checkpoint || 1; D.startLevel = startLevel() >= cp ? 1 : startLevel() + 1; Profile.save(); refreshMenu(); };
@@ -414,7 +446,8 @@ if (SK) {
 }
 function skEnv() {
   return { W, H, S, time, now: performance.now(), player, entities, boss, enemies: ENEMIES, damageBoss, burst, floater: addFloater, sound: Sound,
-    addScore: n => { score += n; }, vibrate };
+    addScore: n => { score += n; }, vibrate, track: (id, n) => Missions.track(id, n),
+    inkShot: () => { if (boss && boss.phase === 'fight') shots.push({ x: player.x, y: player.y, vx: 0, vy: 260 * S, life: 3 }); } };
 }
 
 function startGame(n = startLevel()) {
@@ -655,7 +688,7 @@ function collect(e) {
     }
     case 'fish': score += 25; Sound.eat(); burst(e.x, e.y, '#ffb347', 8, 90); addFloater(e.x, e.y, '+25 nam!', '#ffb347'); Missions.track('fish_day', 1); break;
     case 'shield': shieldTime = 10; Sound.power(); addFloater(e.x, e.y, 'Kalkan!', '#9ee8ff'); break;
-    case 'star': inkCharge = 1; score += 20; Sound.power(); addFloater(e.x, e.y, 'Mürekkep dolu!', '#ffe066'); break;
+    case 'star': inkCharge = 1; score += 20; Sound.power(); if (SK) SK.refill(); addFloater(e.x, e.y, SK ? 'Beceriler hazır!' : 'Mürekkep dolu!', '#ffe066'); break;
     case 'heart': lives = Math.min(lives + 1, 3); Sound.power(); addFloater(e.x, e.y, '+1 can', '#ff6b8a'); break;
     case 'glow': lightBomb(e.x, e.y); break;
     case 'gift': openGift(e); break;
@@ -872,8 +905,9 @@ function startBoss(kind) {
   const lv = levelInfo(levelN).power || levelN, extra = Math.max(0, lv - 3);
   const hp = Math.max(2, def.hp + extra + diff().bossHp);
   boss = { kind, def, big: def.size === 'big', x: W / 2, y: H + 170 * S, hp, maxHp: hp, lv, t: 0, phase: 'enter', attackT: 2.0, stun: 0, flashT: 0, r: def.r * S, puff: 0, dash: null, puffT: 0, act: null, ph: null };
-  if (def.size === 'big') toast('Mürekkep düğmesi ona mürekkep topu atar'); // adı sinematikte zaten göründü
-  else banner(`⚠️ ${def.name}!`, 'Mürekkep düğmesi ona mürekkep topu atar', '#ff8a8a', 3);
+  const hint = SK ? 'Mürekkep ve İnci Atışı ona vurur' : 'Mürekkep düğmesi ona mürekkep topu atar';
+  if (def.size === 'big') toast(hint); // adı sinematikte zaten göründü
+  else banner(`⚠️ ${def.name}!`, hint, '#ff8a8a', 3);
   Sound.bossWarn(); vibrate([100, 80, 100]); shake = 10;
   for (const e of entities) if (ENEMIES.has(e.type)) e.dead = true; // sahneyi canavara bırak
 }
@@ -1589,7 +1623,7 @@ function drawFrame() {
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   ctx.save();
   if (shake > 0 && (state === 'play' || state === 'transition' || state === 'cinema')) ctx.translate(rand(-shake, shake), rand(-shake, shake));
-  if (state === 'menu' && window.OktoTitle) OktoTitle.draw(ctx, W, H, time, Object.assign(look(), { top: safeTop }));
+  if (state === 'menu' && window.OktoTitle) OktoTitle.draw(ctx, W, H, time, Object.assign(look(), { top: safeTop, intro: (performance.now() - BOOT) / 750 }));
   else {
     drawBackground();
     drawWorldBack();

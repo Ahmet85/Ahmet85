@@ -45,30 +45,100 @@ tabs.forEach((t, i) => {
 });
 if (tabs.length) selectTab(0, false);
 
-// Ventus sahnesi: geniş kadrajda şef tezgaha un serper; kaydırdıkça kamera
-// tezgah boyunca Ventus paketine yaklaşır, arka plan flulaşır.
-(function () {
-  const scene = document.getElementById('ventus-sahne');
-  if (!scene) return;
-  const view = scene.querySelector('.chef-view');
-  const world = scene.querySelector('.chef-world');
-  const bg = scene.querySelector('.chef-bg');
-  const canvas = scene.querySelector('.chef-flour');
-  const ctx = canvas.getContext('2d');
-  const caps = scene.querySelectorAll('.art-cap');
-  const grain = scene.querySelector('.art-grain');
-  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+// Ürün sahneleri: geniş kadrajda usta tezgaha un serper; kaydırdıkça kamera
+// tezgah boyunca 1 kg pakete yaklaşır, arka plan flulaşır.
+// Ventus ana sayfada; diğer unlar ürün vitrinindeki "Sahneyi izle" ile tam ekran açılır.
+const IMG = 'assets/img/urunler/';
+const img = (f) => (window.IMG_DATA && window.IMG_DATA[f]) || IMG + f; // önizleme için gömülü görseller
+const WA = 'https://wa.me/905302220090?text=';
+// pack: [dosya genişliği, sol boşluk, paket genişliği]; paketin kendi yüksekliği her dosyada 704 px
+const SCENES = {
+  ventus: {
+    name: 'Ventus Pizzalık Un', bg: 'sef-sahne.jpg', pack: 'ventus', packDim: [594, 78, 438],
+    base: { x: 1300, y: 752, h: 310 }, pinch: [[556, 312], [572, 318], [586, 322], [544, 306]],
+    floor: 690, lightX: 420, startX: 560,
+    caps: [
+      ['VENTUS PİZZALIK UN · ÖZMERMER', 'Her pizza, bir avuç<br>unla başlar.'],
+      ['PROTEİN EN AZ %13 · KÜL EN ÇOK %0,57', 'Kuvvetli ve dirençli<br>bir hamur.'],
+      ['VENTUS PİZZALIK UN', 'Kolay açılır, yırtılmaz.<br>Fırında kabarmaz.']
+    ]
+  },
+  antebin: {
+    name: 'Antebin Baklavalık Un', bg: null, pack: 'antebin', packDim: [595, 79, 437],
+    caps: [
+      ['ANTEBİN BAKLAVALIK UN · ÖZMERMER', 'Baklava, yufkanın<br>inceliğinde saklı.'],
+      ['PROTEİN EN AZ %12 · KÜL EN ÇOK %0,65', 'Açımda kurumaz,<br>yapışmaz.'],
+      ['ANTEBİN BAKLAVALIK UN', 'Şerbetini çeker,<br>hışır kalır.']
+    ]
+  },
+  albina: {
+    name: 'Albina Pastalık-Böreklik Un', bg: null, pack: 'albina', packDim: [593, 78, 436],
+    caps: [
+      ['ALBİNA PASTALIK-BÖREKLİK UN · ÖZMERMER', 'Pastanenin sabahı<br>unla başlar.'],
+      ['PROTEİN EN AZ %12 · KÜL EN ÇOK %0,55', 'Hamur güzel kabarır,<br>iyi hacim alır.'],
+      ['ALBİNA PASTALIK-BÖREKLİK UN', 'Pasta, poğaça, simit.<br>Parlak ve canlı.']
+    ]
+  },
+  dededen: {
+    name: 'Özmermer Dededen Pidelik Un', bg: null, pack: 'dededen', packDim: [599, 79, 441],
+    caps: [
+      ['DEDEDEN PİDELİK UN · ÖZMERMER', 'Tırnak pidesi,<br>ustanın imzasıdır.'],
+      ['PROTEİN EN AZ %11 · KÜL EN ÇOK %0,55', 'Yoğururken çabuk<br>kıvama gelir.'],
+      ['DEDEDEN PİDELİK UN', 'Pideye istenen tabanı<br>ve rengi verir.']
+    ]
+  },
+  pideci: {
+    name: 'Özmermer Pideci Un', bg: null, pack: 'pideci', packDim: [602, 80, 443],
+    caps: [
+      ['PİDECİ UN · ÖZMERMER', 'Pide, fırının<br>ağzında pişer.'],
+      ['PROTEİN EN AZ %11 · KÜL EN ÇOK %0,68', 'Çabuk ve kolay<br>kıvama gelir.'],
+      ['PİDECİ UN', 'Pideden lahmacuna,<br>çok yönlü bir un.']
+    ]
+  },
+  'luks-francalik': {
+    name: 'Lüks Francalık Un', bg: null, pack: 'luks-francalik', packDim: [601, 79, 442],
+    caps: [
+      ['LÜKS FRANCALIK UN · ÖZMERMER', 'Ekmek, fırının<br>ateşinde olgunlaşır.'],
+      ['PROTEİN EN AZ %11 · KÜL %0,7–0,8', 'Katkıya ve geliştiriciye<br>ihtiyaç duymaz.'],
+      ['LÜKS FRANCALIK UN', 'Mikserde dayanıklı,<br>bekleme süresi uzun.']
+    ]
+  },
+  'tam-bugday': {
+    name: 'Tam Buğday Unu', bg: null, pack: 'tam-bugday', packDim: [576, 76, 424],
+    caps: [
+      ['TAM BUĞDAY UNU · ÖZMERMER', 'Buğdayın tamamı,<br>ekmeğin özü.'],
+      ['PROTEİN EN AZ %11 · KÜL EN ÇOK %1,2', 'Rafine edilmeden<br>üretilir.'],
+      ['TAM BUĞDAY UNU', 'Lif, vitamin ve mineral<br>bakımından zengin.']
+    ]
+  }
+};
 
-  const IW = 1680, IH = 944;                 // görselin koordinatları
-  const PACK = { x: 1300, y: 600, h: 310 };  // paketin merkezi ve yüksekliği
+function chefScene(root, cfg, getProgress) {
+  const view = root.querySelector('.chef-view');
+  const world = root.querySelector('.chef-world');
+  const bg = root.querySelector('.chef-bg');
+  const canvas = root.querySelector('.chef-flour');
+  const pack = root.querySelector('.chef-pack');
+  const ctx = canvas.getContext('2d');
+  const caps = root.querySelectorAll('.art-cap');
+  const grain = root.querySelector('.art-grain');
+
+  const IW = 1680, IH = 944;
+  const [pw, pad, pin] = cfg.packDim;
+  const k = cfg.base.h / 704;
+  const PACK = { x: cfg.base.x, y: cfg.base.y - cfg.base.h * 0.48, h: cfg.base.h };
+  pack.style.left = (cfg.base.x - (pad + pin / 2) * k) + 'px';
+  pack.style.top = (cfg.base.y - 704 * k) + 'px';
+  pack.style.width = (pw * k) + 'px';
 
   const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
   const smooth = (t) => t * t * (3 - 2 * t);
   const range = (p, a, b) => smooth(clamp((p - a) / (b - a), 0, 1));
   const lerp = (a, b, t) => a + (b - a) * t;
+  const gauss = () => (Math.random() + Math.random() + Math.random() - 1.5) / 1.5;
+  const lightAt = (x) => clamp(1.2 - (x - cfg.lightX) / 420, 0.3, 1);
 
-  // film greni
-  (function () {
+  (function () { // film greni
     const g = document.createElement('canvas'); g.width = g.height = 140;
     const gc = g.getContext('2d'); const im = gc.createImageData(140, 140);
     for (let i = 0; i < im.data.length; i += 4) {
@@ -78,35 +148,6 @@ if (tabs.length) selectTab(0, false);
     grain.style.backgroundImage = 'url(' + g.toDataURL() + ')';
   })();
 
-  let VW = 0, VH = 0, narrow = false;
-  function measure() {
-    VW = view.clientWidth; VH = view.clientHeight; narrow = VW < 820;
-  }
-
-  function progress() {
-    const r = scene.getBoundingClientRect();
-    const total = r.height - view.clientHeight;
-    return clamp(-r.top / (total || 1), 0, 1);
-  }
-
-  // kamera: t=0 geniş kadraj, t=1 paketin yakın planı
-  function camera(t) {
-    const s0 = Math.max(VW / IW, VH / IH);
-    const z1 = narrow ? 1.6 : 0.62 * VH / (PACK.h * s0);
-    const S = s0 * Math.exp(lerp(0, Math.log(Math.max(z1, 1)), t));
-    const fx = lerp(narrow ? 560 : IW / 2, PACK.x, t);
-    const fy = lerp(IH / 2, PACK.y, t);
-    const ax = lerp(VW / 2, VW * (narrow ? 0.5 : 0.68), t);
-    const ay = lerp(VH / 2, VH * (narrow ? 0.3 : 0.46), t);
-    let tx = ax - fx * S, ty = ay - fy * S;
-    tx = clamp(tx, VW - IW * S, 0); ty = clamp(ty, VH - IH * S, 0); // görsel kenarı görünmesin
-    world.style.transform = 'translate3d(' + tx.toFixed(2) + 'px,' + ty.toFixed(2) + 'px,0) scale(' + S.toFixed(4) + ')';
-    const blur = 7 * smooth(clamp((t - 0.15) / 0.85, 0, 1));
-    bg.style.filter = blur > 0.05 ? 'blur(' + (blur / S).toFixed(2) + 'px) brightness(' + (1 - t * 0.18).toFixed(3) + ')' : '';
-  }
-
-  // şefin parmaklarından dökülen un: ince akış + havada asılı toz bulutu
-  const PINCH = [[556, 312], [572, 318], [586, 322], [544, 306]]; // parmak uçları
   const haze = document.createElement('canvas'); haze.width = haze.height = 64;
   (function () {
     const hc = haze.getContext('2d');
@@ -114,65 +155,72 @@ if (tabs.length) selectTab(0, false);
     g.addColorStop(0, 'rgba(255,232,200,1)'); g.addColorStop(1, 'rgba(255,232,200,0)');
     hc.fillStyle = g; hc.fillRect(0, 0, 64, 64);
   })();
-  const gauss = () => (Math.random() + Math.random() + Math.random() - 1.5) / 1.5;
-  const lightAt = (x) => clamp(1.2 - (x - 420) / 420, 0.3, 1); // ışık soldan gelir
-  let dust = [], clouds = [], clock = 0;
 
+  let VW = 0, VH = 0, narrow = false;
+  function measure() { VW = view.clientWidth; VH = view.clientHeight; narrow = VW < 820; }
+
+  function camera(t) {
+    const s0 = Math.max(VW / IW, VH / IH);
+    const z1 = narrow ? 1.6 : 0.62 * VH / (PACK.h * s0);
+    const S = s0 * Math.exp(lerp(0, Math.log(Math.max(z1, 1)), t));
+    const fx = lerp(narrow ? cfg.startX : IW / 2, PACK.x, t);
+    const fy = lerp(IH / 2, PACK.y, t);
+    const ax = lerp(VW / 2, VW * (narrow ? 0.5 : 0.68), t);
+    const ay = lerp(VH / 2, VH * (narrow ? 0.3 : 0.46), t);
+    let tx = ax - fx * S, ty = ay - fy * S;
+    tx = clamp(tx, VW - IW * S, 0); ty = clamp(ty, VH - IH * S, 0);
+    world.style.transform = 'translate3d(' + tx.toFixed(2) + 'px,' + ty.toFixed(2) + 'px,0) scale(' + S.toFixed(4) + ')';
+    const blur = 7 * smooth(clamp((t - 0.15) / 0.85, 0, 1));
+    bg.style.filter = blur > 0.05 ? 'blur(' + (blur / S).toFixed(2) + 'px) brightness(' + (1 - t * 0.18).toFixed(3) + ')' : '';
+  }
+
+  // ustanın parmaklarından dökülen un: ince akış + havada asılı toz bulutu
+  let dust = [], clouds = [], clock = 0;
+  const top = Math.min(...cfg.pinch.map((q) => q[1]));
+  const cx = cfg.pinch.reduce((a, q) => a + q[0], 0) / cfg.pinch.length;
   function flour(dt, rate) {
     clock += dt;
-    const k = dt * 60;
-    // ince taneler
-    const n = Math.round(rate * k);
+    const f60 = dt * 60;
+    const n = Math.round(rate * f60);
     for (let i = 0; i < n; i++) {
-      const o = PINCH[(Math.random() * PINCH.length) | 0];
+      const o = cfg.pinch[(Math.random() * cfg.pinch.length) | 0];
       dust.push({
         x: o[0] + gauss() * 16, y: o[1] + gauss() * 8 + Math.random() * 14,
         vx: gauss() * 0.4 - 0.16, vy: 0.1 + Math.random() * 0.4,
-        s: 0.3 + Math.pow(Math.random(), 2.2) * 1.0,
-        a: 0.12 + Math.random() * 0.4,
+        s: 0.3 + Math.pow(Math.random(), 2.2), a: 0.12 + Math.random() * 0.4,
         term: 0.9 + Math.random() * 1.4, ph: Math.random() * 6.28
       });
     }
-    // toz bulutu
-    if (Math.random() < 0.06 * k * Math.min(1, rate / 30)) {
-      clouds.push({ x: 470 + Math.random() * 200, y: 380 + Math.random() * 260, r: 22 + Math.random() * 46,
+    if (Math.random() < 0.06 * f60 * Math.min(1, rate / 30)) {
+      clouds.push({ x: cx - 90 + Math.random() * 200, y: top + 70 + Math.random() * (cfg.floor - top - 90), r: 22 + Math.random() * 46,
         vx: (Math.random() - 0.4) * 0.12, vy: 0.05 + Math.random() * 0.1, life: 0, max: 4 + Math.random() * 4 });
     }
-
     ctx.clearRect(0, 0, IW, IH);
     ctx.globalCompositeOperation = 'lighter';
-
     const keepC = [];
     for (const c of clouds) {
-      c.life += dt; c.x += c.vx * k; c.y += c.vy * k; c.r += 0.04 * k;
+      c.life += dt; c.x += c.vx * f60; c.y += c.vy * f60; c.r += 0.04 * f60;
       if (c.life > c.max) continue;
-      const f = Math.sin(Math.PI * c.life / c.max);
-      ctx.globalAlpha = 0.05 * f * lightAt(c.x);
+      ctx.globalAlpha = 0.05 * Math.sin(Math.PI * c.life / c.max) * lightAt(c.x);
       ctx.drawImage(haze, c.x - c.r, c.y - c.r, c.r * 2, c.r * 2);
       keepC.push(c);
     }
     clouds = keepC;
-
-    ctx.lineCap = 'round';
-    ctx.strokeStyle = '#F7DDB6';
+    ctx.lineCap = 'round'; ctx.strokeStyle = '#F7DDB6';
+    const span = Math.max(120, cfg.floor - top);
     const keep = [];
     for (const q of dust) {
-      // hava akımı: yavaş değişen girdap
       const turb = Math.sin(q.y * 0.021 + clock * 0.9 + q.ph) * 0.022 + Math.sin(q.y * 0.009 - clock * 0.5 + q.ph * 2) * 0.014;
-      const fallen = clamp((q.y - 320) / 340, 0, 1);
-      q.vx = (q.vx + turb * (0.6 + 1.6 * fallen) * k + gauss() * 0.02 * k) * Math.pow(0.99, k);
-      q.vy = Math.min(q.vy + 0.012 * k, q.term);
-      q.x += q.vx * k; q.y += q.vy * k;
-      if (q.y > 690 - q.ph * 3) continue;
-      const fade = (1 - fallen * 0.55) * clamp((q.y - 300) / 25, 0, 1);
-      const al = q.a * fade * lightAt(q.x);
-      if (al < 0.01) { keep.push(q); continue; }
-      ctx.globalAlpha = al;
-      ctx.lineWidth = q.s;
-      ctx.beginPath();
-      ctx.moveTo(q.x - q.vx * 2.2, q.y - q.vy * 2.2); // hafif hareket izi
-      ctx.lineTo(q.x, q.y);
-      ctx.stroke();
+      const fallen = clamp((q.y - top) / span, 0, 1);
+      q.vx = (q.vx + turb * (0.6 + 1.6 * fallen) * f60 + gauss() * 0.02 * f60) * Math.pow(0.99, f60);
+      q.vy = Math.min(q.vy + 0.012 * f60, q.term);
+      q.x += q.vx * f60; q.y += q.vy * f60;
+      if (q.y > cfg.floor - q.ph * 3) continue;
+      const al = q.a * (1 - fallen * 0.55) * clamp((q.y - top + 12) / 25, 0, 1) * lightAt(q.x);
+      if (al >= 0.01) {
+        ctx.globalAlpha = al; ctx.lineWidth = q.s;
+        ctx.beginPath(); ctx.moveTo(q.x - q.vx * 2.2, q.y - q.vy * 2.2); ctx.lineTo(q.x, q.y); ctx.stroke();
+      }
       keep.push(q);
     }
     dust = keep.length > 9000 ? keep.slice(-9000) : keep;
@@ -185,22 +233,83 @@ if (tabs.length) selectTab(0, false);
     if (c !== lastCap) { caps.forEach((el, i) => el.classList.toggle('is-active', i === c)); lastCap = c; }
   }
   function frame(ms) {
+    if (!running) { last = 0; return; }
     const dt = Math.min(0.05, last ? (ms - last) / 1000 : 0.016); last = ms;
-    const p = progress();
+    const p = getProgress();
     const t = range(p, 0.1, 0.82);
-    camera(t);
-    setCaption(p);
-    flour(dt, 24 * (1 - t * 0.6));
-    if (running) requestAnimationFrame(frame); else last = 0;
+    camera(t); setCaption(p); flour(dt, 24 * (1 - t * 0.6));
+    requestAnimationFrame(frame);
+  }
+  measure(); camera(0);
+  return {
+    start() { if (!running) { running = true; requestAnimationFrame(frame); } },
+    stop() { running = false; },
+    resize() { measure(); camera(range(getProgress(), 0.1, 0.82)); },
+    still() { measure(); camera(1); setCaption(1); }
+  };
+}
+
+function sceneMarkup(key, cfg) {
+  const caps = cfg.caps.map((c, i) =>
+    '<div class="art-cap' + (i === 0 ? ' is-active' : '') + '"><p class="art-kicker">' + c[0] + '</p><p class="art-line">' + c[1] + '</p>' +
+    (i === 0 ? '<p class="art-hint">Kaydırın</p>' : '') +
+    (i === 2 ? '<a class="art-cta" href="' + WA + encodeURIComponent('Merhaba, ' + cfg.name + ' için fiyat almak istiyorum.') + '">Fiyat sorun</a>' : '') +
+    '</div>').join('');
+  return '<section class="art" aria-label="' + cfg.name + '"><div class="art-sticky"><div class="chef-view"><div class="chef-world">' +
+    '<img class="chef-bg" src="' + img(cfg.bg) + '" width="1680" height="944" alt="">' +
+    '<canvas class="chef-flour" width="1680" height="944" aria-hidden="true"></canvas>' +
+    '<img class="chef-pack" src="' + img(cfg.pack + '-1kg-sahne.png') + '" alt="' + cfg.name + ' 1 kg paketi">' +
+    '</div><div class="art-grain" aria-hidden="true"></div><div class="chef-shade" aria-hidden="true"></div></div>' +
+    '<div class="container art-captions">' + caps + '</div></div></section>';
+}
+
+(function () {
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // ana sayfadaki Ventus sahnesi
+  const home = document.getElementById('ventus-sahne');
+  if (home) {
+    const view = home.querySelector('.chef-view');
+    const sc = chefScene(home, SCENES.ventus, () => {
+      const r = home.getBoundingClientRect();
+      return Math.min(1, Math.max(0, -r.top / ((r.height - view.clientHeight) || 1)));
+    });
+    if (reduce) { sc.still(); window.addEventListener('resize', sc.still); }
+    else {
+      new IntersectionObserver(([e]) => (e.isIntersecting ? sc.start() : sc.stop())).observe(home);
+      window.addEventListener('resize', sc.resize);
+    }
   }
 
-  measure();
-  if (reduce) { camera(1); window.addEventListener('resize', () => { measure(); camera(1); }); return; }
-  camera(0);
-  const io = new IntersectionObserver(([e]) => {
-    const was = running; running = e.isIntersecting;
-    if (running && !was) requestAnimationFrame(frame);
+  // tam ekran sahne penceresi
+  const modal = document.getElementById('sahne-penceresi');
+  if (!modal) return;
+  const scroller = modal.querySelector('.scene-scroll');
+  const closeBtn = modal.querySelector('.scene-close');
+  let current = null, opener = null;
+
+  function open(key, btn) {
+    const cfg = SCENES[key]; if (!cfg || !cfg.bg) return;
+    opener = btn;
+    scroller.innerHTML = sceneMarkup(key, cfg);
+    scroller.scrollTop = 0;
+    modal.hidden = false; document.body.classList.add('scene-lock');
+    current = chefScene(scroller, cfg, () => Math.min(1, Math.max(0, scroller.scrollTop / ((scroller.scrollHeight - scroller.clientHeight) || 1))));
+    if (reduce) current.still(); else current.start();
+    closeBtn.focus();
+  }
+  function close() {
+    if (current) current.stop();
+    current = null; modal.hidden = true; scroller.innerHTML = '';
+    document.body.classList.remove('scene-lock');
+    if (opener) opener.focus();
+  }
+  document.querySelectorAll('.scene-open').forEach((b) => {
+    const cfg = SCENES[b.dataset.scene];
+    if (cfg && cfg.bg) b.hidden = false; // görseli hazır olan sahnelerin düğmesi görünür
+    b.addEventListener('click', () => open(b.dataset.scene, b));
   });
-  io.observe(scene);
-  window.addEventListener('resize', () => { measure(); camera(range(progress(), 0.1, 0.82)); });
+  closeBtn.addEventListener('click', close);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !modal.hidden) close(); });
+  window.addEventListener('resize', () => current && current.resize());
 })();

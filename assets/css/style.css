@@ -349,3 +349,19 @@ p { margin: 0 0 16px; }
   .art-cap { display: none; }
   .art-cap:last-child { display: block; opacity: 1; transform: none; visibility: visible; }
 }
+
+/* Ürün paneli düğmeleri ve tam ekran sahne penceresi */
+.ppanel-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.scene-modal { position: fixed; inset: 0; z-index: 200; background: #0A0806; }
+.scene-modal[hidden] { display: none; }
+.scene-scroll { position: absolute; inset: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+.scene-modal .art-sticky { top: 0; height: 100vh; height: 100svh; }
+.scene-close {
+  position: absolute; z-index: 5; width: 48px; height: 48px; border-radius: 50%;
+  top: calc(16px + env(safe-area-inset-top, 0px)); right: calc(16px + env(safe-area-inset-right, 0px));
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+  background: rgba(10,8,6,.55); border: 1px solid rgba(244,235,221,.45); color: #F4EBDD;
+}
+.scene-close svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; }
+.scene-close:hover, .scene-close:focus-visible { background: #F4EBDD; color: #16110D; }
+body.scene-lock { overflow: hidden; }

@@ -1,0 +1,27 @@
+<!DOCTYPE html><html><head><meta charset="utf-8">
+<style>
+@font-face{font-family:Fredoka;font-weight:700;src:url(../fonts/fredoka-700-latin.woff2) format('woff2')}
+html,body{margin:0;background:transparent}canvas{display:block}
+</style></head><body><canvas id="c"></canvas>
+<script src="../okto.js"></script><script src="../reef.js"></script><script src="../enemies.js"></script><script src="../bosses.js"></script>
+<script>
+// Her varlığı saydam arka planlı PNG olarak çizer (tools/export-assets.js kullanır)
+const c = document.getElementById('c'), ctx = c.getContext('2d'), K = 2;
+function canvasSize(w, h) { c.width = w * K; c.height = h * K; c.style.width = w + 'px'; c.style.height = h + 'px'; ctx.setTransform(K, 0, 0, K, 0, 0); ctx.clearRect(0, 0, w, h); }
+const G = (w, h, extra = {}) => Object.assign({ ctx, S: 1.6, W: w, H: h, time: 1.2, FONT: 'Fredoka, sans-serif', boss: null, player: { x: w / 2, y: 0 }, slams: [], shots: [] }, extra);
+window.assets = () => {
+  const list = [];
+  for (const col of OktoChar.CATALOG.colors) list.push({ name: `okto-renk-${col.id}`, w: 200, h: 220, draw: () => OktoChar.draw(ctx, 100, 80, 52, 1, { palette: col.id, accessory: 'goggles' }) });
+  for (const acc of OktoChar.CATALOG.accessories) list.push({ name: `okto-aksesuar-${acc.id}`, w: 200, h: 220, draw: () => OktoChar.draw(ctx, 100, 84, 52, 1, { palette: 'pink', accessory: acc.id }) });
+  for (const [k, ex] of [['mutlu', { wink: 1 }], ['aci', { ouch: 1 }], ['sersem', { dizzy: 1 }]]) list.push({ name: `okto-ifade-${k}`, w: 200, h: 220, draw: () => OktoChar.draw(ctx, 100, 80, 52, 1, { expr: ex }) });
+  for (const t of ['pearl', 'fish', 'jelly', 'urchin', 'puffer', 'angler', 'shark', 'shield', 'star', 'heart', 'glow', 'gift', 'treat', 'blob', 'spike'])
+    list.push({ name: `nesne-${t}`, w: 160, h: 160, draw: () => OktoEnemies.draw(G(160, 160), { type: t, x: t === 'shark' ? 80 : 80, y: t === 'angler' ? 95 : 80, r: t === 'shark' ? 22 : t === 'pearl' ? 12 : 26, base: 26, puff: t === 'puffer' ? 1 : 0, t: 1, hue: 300, dir: 1, warn: 0, vx: 1, vy: 0 }) });
+  for (const k of ['puffer', 'jelly', 'squid']) list.push({ name: `canavar-${k}`, w: 360, h: 360, draw: () => OktoBosses.draw(G(360, 360, { boss: { kind: k, x: 180, y: 200, r: 90, puff: 0, puffT: 0, stun: 0, flashT: 0, t: 1, dash: null } })) });
+  for (const [k, tier] of [['mossy', 1], ['spiky', 1], ['cave', 1], ['mossy', 2], ['cave', 3]]) list.push({ name: `resif-${k}-kademe${tier}`, w: 260, h: 250, draw: () => { const a = OktoReef.make(k, 160, tier, 7); ctx.drawImage(a.img, 130 - a.ox, 135 - a.oy, a.cw, a.ch); } });
+  list.push({ name: 'resif-cikinti', w: 260, h: 200, draw: () => { const a = OktoReef.make('ledge', 200, 1, 7, -1); ctx.drawImage(a.img, 0, 100 - a.oy, a.cw, a.ch); } });
+  for (const k of ['reef', 'school', 'wreck']) list.push({ name: `silüet-${k}`, w: 260, h: 220, draw: () => { const a = OktoReef.silhouette(k, 200, 5, 'rgba(10,60,110,.9)'); ctx.drawImage(a.img, 130 - a.ox, 110 - a.oy, a.cw, a.ch); } });
+  return list;
+};
+window.render = i => { const a = window.assets()[i]; canvasSize(a.w, a.h); a.draw(); return { name: a.name, data: c.toDataURL('image/png') }; };
+document.fonts.load('700 20px Fredoka').then(() => window.ready = true);
+</script></body></html>

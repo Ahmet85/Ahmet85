@@ -18,7 +18,7 @@ Tasarım brifi: `docs/BRIF.md` ("OKTO – UNDERWATER DESCENT", kullanıcının 1
 - Dal: `claude/octopus-mobile-game-0is63u` → GitHub Pages: https://ahmet85.github.io/Ahmet85/
 - Aynı dalda başka bir oturumun `ritim/` klasörü var; **ona dokunma**, push öncesi `git fetch` + `git rebase` yap.
 - **Her yayında sürümü artır:** `index.html` içindeki tüm `?v=` ekleri, menüdeki `s<sürüm>` etiketi ve `sw.js` içindeki
-  `okto-v<sürüm>` birlikte. Kullanıcı sağ alttaki `s<sürüm>` ile güncellemenin geldiğini kontrol ediyor. Son sürüm: **s19**.
+  `okto-v<sürüm>` birlikte. Kullanıcı sağ alttaki `s<sürüm>` ile güncellemenin geldiğini kontrol ediyor. Son sürüm: **s20**.
 - Telefonda güncelleme: uygulamayı kapat-aç (gerekirse iki kez). Açılış görseli/simge değişirse sil-yeniden kur gerekir.
 
 ## Alınan kararlar
@@ -51,6 +51,9 @@ Tasarım brifi: `docs/BRIF.md` ("OKTO – UNDERWATER DESCENT", kullanıcının 1
 | `game.js` | Oyun motoru: girdi, sesler (3 kademe, dalgıç nefesi), düşmanlar, bölümler, canavarlar, resif dünyası entegrasyonu, hediye/Dev Okto, mağaza ve görevler, HUD |
 | `okto.js` | Okto karakter çizimi; ifadeler; 7 renk ve 7 aksesuar (`OktoChar.CATALOG`) |
 | `zones.js` | 7 özel bölgenin mantığı ve çizimleri (akıntı, mağara karanlığı, batık gemi, bacalar, yosun, mayınlar, kovalayan fener balığı) |
+| `enemies.js` | Düşman ve toplanabilir çizimleri |
+| `bosses.js` | Bölüm sonu canavarları ve saldırı çizimleri |
+| `assets/` | Varlık listesi (`assets/README.md`) ve saydam PNG kopyaları (`assets/png`, `tools/export-assets.js` ile üretilir) |
 | `reef.js` | Resif varlıkları (yosunlu/sivri/mağaralı ada, kanyon çıkıntısı), kanyon duvarı, uzak silüetler, ön plan mercanları, deniz tabanı |
 | `title.js` | Animasyonlu, dokunmaya tepki veren açılış ekranı |
 | `music.js` | Kodla üretilen açılış müziği; `music/acilis.mp3` varsa onu çalar |
@@ -77,6 +80,7 @@ bazı bölümlerde/bölgelerde küçük (brifteki %12–18), bazılarında büy�
 karışık boyutlar; bölge içinde de küçük-büyük karışımı.
 
 **Eksik (kullanıcıya hatırlat, sonra konuşulacak):**
+- [x] Varlıklar ayrı dosyalarda (s20): okto.js, enemies.js, bosses.js, reef.js, zones.js, title.js + 44 PNG (`assets/png`)
 - 19 referans tasarımın her biri için ayrı sahne / değerlendirme (şimdilik özet tablo yapıldı).
 - [x] Bölgeler (s19, `zones.js`): Güçlü Akıntı, Karanlık Mağara, Batık Gemi (gizli oda), Sıcak Bacalar, Yosun Ormanı, Mayın Tarlası, Kaçış Sahnesi. Bölüm 1: resif/kanyon/akıntı/yosun; Bölüm 2: + baca/gemi/mayın; Bölüm 3+: + mağara/kaçış
 - [x] Oyun içi müzik: 3 kademe, kodla üretilir (s18); `music/oyun.mp3` konursa o çalar

@@ -65,15 +65,17 @@ Tasarım brifi: `docs/BRIF.md` ("OKTO – UNDERWATER DESCENT", kullanıcının 1
 denizanası, askıda resifler (yosun, mercan, deniz yıldızı, mağara), yanlardan uzanan kayalıklar (dekor + küçük çarpışılabilir
 çıkıntı, koridor açık), ekranda en fazla 3 resif, sevimli 2D stil, kabarcık ve parıltılar, 3 katmanlı parallax, HUD'un tüm öğeleri.
 
-**Brife aykırı / farklı yapılan (kullanıcı karar verecek):**
-- Okto dört yöne gider; brif "sağa-sola yönlendirme" diyor.
-- Resif adacıkları ekran genişliğinin %17–23'ü (mağaralı %20–26); brif %12–18 diyor.
-- Kanyon çıkıntıları genişliğin %22–30'u; brif "küçük tutulmalı" diyor.
-- Varlıklar ayrı resim dosyası değil, kodla çizilen modüller (bilinçli karar).
-- Normal oyundaki küçük denizanaları pembe-mor; brif "mavi elektrikli küçük denizanası" diyor (sadece canavarın yavruları mavi).
-- Girdap geçişinde ekran bir an tamamen kararıyor; brif "geçişlerde görsel kopukluk olmasın" diyor (kullanıcı girdabı onaylamıştı).
+**Brifden farklı ama kullanıcı onayladı (aynen kalacak):**
+- Okto dört yöne gider (brif: sağa-sola).
+- Varlıklar ayrı resim dosyası değil, kodla çizilen modüller.
+- Normal oyundaki küçük denizanaları pembe-mor (sadece canavarın yavruları mavi).
+- Girdap geçişinde ekran bir an tamamen kararır.
 
-**Eksik:**
+**Karar: boyutlar bölüm bölüm değişecek (henüz uygulanmadı):** resif adacıkları ve kanyon çıkıntıları sabit oranda olmasın;
+bazı bölümlerde/bölgelerde küçük (brifteki %12–18), bazılarında büyük olsun. Öneri: Bölüm 1 küçük ve seyrek, ilerledikçe
+karışık boyutlar; bölge içinde de küçük-büyük karışımı.
+
+**Eksik (kullanıcıya hatırlat, sonra konuşulacak):**
 - 19 referans tasarımın her biri için ayrı sahne / değerlendirme (şimdilik özet tablo yapıldı).
 - Bölgeler: Güçlü Akıntı, Karanlık Mağara, Batık Gemi (gizli oda), Sıcak Bacalar, Yosun Ormanı, Mayın Tarlası, Kaçış Sahnesi.
 - Kullanıcının kendi açılış müziği (`music/acilis.mp3`), oyun içi müzik.

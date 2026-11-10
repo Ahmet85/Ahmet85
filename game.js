@@ -1705,21 +1705,19 @@ function stepFrame(now, dt) {
   if (state !== 'pause' && state !== 'menu') updateAmbient(dt, scroll);
 }
 let edgeDue = true;
-function updateEdge() { // tuvalin en alt orta pikselini oku, şeridi aynı renge boya
+function updateEdge() { // şerit rengi sahnenin zemin renginden hesaplanır (anlık efektler etkilemez)
   edgeDue = false;
   const open = id => !$(id).classList.contains('hidden');
   if (open('shop') || open('missions')) return setEdgeColor('#06223f');
-  let r, g, b;
-  try {
-    const d = ctx.getImageData(0, cvs.height - 2, cvs.width, 1).data, R = [], G = [], B = [];
-    for (let i = 0; i < 9; i++) { const x = Math.floor(cvs.width * (0.04 + i * 0.09)); R.push(d[x * 4]); G.push(d[x * 4 + 1]); B.push(d[x * 4 + 2]); }
-    const med = a => a.sort((p, q) => p - q)[4]; r = med(R); g = med(G); b = med(B);
+  let c;
+  if (state === 'menu') c = [173, 139, 86]; // açılış sahnesinin kararmış kum rengi (ölçülmüş)
+  else {
+    const t = clamp(depth / 600, 0, 1), A = [0x0b, 0x5d, 0x8f], B = [0x01, 0x0a, 0x18];
+    c = A.map((v, i) => lerp(v, B[i], t));
+    if (seabedAmt > 0.01) { const sb = tier >= 3 ? [38, 38, 63] : [184, 138, 78]; c = c.map((v, i) => lerp(v, sb[i], seabedAmt)); }
   }
-  catch { const c = sceneBottomColor(); return setEdgeColor(c); }
-  if (open('pauseMenu') || open('over') || open('clear') || open('help')) { // koyu perdeyle aynı oranda karart
-    const k = 0.8; r = r * (1 - k) + 2 * k; g = g * (1 - k) + 12 * k; b = b * (1 - k) + 26 * k;
-  }
-  setEdgeColor(`rgb(${Math.round(r)},${Math.round(g)},${Math.round(b)})`);
+  if (open('pauseMenu') || open('over') || open('clear') || open('help')) c = c.map((v, i) => v * 0.2 + [2, 12, 26][i] * 0.8); // koyu perdeyle aynı oranda
+  setEdgeColor(`rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`);
 }
 function drawFrame() {
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);

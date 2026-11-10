@@ -70,6 +70,8 @@
     border:3px solid #0f3d8c; background:#fff; color:#0f3d8c; font:700 17px Fredoka,"Trebuchet MS",sans-serif; cursor:pointer; box-shadow:0 4px 0 #0f3d8c; }
   #musicBtn.hint { animation:pulse .7s infinite alternate; }
   #musicBtn.icon { width:46px; padding:0; font-size:20px; }
+  #diffBtn { pointer-events:auto; position:absolute; top:calc(max(12px,env(safe-area-inset-top)) + 56px); left:max(12px,env(safe-area-inset-left)); height:32px; padding:0 12px; border-radius:16px;
+    border:2px solid #0f3d8c; background:rgba(255,255,255,.9); color:#0f3d8c; font:700 13px Fredoka,"Trebuchet MS",sans-serif; cursor:pointer; box-shadow:0 3px 0 #0f3d8c; }
   #helpBtn:active { transform:translateY(3px); box-shadow:0 1px 0 #0f3d8c; }
   #menuBest { position:absolute; left:0; right:0; bottom:max(14px,env(safe-area-inset-bottom)); text-align:center; font:700 17px Fredoka,"Trebuchet MS",sans-serif; color:#5a3410; opacity:1; text-shadow:0 1px 0 rgba(255,255,255,.6); }
   h1,h2,.btn { font-family:Fredoka,"Trebuchet MS",sans-serif; }
@@ -128,11 +130,12 @@
 <div id="menu">
   <button id="helpBtn" aria-label="Nasıl oynanır">?</button>
   <button id="musicBtn" aria-label="Müzik">🎵 Müziği aç</button>
+  <button id="diffBtn" aria-label="Zorluk">Zorluk: Normal</button>
   <button id="levelPick" class="hidden">▶ Bölüm 2'den başla</button>
   <button id="shopBtn" class="roundBtn" aria-label="Mağaza">🛍️<span>Mağaza</span></button>
   <button id="missionBtn" class="roundBtn" aria-label="Görevler">📋<span>Görevler</span><b id="missionBadge" class="badge hidden">!</b></button>
   <div id="menuBest" class="best"></div>
-  <div id="ver" class="ver">s16</div>
+  <div id="ver" class="ver">s17</div>
 </div>
 
 <div id="shop" class="overlay panel hidden">
@@ -160,7 +163,8 @@
     ✨ <b>Işık Midyesi</b>: ye, ışık bombası patlasın, ekrandaki tüm düşmanlar yok olsun!<br>
     🪨 <b>Kayalıklara</b> dikkat: resif adacıklarına ve kanyon çıkıntılarına çarpınca can gider. Parlayan <b>mağara ağzına</b> yüzersen hazine çıkar!<br>
     🎁 Yok ettiğin bazı düşmanlardan <b>hediye</b> düşer: içinden çıkan <b>Altın Karides</b>i ye, 6 saniye <b>Dev Okto</b> ol ve düşmanları ez!<br>
-        🏁 Her <b>bölümün</b> sonunda bir canavar seni bekler: Dev Balon Balığı, Elektrikli Denizanası, Dev Kalamar. Yen, yıldızları topla, girdaba dal!<br>
+        🎚️ Sol üstteki <b>Zorluk</b> düğmesiyle Kolay / Normal / Zor seçebilirsin.<br>
+    🏁 Her <b>bölümün</b> sonunda bir canavar seni bekler: Dev Balon Balığı, Elektrikli Denizanası, Dev Kalamar. Yen, yıldızları topla, girdaba dal!<br>
     💾 Yanarsan ulaştığın <b>bölümün başından</b> devam edebilirsin.
   </div>
   <button id="helpClose" class="btn">Anladım!</button>
@@ -201,11 +205,11 @@
   </div>
 </div>
 
-<script src="okto.js?v=16"></script>
-<script src="reef.js?v=16"></script>
-<script src="title.js?v=16"></script>
-<script src="music.js?v=16"></script>
-<script src="game.js?v=16"></script>
+<script src="okto.js?v=17"></script>
+<script src="reef.js?v=17"></script>
+<script src="title.js?v=17"></script>
+<script src="music.js?v=17"></script>
+<script src="game.js?v=17"></script>
 <script>
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
     window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));

@@ -350,6 +350,7 @@ function layoutMenuButtons() { // mağaza ve görev düğmeleri oyna düğmesini
 function hitPlay(x, y) { const r = window.OktoTitle && OktoTitle.playRect; return r && x >= r.x - 10 && x <= r.x + r.w + 10 && y >= r.y - 10 && y <= r.y + r.h + 16; }
 
 $('helpBtn').onclick = () => show(ui.help, true);
+$('diffBtn').onclick = () => { const k = ['kolay', 'normal', 'zor'], i = k.indexOf(Profile.data.difficulty || 'normal'); Profile.data.difficulty = k[(i + 1) % 3]; Profile.save(); refreshDiffBtn(); };
 $('helpClose').onclick = () => show(ui.help, false);
 $('againBtn').onclick = () => startGame(levelN);
 $('clearNext').onclick = () => startTransition();
@@ -379,7 +380,7 @@ function startGame(n = startLevel()) {
   show(ui.ink, true); show(ui.pauseBtn, true); show(ui.mute, true);
 }
 function toMenu() {
-  state = 'menu'; shake = 0; flash = 0; Missions.ensure(); refreshMenu();
+  state = 'menu'; shake = 0; flash = 0; Missions.ensure(); refreshMenu(); refreshDiffBtn();
   if (Sound.ctx && !Sound.muted) menuMusic();
   refreshMute();
   show(ui.menu, true); show(ui.over, false); show(ui.pause, false);
@@ -416,6 +417,15 @@ function gameOver() {
   show(ui.ink, false); show(ui.pauseBtn, false);
   setTimeout(() => { if (state === 'over') show(ui.over, true); }, 700);
 }
+
+// ---------- Zorluk ----------
+const DIFF = {
+  kolay:  { name: 'Kolay',  spawn: 1.3, scroll: 0.85, bossHp: -1, invuln: 2.2, ink: 5.5 },
+  normal: { name: 'Normal', spawn: 1.0, scroll: 1.0,  bossHp: 0,  invuln: 1.6, ink: 7 },
+  zor:    { name: 'Zor',    spawn: 0.8, scroll: 1.12, bossHp: 1,  invuln: 1.3, ink: 8.5 },
+};
+const diff = () => DIFF[Profile.data.difficulty] || DIFF.normal;
+function refreshDiffBtn() { const b = $('diffBtn'); if (b) b.textContent = `Zorluk: ${diff().name}`; }
 
 // ---------- Duyurular ----------
 // Tuvale çizilen yazılarda emoji kullanma: iPhone bunların genişliğini ölçemiyor, yazı kayıyor ve taşıyor
@@ -558,7 +568,7 @@ function lightBomb(x, y) {
 function hurt() {
   if (invuln > 0 || player.bigT > 0) return; // dev Okto'ya hiçbir şey işlemez
   if (shieldTime > 0) { shieldTime = 0; invuln = 1; burst(player.x, player.y, '#9ee8ff', 22, 200); Sound.tone(500, 0.2, 'triangle', 0.12, -300); addFloater(player.x, player.y - 40 * S, 'Kalkan!', '#9ee8ff'); return; }
-  lives--; levelHits++; invuln = 1.6; shake = 14; combo = 0;
+  lives--; levelHits++; invuln = diff().invuln; shake = 14; combo = 0;
   Sound.hit(); vibrate(120);
   burst(player.x, player.y, '#ff7eb6', 18, 180);
   if (lives <= 0) gameOver();
@@ -625,24 +635,59 @@ function freeAt(x, y, r) {
   for (const k of rocks) for (const h of k.hit) if (Math.hypot(x - (k.x + h.x), y - (k.y + h.y)) < h.r + r + 8 * S) return false;
   return true;
 }
-const reefCount = () => rocks.filter(k => k.kind !== 'ledge' && k.y > -40 * S && k.y < H + 60 * S).length;
+// ---- Kurallar: ekranda en fazla 3 çarpışılabilir kaya (çıkıntılar dahil) ve her yükseklikte açık koridor ----
+const MAX_ROCKS = 3;
+const onScreen = k => k.y - k.a.oy < H + 8 && k.y + (k.a.ch - k.a.oy) > -8;
+// henüz ekrana girmemiş ama girecek olanlar da sayılır (ekranın hemen altındakiler)
+const collidableCount = () => rocks.filter(k => k.y - k.a.oy < H + k.a.ch && k.y + (k.a.ch - k.a.oy) > -8).length;
+function blockedAt(y, list) { // y yüksekliğinde kayaların kapattığı x aralıkları (Okto'nun çarpışma payı dahil)
+  const pad = player.r * 0.62 + 6 * S, out = [];
+  for (const k of list) for (const h of k.hit) {
+    const dy = y - (k.y + h.y), r = h.r + pad;
+    if (Math.abs(dy) < r) { const half = Math.sqrt(r * r - dy * dy), cx = k.x + h.x; out.push([cx - half, cx + half]); }
+  }
+  return out;
+}
+function widestGap(intervals) {
+  const a = intervals.concat([[-1e4, player.r], [W - player.r, 1e4]]).sort((p, q) => p[0] - q[0]);
+  let best = 0, edge = -1e4;
+  for (const [l, r] of a) { if (l > edge) best = Math.max(best, l - edge); edge = Math.max(edge, r); }
+  return best;
+}
+function corridorOK(cand) { // adayın kapladığı her yükseklikte en az bir geçit kalmalı
+  const list = rocks.concat([cand]);
+  let y0 = Infinity, y1 = -Infinity;
+  for (const h of cand.hit) { y0 = Math.min(y0, cand.y + h.y - h.r - player.r); y1 = Math.max(y1, cand.y + h.y + h.r + player.r); }
+  for (let y = y0; y <= y1; y += 6 * S) if (widestGap(blockedAt(y, list)) < 14 * S) return false;
+  return true;
+}
+function tryAddRock(r) {
+  if (collidableCount() >= MAX_ROCKS) return false;
+  if (!corridorOK(r)) return false;
+  rocks.push(r); return true;
+}
+// Boyutlar bölüm bölüm değişir: Bölüm 1 küçük ve seyrek (brif %12–18), sonra küçük-büyük karışık
+function reefSize(kind) {
+  const n = levelN, r = Math.random();
+  let f = n === 1 ? rand(0.12, 0.18) : n === 2 ? (r < 0.6 ? rand(0.13, 0.19) : rand(0.2, 0.25)) : (r < 0.4 ? rand(0.12, 0.17) : r < 0.8 ? rand(0.18, 0.23) : rand(0.24, 0.28));
+  if (kind === 'cave') f = Math.max(f * 1.1, 0.18); // mağara ağzı seçilebilsin
+  return W * f;
+}
+function ledgeSize() { return W * (levelN === 1 ? rand(0.16, 0.22) : Math.random() < 0.5 ? rand(0.16, 0.24) : rand(0.25, 0.32)); }
 function spawnReef(edgeOnly) {
-  if (reefCount() >= 3) return;
+  if (collidableCount() >= MAX_ROCKS) return;
   const lanes = edgeOnly ? [-1, 1] : [-1, 0, 1].filter(l => l !== lastLane);
   const lane = lanes[Math.floor(Math.random() * lanes.length)]; lastLane = lane;
   const roll = Math.random(), kind = roll < 0.5 ? 'mossy' : roll < 0.75 ? 'spiky' : 'cave';
-  const w = W * rand(0.17, 0.23) * (kind === 'cave' ? 1.15 : 1);
+  const w = reefSize(kind);
   const x = lane === 0 ? W / 2 + rand(-0.06, 0.06) * W : lane < 0 ? rand(0.12, 0.26) * W : rand(0.74, 0.88) * W;
   const a = OktoReef.make(kind, w, tier, Math.floor(Math.random() * 1e6));
-  const y = H + a.ch * 0.6;
-  // arkadan gelen kayayla aynı hizada koridoru kapatmasın
-  for (const k of rocks) if (k.y > H - 40 * S && Math.abs(k.x - x) < (k.a.w + w) * 0.6) return;
-  rocks.push({ kind, x, y, a, hit: a.hit, mouth: a.mouth, used: false, safeT: 0 });
+  tryAddRock({ kind, x, y: H + a.ch * 0.6, a, hit: a.hit, mouth: a.mouth, used: false, safeT: 0 });
 }
 function spawnLedge() {
   ledgeSide = -ledgeSide;
-  const len = W * rand(0.22, 0.3), a = OktoReef.make('ledge', len, tier, Math.floor(Math.random() * 1e6), ledgeSide);
-  rocks.push({ kind: 'ledge', x: ledgeSide < 0 ? 0 : W, y: H + a.ch * 0.6, a, hit: a.hit, mouth: null, used: false, safeT: 0 });
+  const len = ledgeSize(), a = OktoReef.make('ledge', len, tier, Math.floor(Math.random() * 1e6), ledgeSide);
+  tryAddRock({ kind: 'ledge', x: ledgeSide < 0 ? 0 : W, y: H + a.ch * 0.6, a, hit: a.hit, mouth: null, used: false, safeT: 0 });
 }
 const FAR_COL = () => lerpColor('#1d6ea8', '#0a1c3a', clamp(depth / 700, 0, 1));
 function updateWorld(dt, scroll) {
@@ -727,7 +772,7 @@ function drawWorldFront() { for (const f of nearL) ctx.drawImage(f.a.img, f.x - 
 // ---------- Bölüm sonu canavarları ----------
 function startBoss(kind) {
   const lv = levelN, extra = Math.max(0, lv - 3);
-  const hp = { puffer: 3, jelly: 4, squid: 5 }[kind] + extra;
+  const hp = Math.max(2, { puffer: 3, jelly: 4, squid: 5 }[kind] + extra + diff().bossHp);
   boss = { kind, x: W / 2, y: H + 170 * S, hp, maxHp: hp, lv, t: 0, phase: 'enter', attackT: 2.0, stun: 0, flashT: 0, r: { puffer: 54, jelly: 60, squid: 64 }[kind] * S, puff: 0, dash: null, puffT: 0 };
   banner(`⚠️ ${BOSS_NAMES[kind]}!`, 'Mürekkep düğmesi ona mürekkep topu atar', '#ff8a8a', 3);
   Sound.bossWarn(); vibrate([100, 80, 100]); shake = 10;
@@ -941,7 +986,7 @@ function drawTransition() {
 // ---------- Güncelleme ----------
 function update(dt) {
   time += dt;
-  let scroll = (70 + Math.min(depth, 900) * 0.18) * S; // piksel/sn
+  let scroll = (70 + Math.min(depth, 900) * 0.18) * S * diff().scroll; // piksel/sn
   if (boss) scroll *= 0.35;
   // bölüm ilerleyişi: sona gelince canavar çıkar, derinlik canavar yenilene kadar durur
   const L = levelInfo(levelN);
@@ -986,14 +1031,14 @@ function update(dt) {
   if (shieldTime > 0) shieldTime -= dt;
   if (flash > 0) flash = Math.max(0, flash - dt * 2.2);
   if (comboTimer > 0) { comboTimer -= dt; if (comboTimer <= 0) combo = 0; }
-  if (inkCharge < 1) inkCharge = Math.min(1, inkCharge + dt / (boss ? 4 : 7));
+  if (inkCharge < 1) inkCharge = Math.min(1, inkCharge + dt / (boss ? 4 : diff().ink));
   if (shake > 0) shake = Math.max(0, shake - dt * 40);
   if (Math.floor(depth / 5) !== lastDepthMark) { lastDepthMark = Math.floor(depth / 5); Missions.track('depth_run', Math.floor(depth)); }
 
   updateWorld(dt, scroll);
   // Doğurma
   spawnTimer -= dt;
-  if (spawnTimer <= 0) { spawn(); spawnTimer = (boss ? 1.3 : Math.max(0.32, 1.0 - depth * 0.0013)) * rand(0.7, 1.3); }
+  if (spawnTimer <= 0) { spawn(); spawnTimer = (boss ? 1.3 : Math.max(0.32, 1.0 - depth * 0.0013)) * rand(0.7, 1.3) * diff().spawn; }
   if (boss) updateBoss(dt);
   updateSlams(dt);
 
@@ -1517,7 +1562,7 @@ function drawFx() {
   if (flash > 0) { ctx.fillStyle = `rgba(255,250,215,${flash * 0.75})`; ctx.fillRect(0, 0, W, H); }
 }
 function drawBanners() {
-  let y = Math.max(safeTop + 150, H * 0.2), ys = safeTop + 106; // Okto'nun başlangıç yerinin üstünde kalsın
+  let y = Math.max(safeTop + 200, H * 0.26), ys = safeTop + 128; // ilerleme çubuğunun altında kalsın
   for (const b of banners) {
     const age = b.dur - b.life, a = clamp(Math.min(age * 4, b.life * 2), 0, 1), sc = 0.7 + 0.3 * Math.min(1, age * 5);
     // ortalamayı kendimiz yapıyoruz (textAlign center iPhone'da bazı yazılarda kayıyordu)
@@ -1564,14 +1609,28 @@ function drawHUD() {
   const LI = levelInfo(levelN), prog = clamp((depth - LI.start) / (LI.end - LI.start), 0, 1);
   ctx.font = `700 12px ${FONT}`; ctx.fillStyle = tier === 1 ? '#bff3ff' : tier === 2 ? '#9fd6ff' : '#c9b6ff';
   ctx.fillText(`Bölüm ${levelN}`, 12, top + 54);
-  ctx.fillStyle = 'rgba(255,255,255,.2)'; ctx.beginPath(); ctx.roundRect(12, top + 71, 80, 6, 3); ctx.fill();
-  ctx.fillStyle = prog >= 1 ? '#ff8a8a' : '#7be35a'; ctx.beginPath(); ctx.roundRect(12, top + 71, 80 * prog, 6, 3); ctx.fill();
+
   ctx.textAlign = 'center'; ctx.font = `700 30px ${FONT}`;
   ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,.3)'; ctx.strokeText(score, W / 2, top);
   ctx.fillStyle = '#fff'; ctx.fillText(score, W / 2, top);
   ctx.font = `700 14px ${FONT}`; ctx.fillStyle = '#fff7d6'; ctx.fillText(`⚪ ${pearls}`, W / 2, top + 36);
   if (combo >= 3) { ctx.fillStyle = '#ffe066'; ctx.fillText(`KOMBO x${1 + Math.floor(combo / 3)}`, W / 2, top + 54); }
-  // dev kalamar can barı
+  // bölüm ilerleme çubuğu: ucunda yıldız (canavar gelince yerini canavarın can barı alır)
+  if (!boss) {
+    const bw = Math.min(260, W - 140), bx = W / 2 - bw / 2, by = top + 78, fw = Math.max(14, bw * prog);
+    ctx.fillStyle = 'rgba(0,20,45,.5)'; ctx.beginPath(); ctx.roundRect(bx - 3, by - 3, bw + 6, 16, 8); ctx.fill();
+    const g = ctx.createLinearGradient(bx, 0, bx + bw, 0); g.addColorStop(0, '#ff8fc2'); g.addColorStop(1, '#ff4d8d');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.roundRect(bx, by, fw, 10, 5); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,.4)'; ctx.beginPath(); ctx.roundRect(bx + 3, by + 2, Math.max(0, fw - 6), 3, 1.5); ctx.fill();
+    // canavar simgesi (çubuğun sonu) ve yıldız (ilerleme ucu)
+    ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.beginPath(); ctx.arc(bx + bw + 2, by + 5, 5, 0, TAU); ctx.fill();
+    const sx = bx + fw, sy = by + 5, sr = 11 + Math.sin(time * 4) * 0.8;
+    ctx.save(); ctx.translate(sx, sy); ctx.rotate(Math.sin(time * 2) * 0.15);
+    ctx.fillStyle = '#ffd23f'; ctx.strokeStyle = '#a86a00'; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.beginPath();
+    for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, l = i % 2 ? sr * 0.45 : sr; ctx.lineTo(Math.cos(a) * l, Math.sin(a) * l); }
+    ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore();
+  }
+  // bölüm sonu canavarının can barı
   if (boss && boss.phase !== 'dying') {
     const bw = Math.min(260, W - 140), bx = W / 2 - bw / 2, by = top + 76;
     ctx.fillStyle = 'rgba(0,0,0,.45)'; ctx.beginPath(); ctx.roundRect(bx - 4, by - 4, bw + 8, 22, 11); ctx.fill();
@@ -1759,7 +1818,7 @@ requestAnimationFrame(frame);
 // Test/hata ayıklama için
 window.__okto = {
   get state() { return state; }, get score() { return score; }, get depth() { return depth; }, set depth(v) { depth = v; },
-  get lives() { return lives; }, get safeTop() { return safeTop; }, get rocks() { return rocks; }, get plan() { return plan; }, get zone() { return zone; }, get shake() { return shake; }, set lives(v) { lives = v; }, set invuln(v) { invuln = v; }, get boss() { return boss; }, get tier() { return tier; }, get levelN() { return levelN; }, get phase() { return phase; }, damageBoss, startTransition,
+  get lives() { return lives; }, diff: () => diff(), get safeTop() { return safeTop; }, get rocks() { return rocks; }, rockStats: () => ({ onScreen: rocks.filter(onScreen).length, all: rocks.length }), corridorNow: () => { let worst = 1e9; for (let y = 0; y < H; y += 4) worst = Math.min(worst, widestGap(blockedAt(y, rocks))); return worst; }, get plan() { return plan; }, get zone() { return zone; }, get shake() { return shake; }, set lives(v) { lives = v; }, set invuln(v) { invuln = v; }, get boss() { return boss; }, get tier() { return tier; }, get levelN() { return levelN; }, get phase() { return phase; }, damageBoss, startTransition,
   Sound, TIERS, startGame, useInk, lightBomb: () => lightBomb(player.x, player.y), get entities() { return entities; }, get player() { return player; }, get target() { return target; },
   Profile, Missions, spawnGift: () => entities.push({ type: 'gift', x: player.x, y: player.y + 70 * S, r: 14 * S, t: 0, hue: 330 }), spawnGlow: () => entities.push({ type: 'glow', x: player.x, y: player.y + 80 * S, r: 15 * S, t: 0 }),
 };

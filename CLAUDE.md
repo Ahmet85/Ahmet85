@@ -18,7 +18,7 @@ Tasarım brifi: `docs/BRIF.md` ("OKTO – UNDERWATER DESCENT", kullanıcının 1
 - Dal: `claude/octopus-mobile-game-0is63u` → GitHub Pages: https://ahmet85.github.io/Ahmet85/
 - Aynı dalda başka bir oturumun `ritim/` klasörü var; **ona dokunma**, push öncesi `git fetch` + `git rebase` yap.
 - **Her yayında sürümü artır:** `index.html` içindeki tüm `?v=` ekleri, menüdeki `s<sürüm>` etiketi ve `sw.js` içindeki
-  `okto-v<sürüm>` birlikte. Kullanıcı sağ alttaki `s<sürüm>` ile güncellemenin geldiğini kontrol ediyor. Son sürüm: **s16**.
+  `okto-v<sürüm>` birlikte. Kullanıcı sağ alttaki `s<sürüm>` ile güncellemenin geldiğini kontrol ediyor. Son sürüm: **s17**.
 - Telefonda güncelleme: uygulamayı kapat-aç (gerekirse iki kez). Açılış görseli/simge değişirse sil-yeniden kur gerekir.
 
 ## Alınan kararlar
@@ -71,7 +71,7 @@ denizanası, askıda resifler (yosun, mercan, deniz yıldızı, mağara), yanlar
 - Normal oyundaki küçük denizanaları pembe-mor (sadece canavarın yavruları mavi).
 - Girdap geçişinde ekran bir an tamamen kararır.
 
-**Karar: boyutlar bölüm bölüm değişecek (henüz uygulanmadı):** resif adacıkları ve kanyon çıkıntıları sabit oranda olmasın;
+**Karar: boyutlar bölüm bölüm değişir (s17'de uygulandı):** resif adacıkları ve kanyon çıkıntıları sabit oranda olmasın;
 bazı bölümlerde/bölgelerde küçük (brifteki %12–18), bazılarında büyük olsun. Öneri: Bölüm 1 küçük ve seyrek, ilerledikçe
 karışık boyutlar; bölge içinde de küçük-büyük karışımı.
 
@@ -79,5 +79,5 @@ karışık boyutlar; bölge içinde de küçük-büyük karışımı.
 - 19 referans tasarımın her biri için ayrı sahne / değerlendirme (şimdilik özet tablo yapıldı).
 - Bölgeler: Güçlü Akıntı, Karanlık Mağara, Batık Gemi (gizli oda), Sıcak Bacalar, Yosun Ormanı, Mayın Tarlası, Kaçış Sahnesi.
 - Kullanıcının kendi açılış müziği (`music/acilis.mp3`), oyun içi müzik.
-- Yıldızlı büyük bölüm ilerleme çubuğu (referans 15–18), zorluk ayarı (gerçek cihazda oynanınca).
+- [x] Yıldızlı büyük bölüm ilerleme çubuğu (s17) · [x] zorluk ayarı: menüde Kolay / Normal / Zor (s17)
 - App Store / Google Play paketleme (Capacitor).

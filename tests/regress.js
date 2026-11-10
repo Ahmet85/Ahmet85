@@ -168,8 +168,18 @@ function serve() {
   // 6) beceri halkası denemesi (?beceri, gerçek döngü, fareyle)
   console.log('6. Beceri halkası (?beceri)');
   {
-    const { page, errors, close } = await open('?beceri', false);
-    ok(await page.evaluate(() => !window.__okto.SK) === false, 'beceri sistemi açık');
+    { // açılma: başta yalnızca Mürekkep Yelpazesi; 1. bölüm sonunda İnci Atışı açılır
+      const { page, errors, close } = await open('?beceri');
+      ok(JSON.stringify(await page.evaluate(() => window.__okto.SK.state.equipped)) === '["inkFan"]', 'başta yalnızca Mürekkep Yelpazesi açık');
+      await page.evaluate(() => { const O = window.__okto; O.startGame(1); O.depth = 148; });
+      await page.evaluate(() => { const O = window.__okto; for (let i = 0; i < 1800 && !(O.boss && O.boss.phase === 'fight'); i++) { O.lives = 3; O.invuln = 5; O.step(1 / 60); } O.boss.hp = 1; O.damageBoss(1); });
+      await run(page, 10, 0, 'clear'); await page.waitForTimeout(600);
+      ok((await page.textContent('#clUnlock')).includes('İnci Atışı') && await page.isVisible('#clSkills'), 'bölüm sonunda İnci Atışı açıldı, Becerileri Değiştir düğmesi var');
+      ok(errors.length === 0, 'hata yok');
+      await close();
+    }
+    const { page, errors, close } = await open('?beceri&xp=900', false);
+    ok(JSON.stringify(await page.evaluate(() => window.__okto.SK.state.equipped)) === '["inkFan","pearlShot","shieldArcs"]', '900 puanda üç beceri açık ve kuşanılı');
     await page.evaluate(() => window.__okto.startGame(1)); await page.waitForTimeout(2500);
     const bb = await page.locator('#inkBtn').boundingBox(), bx = bb.x + bb.width / 2, by = bb.y + bb.height / 2;
     const SKs = () => page.evaluate(() => { const K = window.__okto.SK; return { sel: K.selected, ring: K.ringOpen, fx: K.state.fx.map(f => f.kind).join(','), cd: K.state.cd }; });

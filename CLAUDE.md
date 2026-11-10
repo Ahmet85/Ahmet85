@@ -18,7 +18,7 @@ Tasarım brifi: `docs/BRIF.md` ("OKTO – UNDERWATER DESCENT", kullanıcının 1
 - Dal: `claude/octopus-mobile-game-0is63u` → GitHub Pages: https://ahmet85.github.io/Ahmet85/
 - Aynı dalda başka bir oturumun `ritim/` klasörü var; **ona dokunma**, push öncesi `git fetch` + `git rebase` yap.
 - **Her yayında sürümü artır:** `index.html` içindeki tüm `?v=` ekleri, menüdeki `s<sürüm>` etiketi ve `sw.js` içindeki
-  `okto-v<sürüm>` birlikte. Kullanıcı sağ alttaki `s<sürüm>` ile güncellemenin geldiğini kontrol ediyor. Son sürüm: **s24**.
+  `okto-v<sürüm>` birlikte. Kullanıcı sağ alttaki `s<sürüm>` ile güncellemenin geldiğini kontrol ediyor. Son sürüm: **s25**.
 - Telefonda güncelleme: uygulamayı kapat-aç (gerekirse iki kez). Açılış görseli/simge değişirse sil-yeniden kur gerekir.
 
 ## Alınan kararlar
@@ -46,7 +46,12 @@ Tasarım brifi: `docs/BRIF.md` ("OKTO – UNDERWATER DESCENT", kullanıcının 1
 - Sağ altta tek düğme: basılı tut → Okto çevresinde halka (oyun 0,4 hızına yavaşlar), sürükle yukarı/sola/sağa → dilim, bırak → seçilir;
   kısa dokun → seçili beceri çalışır. Her becerinin kendi bekleme süresi var. Yönlü beceriler 4 yöne aynı anda yayılır.
 - `skills.js`: 12 tanım; çalışan 3'ü: Mürekkep Yelpazesi (6 sn), İnci Atışı (3,5 sn, canavara vurur), Kalkan Açılımı (10 sn, 4 yay mermi durdurur).
-- Normal oyun değişmedi (mürekkep düğmesi duruyor). Kullanıcı hissi onaylarsa: kalan 9 beceri, kuşanma ekranı, bölüm geçişi seçeneği.
+- **Açılma (s25, kullanıcı fikri bana bıraktı):** tek "Kaşif Puanı" çubuğu; dalışta kazanılan her puan birikir (canavar yenmek
+  çok puan verir). Eşikler: Mürekkep 0 · İnci 300 · Kalkan 800 · Dokunaç 1500 · Akıntı 2400 · Kabarcık 3500 · Fener 5000 ·
+  Kanca 6500 · Işık 8500 · Dönen 11000 · Girdap 14000 · Dev Okto Darbesi 18000. Açılan beceri boş yuvaya kendiliğinden girer.
+- Menüde "Beceriler" paneli (kuşan/çıkar, kilitli olanlar ve eşikleri), bölüm kartında "Becerileri Değiştir", seçim profilde kayıtlı.
+  Test adresinde `?beceri&xp=900` ile başlangıç puanı verilir (test adresi kaydetmez).
+- Normal oyun değişmedi (mürekkep düğmesi duruyor). Sırada: kalan 9 beceri, kullanıcı onayıyla normal oyuna geçiş.
 
 ## iPhone'a özgü dersler (tekrar yaşama)
 - **Ekran ölçümüyle oynama**: basit `innerWidth/innerHeight` + `resize` olayı kalsın. Periyodik yeniden boyutlandırma ve

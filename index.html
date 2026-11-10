@@ -35,6 +35,13 @@
     padding:max(24px,env(safe-area-inset-top)) 20px max(24px,env(safe-area-inset-bottom)); text-align:center;
     background:radial-gradient(ellipse at center, rgba(4,33,61,.55), rgba(2,12,26,.85)); backdrop-filter:blur(2px); z-index:5; }
   .hidden { display:none !important; }
+  /* Beceriler paneli (deneme) */
+  #skills { z-index:6; }
+  .xpbar { height:14px; border-radius:7px; background:rgba(0,0,0,.35); overflow:hidden; margin-top:6px; }
+  .xpbar i { display:block; height:100%; background:linear-gradient(90deg,#ffd73a,#ff9a3d); }
+  .grid3 { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; width:100%; max-width:420px; }
+  .item.lock { opacity:.5; } .item.soon { opacity:.75; } .item.eq { border-color:#7dffb0; background:rgba(125,255,176,.18); }
+  .item .ds { font-size:10px; opacity:.8; line-height:1.15; padding:0 2px; }
   /* Nasıl oynanır: içerik ekrandan uzunsa kart kendi içinde kayar, başlık ve düğme hep görünür */
   #help h2, #help .btn { flex-shrink:0; }
   #help .card { min-height:0; overflow-y:auto; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; touch-action:pan-y; }
@@ -137,9 +144,10 @@
   <button id="diffBtn" aria-label="Zorluk">Zorluk: Normal</button>
   <button id="levelPick" class="hidden">▶ Bölüm 2'den başla</button>
   <button id="shopBtn" class="roundBtn" aria-label="Mağaza">🛍️<span>Mağaza</span></button>
+  <button id="skillBtn" class="roundBtn hidden" aria-label="Beceriler">✨<span>Beceriler</span><b id="skillBadge" class="badge hidden">!</b></button>
   <button id="missionBtn" class="roundBtn" aria-label="Görevler">📋<span>Görevler</span><b id="missionBadge" class="badge hidden">!</b></button>
   <div id="menuBest" class="best"></div>
-  <div id="ver" class="ver">s24</div>
+  <div id="ver" class="ver">s25</div>
 </div>
 
 <div id="shop" class="overlay panel hidden">
@@ -190,13 +198,16 @@
   <div id="clStars" class="stars"></div>
   <div id="clStats" class="card"></div>
   <p id="clNext" class="sub"></p>
+  <p id="clUnlock" class="new hidden"></p>
   <button id="clearNext" class="btn">Girdaba dal! 🌀</button>
+  <button id="clSkills" class="btn alt hidden">Becerileri Değiştir</button>
 </div>
 
 <div id="over" class="overlay hidden">
   <h2>Okto yoruldu! 😵</h2>
   <p id="oLevel" class="sub"></p>
   <div id="newBest" class="new hidden">🏆 YENİ REKOR!</div>
+  <p id="oUnlock" class="new hidden"></p>
   <div class="stats">
     <div class="stat"><div class="v" id="oScore">0</div><div class="l">Puan</div></div>
     <div class="stat"><div class="v" id="oDepth">0</div><div class="l">Derinlik (m)</div></div>
@@ -210,18 +221,27 @@
   </div>
 </div>
 
-<script src="okto.js?v=24"></script>
-<script src="reef.js?v=24"></script>
-<script src="zones.js?v=24"></script>
-<script src="enemies.js?v=24"></script>
-<script src="bosses.js?v=24"></script>
-<script src="title.js?v=24"></script>
-<script src="music.js?v=24"></script>
-<script src="campaign.js?v=24"></script>
-<script src="boss-ai.js?v=24"></script>
-<script src="cinema.js?v=24"></script>
-<script src="skills.js?v=24"></script>
-<script src="game.js?v=24"></script>
+<div id="skills" class="overlay panel hidden">
+  <div class="phead"><h2>✨ Beceriler</h2><button id="skillsClose" class="x" aria-label="Kapat">✕</button></div>
+  <div id="skXp" class="card"></div>
+  <p class="sub">Kuşandıkların (en fazla 3) · çıkarmak için dokun</p>
+  <div id="skEquip" class="grid3"></div>
+  <p class="sub">Tüm beceriler · açık olanı kuşanmak için dokun</p>
+  <div id="skGrid" class="grid"></div>
+</div>
+
+<script src="okto.js?v=25"></script>
+<script src="reef.js?v=25"></script>
+<script src="zones.js?v=25"></script>
+<script src="enemies.js?v=25"></script>
+<script src="bosses.js?v=25"></script>
+<script src="title.js?v=25"></script>
+<script src="music.js?v=25"></script>
+<script src="campaign.js?v=25"></script>
+<script src="boss-ai.js?v=25"></script>
+<script src="cinema.js?v=25"></script>
+<script src="skills.js?v=25"></script>
+<script src="game.js?v=25"></script>
 <script>
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
     window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));

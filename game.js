@@ -69,6 +69,9 @@ const Profile = {
   save() { store.set('okto_profile', this.data); },
 };
 const look = () => ({ palette: Profile.data.palette, accessory: Profile.data.accessory });
+// Beceri ilerlemesi (Kaşif Puanı ve kuşanılan beceriler) profilde saklanır; test adresinde ?xp=N ile başlangıç puanı verilebilir
+function skProf() { const D = Profile.data; if (!D.skills) D.skills = { xp: 0, equipped: ['inkFan'], seen: 1 }; return D.skills; }
+if (SK) { const q = new URLSearchParams(location.search); SK.load(skProf()); if (q.has('xp')) { skProf().xp = 0; SK.addXp(skProf(), +q.get('xp') || 0); } }
 
 // ---------- Ses (WebAudio, derinliğe göre 3 kademe) ----------
 const TIERS = [null,
@@ -264,6 +267,7 @@ function reset() {
   tier = 1; Sound.tier = 1; boss = null; bossesBeaten = 0; breathT = 1.2; blipT = 0; banked = false;
   levelN = 1; phase = 'dive'; levelHits = 0; levelPearls = 0; trans = null; cine = null; victory = null;
   if (SK) SK.reset();
+  xpBase = 0; lastUnlocks = [];
 }
 
 // ---------- Girdi ----------
@@ -333,7 +337,7 @@ document.addEventListener('contextmenu', e => e.preventDefault());
 const ui = { menu: $('menu'), over: $('over'), pause: $('pauseMenu'), ink: $('inkBtn'), pauseBtn: $('pauseBtn'), mute: $('muteBtn'), shop: $('shop'), missions: $('missions'), help: $('help'), clear: $('clear') };
 const inkCtx = $('inkCanvas').getContext('2d');
 function show(el, v) { el.classList.toggle('hidden', !v); }
-const anyPanelOpen = () => [ui.shop, ui.missions, ui.help].some(p => !p.classList.contains('hidden'));
+const anyPanelOpen = () => [ui.shop, ui.missions, ui.help, $('skills')].some(p => !p.classList.contains('hidden'));
 function refreshMute() {
   ui.mute.textContent = Sound.muted ? '🔇' : '🔊';
   const mb = $('musicBtn'), M = window.OktoMusic;
@@ -354,6 +358,8 @@ function refreshMenu() {
   lp.innerHTML = sl > 1 ? `▶ Bölüm ${ablative(sl)} başla <small>(değiştir)</small>` : `▶ Baştan başla <small>(değiştir)</small>`;
   $('menuBest').textContent = `⚪ ${Profile.data.wallet} inci` + (Profile.data.best > 0 ? `   🏆 ${Profile.data.best}` : '');
   $('missionBadge').classList.toggle('hidden', !Missions.claimable());
+  show($('skillBtn'), !!SK);
+  if (SK) { const P = skProf(); $('skillBadge').classList.toggle('hidden', SK.unlockedIds(P.xp).length <= (P.seen || 1)); }
 }
 function layoutMenuButtons() { // mağaza ve görev düğmeleri oyna düğmesinin iki yanında
   const u = Math.min(W / 390, H / 720), y = H * 0.865, dx = 75 * u + 46;
@@ -361,6 +367,7 @@ function layoutMenuButtons() { // mağaza ve görev düğmeleri oyna düğmesini
     const el = $(id); if (!el) continue;
     el.style.left = (W / 2 + sx * dx - 30) + 'px'; el.style.top = (y - 30) + 'px';
   }
+  const sb = $('skillBtn'); if (sb) { sb.style.left = (W / 2 - dx - 30) + 'px'; sb.style.top = (y - 30 - 96 * u) + 'px'; } // beceriler: mağazanın üstünde
   const lp = $('levelPick'); if (lp) lp.style.top = (y - 32 * u - 50) + 'px';
 }
 function hitPlay(x, y) { const r = window.OktoTitle && OktoTitle.playRect; return r && x >= r.x - 10 && x <= r.x + r.w + 10 && y >= r.y - 10 && y <= r.y + r.h + 16; }
@@ -409,7 +416,7 @@ function startGame(n = startLevel()) {
   gameMusic();
   if (n > 1) toast(L.news);
 
-  for (const p of [ui.menu, ui.over, ui.pause, ui.shop, ui.missions, ui.help, ui.clear]) show(p, false);
+  for (const p of [ui.menu, ui.over, ui.pause, ui.shop, ui.missions, ui.help, ui.clear, $('skills')]) show(p, false);
   show(ui.ink, true); show(ui.pauseBtn, true); show(ui.mute, true);
 }
 function toMenu() {
@@ -429,9 +436,16 @@ function togglePause() {
   }
   else if (state === 'pause') { state = 'play'; show(ui.pause, false); last = performance.now(); gameMusic(); }
 }
+let xpBase = 0, lastUnlocks = [];
+function awardXp() { // bu dalışta kazanılan puanlar Kaşif Puanı'na eklenir (yalnızca beceri denemesinde)
+  if (!SK) return [];
+  const n = Math.max(0, score - xpBase); xpBase = score;
+  const fresh = SK.addXp(skProf(), n); Profile.save(); return fresh;
+}
+const unlockText = list => list.length ? `Yeni beceri açıldı: ${list.map(d => d.name + (d.ready ? '' : ' (yakında)')).join(', ')}!` : '';
 function bankRun() { // dalıştan kazanılan incileri cüzdana bir kez ekle
   if (banked || !player) return 0;
-  banked = true;
+  banked = true; lastUnlocks = awardXp();
   const D = Profile.data, earned = pearls + bonusPearls;
   if (score > D.best) D.best = score;
   D.wallet += earned; Profile.save();
@@ -442,6 +456,7 @@ function gameOver() {
   state = 'over'; Sound.over(); vibrate([80, 60, 160]); drag.active = false; window.OktoMusic && OktoMusic.stop(1.2);
   const D = Profile.data, isBest = score > D.best;
   const earned = bankRun();
+  $('oUnlock').textContent = unlockText(lastUnlocks); show($('oUnlock'), lastUnlocks.length > 0);
   $('againBtn').textContent = levelN > 1 ? `Bölüm ${ablative(levelN)} devam` : 'Tekrar Dal';
   $('oLevel').textContent = `Bölüm ${levelN} · ${levelInfo(levelN).name}`;
   $('oScore').textContent = score; $('oDepth').textContent = Math.floor(depth); $('oPearls').textContent = pearls;
@@ -973,6 +988,8 @@ function bigVictory() {
 let trans = null;
 function levelClear() {
   if (SK) SK.cancel();
+  const fresh = awardXp(); // bölüm sonunda Kaşif Puanı ve açılan beceriler
+  $('clUnlock').textContent = unlockText(fresh); show($('clUnlock'), fresh.length > 0); show($('clSkills'), !!SK);
   state = 'clear'; drag.active = false; window.OktoMusic && OktoMusic.stop(1.0);
   const n = levelN, goal = pearlGoal(n);
   const stars = 1 + (levelHits <= 1 ? 1 : 0) + (levelPearls >= goal ? 1 : 0);
@@ -1457,6 +1474,57 @@ function renderMissions() {
   }
 }
 $('missionBtn').onclick = () => { renderMissions(); show(ui.missions, true); };
+
+// ---------- Beceriler paneli (deneme: ?beceri) ----------
+function skillIcon(d, locked) {
+  const cv = document.createElement('canvas'); cv.width = 128; cv.height = 128; const c = cv.getContext('2d');
+  c.fillStyle = 'rgba(20,40,90,.9)'; c.beginPath(); c.arc(64, 64, 60, 0, TAU); c.fill();
+  c.save(); c.translate(64, 62);
+  if (SK.ICONS[d.id]) SK.ICONS[d.id](c, 46);
+  else { c.fillStyle = '#fff'; c.font = `700 40px ${FONT}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(d.name.split(' ').map(w => w[0]).join('').slice(0, 2), 0, 2); }
+  c.restore();
+  if (locked) { // kilit
+    c.fillStyle = 'rgba(0,0,0,.45)'; c.beginPath(); c.arc(64, 64, 60, 0, TAU); c.fill();
+    c.strokeStyle = '#ffd73a'; c.lineWidth = 7; c.beginPath(); c.arc(64, 58, 15, Math.PI, 0); c.stroke();
+    c.fillStyle = '#ffd73a'; c.beginPath(); c.roundRect(42, 58, 44, 34, 6); c.fill();
+  }
+  return cv;
+}
+let skMsg = '';
+function renderSkills() {
+  const P = skProf(), xp = P.xp, nx = SK.nextUnlock(xp), prev = SK.DEFS.filter(d => d.xp <= xp).reduce((m, d) => Math.max(m, d.xp), 0);
+  const k = nx ? (xp - prev) / Math.max(1, nx.xp - prev) : 1;
+  $('skXp').innerHTML = `<b>Kaşif Puanı: ${xp}</b><br>` + (nx ? `Sıradaki beceri: <b>${nx.name}</b> · ${nx.xp} puanda açılır` : 'Bütün beceriler açık!') +
+    `<div class="xpbar"><i style="width:${Math.round(clamp(k, 0, 1) * 100)}%"></i></div>` +
+    `<small>Dalışta kazandığın her puan buraya eklenir. Canavar yenmek çok puan verir.</small>` + (skMsg ? `<br><b>${skMsg}</b>` : '');
+  skMsg = '';
+  const eq = $('skEquip'); eq.innerHTML = '';
+  for (let i = 0; i < 3; i++) {
+    const id = SK.state.equipped[i], d = id && SK.byId(id), b = document.createElement('button'); b.className = 'item' + (d ? ' eq' : '');
+    if (d) { b.append(skillIcon(d, false)); b.insertAdjacentHTML('beforeend', `<div class="nm">${d.name}</div>`); b.onclick = () => tapSkill(id); }
+    else b.innerHTML = '<div class="nm" style="padding:26px 0">Boş yuva</div>';
+    eq.append(b);
+  }
+  const g = $('skGrid'); g.innerHTML = '';
+  for (const d of SK.DEFS) {
+    const open = d.xp <= xp, on = SK.state.equipped.includes(d.id), b = document.createElement('button');
+    b.className = 'item' + (on ? ' eq' : '') + (!open ? ' lock' : !d.ready ? ' soon' : '');
+    b.append(skillIcon(d, !open));
+    b.insertAdjacentHTML('beforeend', `<div class="nm">${d.name}</div><div class="pr">${!open ? d.xp + ' puan' : !d.ready ? 'yakında' : on ? 'kuşanıldı ✓' : 'kuşan'}</div><div class="ds">${d.desc}</div>`);
+    b.onclick = () => tapSkill(d.id);
+    g.append(b);
+  }
+  P.seen = SK.unlockedIds(xp).length; Profile.save();
+}
+function tapSkill(id) {
+  const r = SK.toggleEquip(skProf(), id), d = SK.byId(id);
+  skMsg = r === 'kilitli' ? (d.xp > skProf().xp ? `${d.name} ${d.xp} puanda açılır` : `${d.name} yakında geliyor`) : r === 'dolu' ? 'En fazla 3 beceri: önce birini çıkar' : r === 'enaz' ? 'En az bir beceri kuşanılı kalmalı' : '';
+  if (r === 'tamam') Sound.coin(); else Sound.tone(220, 0.1, 'square', 0.05);
+  Profile.save(); renderSkills();
+}
+$('skillBtn').onclick = () => { if (!SK) return; renderSkills(); show($('skills'), true); };
+$('clSkills').onclick = () => { if (!SK) return; renderSkills(); show($('skills'), true); };
+$('skillsClose').onclick = () => { show($('skills'), false); if (state === 'menu') refreshMenu(); };
 $('missionClose').onclick = () => { show(ui.missions, false); refreshMenu(); };
 
 // ---------- Ana döngü ----------

@@ -33,19 +33,20 @@ const ICONS = {
 };
 
 // ---------- 12 beceri (ready: bu denemede çalışıyor mu) ----------
+// xp: açılması için gereken toplam Kaşif Puanı (dalışlarda kazanılan bütün puanlar birikir; canavar yenmek çok puan verir)
 const DEFS = [
-  { id: 'tentacleSlam', name: 'Dokunaç Darbesi', cd: 5, ready: false },
-  { id: 'inkFan', name: 'Mürekkep Yelpazesi', cd: 6, ready: true, color: '#b48cff' },
-  { id: 'pearlShot', name: 'İnci Atışı', cd: 3.5, ready: true, color: '#fff3d6' },
-  { id: 'bubbleTrap', name: 'Kabarcık Kapanı', cd: 7, ready: false },
-  { id: 'reefHook', name: 'Resif Kancası', cd: 7, ready: false },
-  { id: 'currentPush', name: 'Akıntı İtişi', cd: 6, ready: false },
-  { id: 'lanternPulse', name: 'Fener Nabzı', cd: 8, ready: false },
-  { id: 'shieldArcs', name: 'Kalkan Açılımı', cd: 10, ready: true, color: '#9ee8ff' },
-  { id: 'lightWave', name: 'Işık Dalgası', cd: 8, ready: false },
-  { id: 'spinTentacles', name: 'Dönen Dokunaçlar', cd: 6, ready: false },
-  { id: 'vortexPull', name: 'Girdap Çekişi', cd: 9, ready: false },
-  { id: 'gigaSlam', name: 'Dev Okto Darbesi', cd: 4, ready: false },
+  { id: 'inkFan', name: 'Mürekkep Yelpazesi', cd: 6, ready: true, color: '#b48cff', xp: 0, desc: 'Dört bulut, yakındaki düşmanları sersemletir' },
+  { id: 'pearlShot', name: 'İnci Atışı', cd: 3.5, ready: true, color: '#fff3d6', xp: 300, desc: 'Dört inci, her biri ilk hedefe vurur' },
+  { id: 'shieldArcs', name: 'Kalkan Açılımı', cd: 10, ready: true, color: '#9ee8ff', xp: 800, desc: 'Dört yay, her biri bir mermiyi durdurur' },
+  { id: 'tentacleSlam', name: 'Dokunaç Darbesi', cd: 5, ready: false, xp: 1500, desc: 'Dört kısa darbe, yakındaki düşmanları iter' },
+  { id: 'currentPush', name: 'Akıntı İtişi', cd: 6, ready: false, xp: 2400, desc: 'Dört dalga, küçük düşmanları uzaklaştırır' },
+  { id: 'bubbleTrap', name: 'Kabarcık Kapanı', cd: 7, ready: false, xp: 3500, desc: 'Dört kabarcık, küçük düşmanları tutar' },
+  { id: 'lanternPulse', name: 'Fener Nabzı', cd: 8, ready: false, xp: 5000, desc: 'Dört huzme, karanlıkta her şeyi gösterir' },
+  { id: 'reefHook', name: 'Resif Kancası', cd: 7, ready: false, xp: 6500, desc: 'Dört dokunaç, küçük düşmanları uzakta tutar' },
+  { id: 'lightWave', name: 'Işık Dalgası', cd: 8, ready: false, xp: 8500, desc: 'Dört ışık yayı, düşmanlara hasar verir' },
+  { id: 'spinTentacles', name: 'Dönen Dokunaçlar', cd: 6, ready: false, xp: 11000, desc: 'Dört yönden süpürme, çaprazları da kapsar' },
+  { id: 'vortexPull', name: 'Girdap Çekişi', cd: 9, ready: false, xp: 14000, desc: 'Küçük düşmanları Okto’nun çevresinde toplar' },
+  { id: 'gigaSlam', name: 'Dev Okto Darbesi', cd: 4, ready: false, xp: 18000, desc: 'Dev Okto’yken dört geniş darbe' },
 ];
 const byId = id => DEFS.find(d => d.id === id);
 
@@ -55,9 +56,15 @@ const st = {
   hold: null,            // { id, x, y, t, open, hover }
   fx: [],                // etkin efektler
 };
-const SLOT_ANG = [-Math.PI / 2, Math.PI * 5 / 6, Math.PI / 6]; // halkada dilim merkezleri: üst, sol-alt, sağ-alt
+// halkada dilim merkezleri (kuşanılan beceri sayısına göre): 3 → üst, sol-alt, sağ-alt · 2 → sol, sağ
+const slotAng = n => (n >= 3 ? [-Math.PI / 2, Math.PI * 5 / 6, Math.PI / 6] : n === 2 ? [Math.PI, 0] : [-Math.PI / 2]);
 // sürükleme yönünden dilim: yukarı → 0, sola → 1, sağa → 2 (başparmak sağ altta olduğu için aşağı yön kullanılmaz)
-function slotFromDrag(dx, dy) { if (Math.hypot(dx, dy) < 16) return null; if (-dy > Math.abs(dx) * 0.8) return 0; return dx < 0 ? 1 : 2; }
+function slotFromDrag(dx, dy) {
+  const n = st.equipped.length; if (Math.hypot(dx, dy) < 16) return null;
+  if (n <= 1) return 0;
+  if (n === 2) return dx < 0 ? 0 : 1;
+  if (-dy > Math.abs(dx) * 0.8) return 0; return dx < 0 ? 1 : 2;
+}
 
 // ---------- Düğme girdisi (ekran koordinatları) ----------
 function down(id, x, y, now) { st.hold = { id, x, y, t: now, open: false, hover: st.sel }; }
@@ -182,12 +189,13 @@ function drawRing(c, E) {
   c.save();
   c.fillStyle = 'rgba(2,10,30,.35)'; c.fillRect(0, 0, E.W, E.H); // arka plan biraz kararır
   c.translate(clamp(P.x, R1 + 8, E.W - R1 - 8), clamp(P.y, R1 + 70 * S, E.H - R1 - 90 * S));
-  for (let i = 0; i < 3; i++) {
-    const a = SLOT_ANG[i], on = i === h.hover, id = st.equipped[i], d = byId(id), cdl = st.cd[id] || 0;
-    c.beginPath(); c.arc(0, 0, R1 + (on ? 6 * S : 0), a - Math.PI / 3 + 0.04, a + Math.PI / 3 - 0.04); c.arc(0, 0, R0, a + Math.PI / 3 - 0.04, a - Math.PI / 3 + 0.04, true); c.closePath();
+  const n = st.equipped.length, ANG = slotAng(n), half = n >= 3 ? Math.PI / 3 : n === 2 ? Math.PI / 2 : Math.PI;
+  for (let i = 0; i < n; i++) {
+    const a = ANG[i], on = i === h.hover, id = st.equipped[i], d = byId(id), cdl = st.cd[id] || 0;
+    c.beginPath(); c.arc(0, 0, R1 + (on ? 6 * S : 0), a - half + 0.04, a + half - 0.04); c.arc(0, 0, R0, a + half - 0.04, a - half + 0.04, true); c.closePath();
     c.fillStyle = on ? 'rgba(255,215,90,.92)' : 'rgba(20,40,80,.82)'; c.fill();
     c.lineWidth = 3 * S; c.strokeStyle = on ? '#fff' : 'rgba(255,255,255,.35)'; c.stroke();
-    const mx = Math.cos(a) * (R0 + R1) / 2, my = Math.sin(a) * (R0 + R1) / 2;
+    const mx = n === 1 ? 0 : Math.cos(a) * (R0 + R1) / 2, my = Math.sin(a) * (R0 + R1) / 2;
     c.save(); c.translate(mx, my - 6 * S); if (cdl > 0) c.globalAlpha = 0.45; (ICONS[id] || ICONS.generic)(c, 24 * S); c.restore();
     c.font = `700 ${12 * S}px Fredoka, sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle';
     c.fillStyle = on ? '#3a2400' : '#fff'; c.fillText(cdl > 0 ? `${Math.ceil(cdl)} sn` : d.name, mx, my + 20 * S);
@@ -206,13 +214,36 @@ function drawButton(c, s, E) {
   c.beginPath(); c.arc(cx, cx, rr - 2, -Math.PI / 2, -Math.PI / 2 + TAU * k); c.stroke();
   c.save(); c.translate(cx, cx - 4); if (!ready) c.globalAlpha = 0.45; (ICONS[id] || ICONS.generic)(c, 44); c.restore();
   // kuşanılmış üç beceri: küçük noktalar
-  for (let i = 0; i < 3; i++) { c.fillStyle = i === st.sel ? '#ffd36b' : 'rgba(255,255,255,.35)'; c.beginPath(); c.arc(cx + (i - 1) * 16, s - 26, 5, 0, TAU); c.fill(); }
+  for (let i = 0; i < st.equipped.length; i++) { c.fillStyle = i === st.sel ? '#ffd36b' : 'rgba(255,255,255,.35)'; c.beginPath(); c.arc(cx + (i - 1) * 16, s - 26, 5, 0, TAU); c.fill(); }
   if (!ready) { c.fillStyle = '#fff'; c.font = '700 30px Fredoka, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(Math.ceil(cdl), cx, cx - 2); }
 }
 
-function reset() { st.cd = {}; st.fx = []; st.hold = null; st.lock = 0; }
+function reset() { st.cd = {}; st.fx = []; st.hold = null; st.lock = 0; if (st.sel >= st.equipped.length) st.sel = 0; }
+// ---------- Açılma (Kaşif Puanı) ----------
+const unlockedIds = xp => DEFS.filter(d => d.xp <= xp).map(d => d.id);
+const nextUnlock = xp => DEFS.filter(d => d.xp > xp).sort((a, b) => a.xp - b.xp)[0] || null;
+// kayıtlı profil: { xp, equipped } → durumu yükle (kuşanılmış ama açılmamış/çalışmayan beceriler çıkarılır)
+function load(prof) {
+  const ok = new Set(unlockedIds(prof.xp)), eq = (prof.equipped || []).filter(id => ok.has(id) && byId(id) && byId(id).ready).slice(0, 3);
+  st.equipped = eq.length ? eq : ['inkFan']; prof.equipped = st.equipped.slice(); if (st.sel >= st.equipped.length) st.sel = 0;
+}
+// puan ekle; yeni açılan becerileri döndür (boş yuva varsa otomatik kuşanılır)
+function addXp(prof, n) {
+  const before = new Set(unlockedIds(prof.xp)); prof.xp = Math.max(0, Math.round(prof.xp + n));
+  const fresh = DEFS.filter(d => d.xp <= prof.xp && !before.has(d.id));
+  for (const d of fresh) if (d.ready && st.equipped.length < 3 && !st.equipped.includes(d.id)) st.equipped.push(d.id);
+  prof.equipped = st.equipped.slice();
+  return fresh;
+}
+function toggleEquip(prof, id) { // menüden kuşan / çıkar; en az bir beceri kalır, en fazla üç
+  const d = byId(id); if (!d || !d.ready || d.xp > prof.xp) return 'kilitli';
+  const i = st.equipped.indexOf(id);
+  if (i >= 0) { if (st.equipped.length === 1) return 'enaz'; st.equipped.splice(i, 1); if (st.sel >= st.equipped.length) st.sel = 0; }
+  else { if (st.equipped.length >= 3) return 'dolu'; st.equipped.push(id); }
+  prof.equipped = st.equipped.slice(); return 'tamam';
+}
 window.OktoSkills = {
-  DEFS, ICONS, state: st, byId,
+  DEFS, ICONS, state: st, byId, unlockedIds, nextUnlock, load, addXp, toggleEquip,
   get selected() { return st.equipped[st.sel]; }, get ringOpen() { return !!(st.hold && st.hold.open); },
   setEquipped(list) { if (Array.isArray(list) && list.length === 3) st.equipped = list.slice(); },
   select(i) { st.sel = clamp(i | 0, 0, 2); },

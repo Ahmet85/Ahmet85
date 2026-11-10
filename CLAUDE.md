@@ -18,7 +18,7 @@ Tasarım brifi: `docs/BRIF.md` ("OKTO – UNDERWATER DESCENT", kullanıcının 1
 - Dal: `claude/octopus-mobile-game-0is63u` → GitHub Pages: https://ahmet85.github.io/Ahmet85/
 - Aynı dalda başka bir oturumun `ritim/` klasörü var; **ona dokunma**, push öncesi `git fetch` + `git rebase` yap.
 - **Her yayında sürümü artır:** `index.html` içindeki tüm `?v=` ekleri, menüdeki `s<sürüm>` etiketi ve `sw.js` içindeki
-  `okto-v<sürüm>` birlikte. Kullanıcı sağ alttaki `s<sürüm>` ile güncellemenin geldiğini kontrol ediyor. Son sürüm: **s23**.
+  `okto-v<sürüm>` birlikte. Kullanıcı sağ alttaki `s<sürüm>` ile güncellemenin geldiğini kontrol ediyor. Son sürüm: **s24**.
 - Telefonda güncelleme: uygulamayı kapat-aç (gerekirse iki kez). Açılış görseli/simge değişirse sil-yeniden kur gerekir.
 
 ## Alınan kararlar
@@ -40,6 +40,13 @@ Tasarım brifi: `docs/BRIF.md` ("OKTO – UNDERWATER DESCENT", kullanıcının 1
 - Görseller ve bölüm planı tasarım yapay zekâsından gelecek; teslim biçimi ve tanım alanları: `docs/BOSS-SISTEMI.md`.
 - Test adresleri (hiçbir şey kaydetmez, sağ altta TEST yazar): `?boss=kimlik`, `?bolum=N`, `?plan=grup`; liste: `preview/boss-test.html`.
 - s22 yeniden düzenlemesinde mevcut canavarlar eski s21 koduyla aynı rastgele sayılarla yan yana oynatıldı: 4 bölümde birebir aynı.
+
+## Beceri halkası (s24, DENEME: yalnızca `?beceri`)
+- Kullanıcı isteği: 12 beceri, oyuncu 3'ünü kuşanır; menüden ve bölüm geçişinde ("Becerileri Değiştir") değiştirilir; seçim kayıtlı kalır.
+- Sağ altta tek düğme: basılı tut → Okto çevresinde halka (oyun 0,4 hızına yavaşlar), sürükle yukarı/sola/sağa → dilim, bırak → seçilir;
+  kısa dokun → seçili beceri çalışır. Her becerinin kendi bekleme süresi var. Yönlü beceriler 4 yöne aynı anda yayılır.
+- `skills.js`: 12 tanım; çalışan 3'ü: Mürekkep Yelpazesi (6 sn), İnci Atışı (3,5 sn, canavara vurur), Kalkan Açılımı (10 sn, 4 yay mermi durdurur).
+- Normal oyun değişmedi (mürekkep düğmesi duruyor). Kullanıcı hissi onaylarsa: kalan 9 beceri, kuşanma ekranı, bölüm geçişi seçeneği.
 
 ## iPhone'a özgü dersler (tekrar yaşama)
 - **Ekran ölçümüyle oynama**: basit `innerWidth/innerHeight` + `resize` olayı kalsın. Periyodik yeniden boyutlandırma ve
@@ -64,6 +71,7 @@ Tasarım brifi: `docs/BRIF.md` ("OKTO – UNDERWATER DESCENT", kullanıcının 1
 | `boss-ai.js` | Canavar sistemi: tanımlar (`OktoBossAI.register`), ortak saldırı kütüphanesi, can eşiğiyle aşamalar, büyük/mini |
 | `campaign.js` | Bölüm düzeni: `klasik` (varsayılan, s21) ve `grup` (3 bölüm + mini canavar, sonra büyük canavar; TASLAK) |
 | `cinema.js` | Büyük canavar sinematik girişi ve büyük zafer kutlaması |
+| `skills.js` | Beceri halkası denemesi: 12 beceri tanımı, halka girdisi, 3 çalışan beceri, düğme ve halka çizimi |
 | `tests/regress.js` | Gerileme testleri (`node tests/regress.js`): her yayından önce çalıştır |
 | `yedek/s21/` | Yeni altyapıdan önceki s21'in oynanabilir yedeği (dokunma) |
 | `assets/` | Varlık listesi (`assets/README.md`) ve saydam PNG kopyaları (`assets/png`, `tools/export-assets.js` ile üretilir) |

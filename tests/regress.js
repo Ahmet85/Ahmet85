@@ -6,7 +6,7 @@
    3. Üç mevcut canavar: giriş → savaş → yenilme → bölüm kartı → girdap → sonraki bölüm
    4. Resif kuralı: ekranda en fazla 3 çarpışılabilir kaya, koridor açık
    5. Yeni altyapı (?plan=grup): grup verisi, mini canavar aşaması, sinematik giriş, büyük canavar aşamaları, büyük zafer
-   6. Test adresi hiçbir şey kaydetmiyor */
+   6. Test adresi hiçbir şey kaydetmiyor; beceri halkası (?beceri): dokun/basılı tut/sürükle/bekleme süresi */
 const { chromium, devices } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path');
 const ROOT = path.join(__dirname, '..'), OUT = path.join(__dirname, 'out');
@@ -161,6 +161,31 @@ function serve() {
     await page.evaluate(() => { const O = window.__okto; O.boss.phase = 'fight'; O.boss.hp = 1; O.damageBoss(1); }); await page.waitForTimeout(1200);
     await page.screenshot({ path: path.join(OUT, '5-buyuk-zafer.png') });
     ok(await page.evaluate(() => !!window.__okto.victory), 'büyük zafer kutlaması');
+    ok(errors.length === 0, 'hata yok' + (errors.length ? ': ' + errors.join(' / ') : ''));
+    await close();
+  }
+
+  // 6) beceri halkası denemesi (?beceri, gerçek döngü, fareyle)
+  console.log('6. Beceri halkası (?beceri)');
+  {
+    const { page, errors, close } = await open('?beceri', false);
+    ok(await page.evaluate(() => !window.__okto.SK) === false, 'beceri sistemi açık');
+    await page.evaluate(() => window.__okto.startGame(1)); await page.waitForTimeout(2500);
+    const bb = await page.locator('#inkBtn').boundingBox(), bx = bb.x + bb.width / 2, by = bb.y + bb.height / 2;
+    const SKs = () => page.evaluate(() => { const K = window.__okto.SK; return { sel: K.selected, ring: K.ringOpen, fx: K.state.fx.map(f => f.kind).join(','), cd: K.state.cd }; });
+    await page.mouse.move(bx, by); await page.mouse.down(); await page.waitForTimeout(60); await page.mouse.up(); await page.waitForTimeout(150);
+    let k = await SKs(); ok(k.fx.startsWith('ink') && k.cd.inkFan > 0, 'kısa dokunuş: Mürekkep Yelpazesi çalıştı (4 bulut)');
+    await page.mouse.down(); await page.waitForTimeout(350); k = await SKs(); ok(k.ring, 'basılı tutunca halka açıldı');
+    await page.mouse.move(bx - 70, by, { steps: 5 }); await page.mouse.up(); await page.waitForTimeout(100);
+    k = await SKs(); ok(!k.ring && k.sel === 'pearlShot', 'sola sürükleyip bırakınca İnci Atışı seçildi');
+    await page.mouse.move(bx, by); await page.mouse.down(); await page.waitForTimeout(60); await page.mouse.up(); await page.waitForTimeout(100);
+    k = await SKs(); ok(k.fx.includes('pearl'), 'İnci Atışı 4 inci fırlattı');
+    await page.mouse.down(); await page.waitForTimeout(60); await page.mouse.up(); await page.waitForTimeout(100);
+    ok((await SKs()).cd.pearlShot > 2.5, 'bekleme süresi dolmadan tekrar çalışmıyor');
+    const x0 = await page.evaluate(() => window.__okto.player.x);
+    await page.mouse.move(150, 400); await page.mouse.down(); await page.mouse.move(60, 400, { steps: 8 }); await page.mouse.up(); await page.waitForTimeout(400);
+    ok(await page.evaluate(() => window.__okto.player.x) < x0 - 40, 'halka kapanınca normal yüzme çalışıyor');
+    ok(await page.evaluate(() => localStorage.getItem('okto_profile')) === null, 'test adresinde kayıt yok');
     ok(errors.length === 0, 'hata yok' + (errors.length ? ': ' + errors.join(' / ') : ''));
     await close();
   }

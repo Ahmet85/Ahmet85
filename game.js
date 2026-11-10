@@ -11,9 +11,11 @@ const TAU = Math.PI * 2;
 // Test adresi (yalnızca geliştirme): ?plan=grup  ?bolum=N  ?boss=kimlik  ?test
 // Böyle açılınca hiçbir şey kaydedilmez; normal açılışta (parametresiz) hiçbir etkisi yoktur.
 const TEST = (() => {
-  const q = new URLSearchParams(location.search), on = ['plan', 'bolum', 'boss', 'test'].some(k => q.has(k));
-  return { on, plan: q.get('plan'), level: parseInt(q.get('bolum'), 10) || 0, boss: q.get('boss') || '' };
+  const q = new URLSearchParams(location.search), on = ['plan', 'bolum', 'boss', 'test', 'beceri'].some(k => q.has(k));
+  return { on, plan: q.get('plan'), level: parseInt(q.get('bolum'), 10) || 0, boss: q.get('boss') || '', skills: q.has('beceri') };
 })();
+// Beceri halkası (DENEME): yalnızca ?beceri ile açılır; açıkken mürekkep düğmesinin yerini beceri düğmesi alır
+const SK = TEST.skills && window.OktoSkills ? window.OktoSkills : null;
 if (TEST.on && TEST.plan && window.OktoCampaign) OktoCampaign.setMode(TEST.plan);
 const store = {
   get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } },
@@ -261,6 +263,7 @@ function reset() {
   if (window.OktoZones) OktoZones.exit();
   tier = 1; Sound.tier = 1; boss = null; bossesBeaten = 0; breathT = 1.2; blipT = 0; banked = false;
   levelN = 1; phase = 'dive'; levelHits = 0; levelPearls = 0; trans = null; cine = null; victory = null;
+  if (SK) SK.reset();
 }
 
 // ---------- Girdi ----------
@@ -380,7 +383,22 @@ $('musicBtn').onclick = e => {
   if (M) { M.setMuted(Sound.muted); if (!Sound.muted && !M.playing) M.start(); }
   refreshMute();
 };
-ui.ink.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); Sound.init(); useInk(); });
+ui.ink.addEventListener('pointerdown', e => {
+  e.preventDefault(); e.stopPropagation(); Sound.init();
+  if (!SK) return useInk();
+  if (state !== 'play') return;
+  try { ui.ink.setPointerCapture(e.pointerId); } catch {} // halka açıkken bu parmağın hareketi yalnızca beceri seçer
+  SK.down(e.pointerId, e.clientX, e.clientY, performance.now());
+});
+if (SK) {
+  ui.ink.addEventListener('pointermove', e => { e.preventDefault(); SK.move(e.pointerId, e.clientX, e.clientY); });
+  ui.ink.addEventListener('pointerup', e => { e.preventDefault(); if (state === 'play') SK.up(e.pointerId, skEnv()); else SK.cancel(); });
+  ui.ink.addEventListener('pointercancel', () => SK.cancel());
+}
+function skEnv() {
+  return { W, H, S, time, now: performance.now(), player, entities, boss, enemies: ENEMIES, damageBoss, burst, floater: addFloater, sound: Sound,
+    addScore: n => { score += n; }, vibrate };
+}
 
 function startGame(n = startLevel()) {
   Sound.init(); reset(); state = 'play'; Missions.ensure();
@@ -403,6 +421,7 @@ function toMenu() {
 }
 function togglePause() {
   if (state === 'play') {
+    if (SK) SK.cancel();
     state = 'pause'; show(ui.pause, true); window.OktoMusic && OktoMusic.stop(0.3);
     const e = store.get('okto_lasterr', null), el = $('errInfo');
     el.textContent = e ? `Son hata (${e.at}, bölüm ${e.level}, ${e.where}): ${e.msg} — ${e.line}` : '';
@@ -953,6 +972,7 @@ function bigVictory() {
 // ---------- Bölüm sonu: özet kartı ve girdap geçişi ----------
 let trans = null;
 function levelClear() {
+  if (SK) SK.cancel();
   state = 'clear'; drag.active = false; window.OktoMusic && OktoMusic.stop(1.0);
   const n = levelN, goal = pearlGoal(n);
   const stars = 1 + (levelHits <= 1 ? 1 : 0) + (levelPearls >= goal ? 1 : 0);
@@ -1088,6 +1108,7 @@ function update(dt) {
   spawnTimer -= dt;
   if (spawnTimer <= 0) { spawn(); spawnTimer = (boss ? 1.3 : Math.max(0.32, 1.0 - depth * 0.0013)) * rand(0.7, 1.3) * diff().spawn; }
   if (boss) updateBoss(dt);
+  if (SK) SK.update(skEnv(), dt); // beceri efektleri (çarpışmalardan önce: kalkan mermiyi durdurur)
   updateSlams(dt);
 
   // Varlıklar
@@ -1340,7 +1361,8 @@ function drawHUD() {
     ctx.fillStyle = boss.big ? '#ff8a3d' : '#ff4d6d'; ctx.beginPath(); ctx.roundRect(bx, by, bw * Math.max(0, boss.hp) / boss.maxHp, 14, 7); ctx.fill();
     ctx.font = `700 12px ${FONT}`; ctx.fillStyle = '#fff'; ctx.textBaseline = 'middle'; ctx.fillText(`${boss.def.name}  ${Math.max(0, boss.hp)}/${boss.maxHp}`, W / 2, by + 7);
   }
-  // mürekkep düğmesi
+  // mürekkep düğmesi (beceri denemesinde beceri düğmesi)
+  if (SK) { SK.drawButton(inkCtx, 168, skEnv()); ui.ink.style.transform = 'none'; return; }
   const c = inkCtx, s = 168, cx = s / 2, rr = s / 2 - 10, ready = inkCharge >= 1;
   c.clearRect(0, 0, s, s);
   c.fillStyle = ready ? 'rgba(40,16,70,.85)' : 'rgba(20,10,35,.55)';
@@ -1456,7 +1478,7 @@ function stepFrame(now, dt) {
   if (shake > 0 && state !== 'play') shake = Math.max(0, shake - dt * 40);
   if (victory && state !== 'pause') { victory.t += dt; if (victory.t > 3.8) victory = null; } // ölünce/menüde sarsıntı sönsün
   if ((sizeCheckT += dt) > 0.5) { sizeCheckT = 0; edgeDue = true; refreshSafeTop(); }
-  if (state === 'play') update(dt);
+  if (state === 'play') update(SK ? dt * SK.timeScale() : dt); // beceri halkası açıkken oyun yavaşlar
   else if (state === 'cinema') { updateCinema(dt); updateFx(dt); for (const q of particles) { q.x += q.vx * dt; q.y += q.vy * dt; q.life -= q.decay * dt; } particles = particles.filter(q => q.life > 0); }
   else if (state === 'transition') { updateTransition(dt); updateFx(dt); for (const q of particles) { q.x += q.vx * dt; q.y += q.vy * dt; q.life -= q.decay * dt; } particles = particles.filter(q => q.life > 0); }
   else if (state === 'clear') { time += dt; updateFx(dt); }
@@ -1502,11 +1524,13 @@ function drawFrame() {
     for (const e of entities) { try { drawEntity(e); } catch (err) { e.dead = true; reportError('nesne çizimi ' + e.type, err); try { ctx.restore(); } catch {} } }
     drawParticles();
     drawPlayer();
+    if (SK) SK.drawFx(ctx, skEnv());
     drawWorldFront();
     if (zenv) { OktoZones.drawFront(ctx, zenv); OktoZones.overlay(ctx, zenv, zoneLights()); }
     drawFx();
     if (state === 'transition') drawTransition();
     if (state === 'cinema') drawCinema();
+    if (SK && state === 'play') SK.drawRing(ctx, skEnv());
     if (victory) OktoCinema.drawVictory(Object.assign({ ctx, W, H, S, FONT, time }, victory));
   }
   ctx.restore();
@@ -1530,7 +1554,7 @@ requestAnimationFrame(frame);
 // Test/hata ayıklama için
 window.__okto = {
   get state() { return state; }, get score() { return score; }, get depth() { return depth; }, set depth(v) { depth = v; },
-  step: dt => stepFrame(0, dt), draw: () => drawFrame(), levelInfo: n => levelInfo(n), get cine() { return cine; }, get victory() { return victory; }, TEST,
+  step: dt => stepFrame(0, dt), SK, draw: () => drawFrame(), levelInfo: n => levelInfo(n), get cine() { return cine; }, get victory() { return victory; }, TEST,
   get lives() { return lives; }, diff: () => diff(), get safeTop() { return safeTop; }, get rocks() { return rocks; }, get zoneName() { return zone; }, setZone: z => { plan = [{ type: 'open', a: 0, b: depth + 1 }, { type: z, a: depth + 1, b: depth + 200 }, { type: 'open', a: depth + 200, b: 1e6 }]; }, rockStats: () => ({ onScreen: rocks.filter(onScreen).length, all: rocks.length }), corridorNow: () => { let worst = 1e9; for (let y = 0; y < H; y += 4) worst = Math.min(worst, widestGap(blockedAt(y, rocks))); return worst; }, get plan() { return plan; }, get zone() { return zone; }, get shake() { return shake; }, set lives(v) { lives = v; }, set invuln(v) { invuln = v; }, get boss() { return boss; }, get tier() { return tier; }, get levelN() { return levelN; }, get phase() { return phase; }, damageBoss, startTransition,
   Sound, TIERS, startGame, useInk, lightBomb: () => lightBomb(player.x, player.y), get entities() { return entities; }, get player() { return player; }, get target() { return target; },
   Profile, Missions, spawnGift: () => entities.push({ type: 'gift', x: player.x, y: player.y + 70 * S, r: 14 * S, t: 0, hue: 330 }), spawnGlow: () => entities.push({ type: 'glow', x: player.x, y: player.y + 80 * S, r: 15 * S, t: 0 }),

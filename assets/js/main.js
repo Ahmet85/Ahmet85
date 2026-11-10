@@ -46,7 +46,7 @@ tabs.forEach((t, i) => {
 if (tabs.length) selectTab(0, false);
 
 // Ürün sahneleri: geniş kadrajda usta tezgaha un serper; kaydırdıkça kamera
-// tezgah boyunca 1 kg pakete yaklaşır, arka plan flulaşır.
+// tezgah boyunca pakete yaklaşır, arka plan flulaşır.
 // Ventus ana sayfada; diğer unlar ürün vitrinindeki "Sahneyi izle" ile tam ekran açılır.
 const IMG = 'assets/img/urunler/';
 const img = (f) => (window.IMG_DATA && window.IMG_DATA[f]) || IMG + f; // önizleme için gömülü görseller
@@ -54,7 +54,7 @@ const WA = 'https://wa.me/905302220090?text=';
 // pack: [dosya genişliği, sol boşluk, paket genişliği]; paketin kendi yüksekliği her dosyada 704 px
 const SCENES = {
   ventus: {
-    name: 'Ventus Pizzalık Un', bg: 'sef-sahne.jpg', pack: 'ventus', packDim: [594, 78, 438],
+    name: 'Ventus Pizzalık Un', bg: 'sef-sahne.jpg', pack: 'ventus', packDim: [593, 78, 436],
     base: { x: 1300, y: 752, h: 310 }, pinch: [[556, 312], [572, 318], [586, 322], [544, 306]],
     floor: 690, lightX: 420, startX: 560,
     caps: [
@@ -64,7 +64,7 @@ const SCENES = {
     ]
   },
   antebin: {
-    name: 'Antebin Baklavalık Un', bg: 'sahne-antebin.jpg', pack: 'antebin', packDim: [595, 79, 437],
+    name: 'Antebin Baklavalık Un', bg: 'sahne-antebin.jpg', pack: 'antebin', packDim: [598, 79, 440],
     base: { x: 1330, y: 765, h: 290 }, pinch: [[350, 380], [365, 388], [378, 394]],
     floor: 600, lightX: 380, startX: 420, rate: 18,
     caps: [
@@ -74,7 +74,7 @@ const SCENES = {
     ]
   },
   albina: {
-    name: 'Albina Pastalık-Böreklik Un', bg: 'sahne-albina.jpg', pack: 'albina', packDim: [593, 78, 436],
+    name: 'Albina Pastalık-Böreklik Un', bg: 'sahne-albina.jpg', pack: 'albina', packDim: [589, 78, 433],
     base: { x: 1300, y: 800, h: 290 }, pinch: [[505, 268], [530, 274], [555, 276], [580, 274], [605, 268]],
     floor: 610, lightX: 620, startX: 520, rate: 30,
     caps: [
@@ -84,7 +84,7 @@ const SCENES = {
     ]
   },
   dededen: {
-    name: 'Özmermer Dededen Pidelik Un', bg: 'sahne-dededen.jpg', pack: 'dededen', packDim: [599, 79, 441],
+    name: 'Özmermer Dededen Pidelik Un', bg: 'sahne-dededen.jpg', pack: 'dededen', packDim: [599, 79, 440],
     base: { x: 1330, y: 800, h: 300 }, pinch: [[520, 470], [570, 485], [610, 500], [640, 515]],
     floor: 640, lightX: 620, startX: 520, rate: 12,
     caps: [
@@ -94,7 +94,7 @@ const SCENES = {
     ]
   },
   pideci: {
-    name: 'Özmermer Pideci Un', bg: 'sahne-pideci.jpg', pack: 'pideci', packDim: [602, 80, 443],
+    name: 'Özmermer Pideci Un', bg: 'sahne-pideci.jpg', pack: 'pideci', packDim: [602, 79, 443],
     base: { x: 1310, y: 770, h: 290 }, pinch: [[620, 420], [650, 428], [680, 436]],
     floor: 600, lightX: 700, startX: 560, rate: 9,
     caps: [

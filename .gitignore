@@ -1,3 +1,7 @@
 preview/*.gif
 preview/*.m4a
 preview/*.png
+node_modules/
+www/
+ios/
+android/

@@ -62,6 +62,7 @@ Tasarım brifi: `docs/BRIF.md` ("OKTO – UNDERWATER DESCENT", kullanıcının 1
 | `fonts/` | Fredoka yazı tipi (OFL) |
 | `preview/` | Deneme sayfaları: `concepts.html` (bölge konsept panosu), `splash-gen.html`, `reef-test.html`, `title.html` |
 | `docs/BRIF.md` | Tasarım brifi |
+| `docs/MAGAZA.md`, `package.json`, `capacitor.config.json`, `scripts/` | Mağaza paketleme (Capacitor) |
 | `docs/REFERANSLAR.md` | 19 referansın tek tek değerlendirmesi ve sahneleri (`docs/referanslar/`) |
 | `YAPILACAKLAR.md` | Yapılacaklar ve fikir havuzu |
 
@@ -87,4 +88,4 @@ karışık boyutlar; bölge içinde de küçük-büyük karışımı.
 - [x] Oyun içi müzik: 3 kademe, kodla üretilir (s18); `music/oyun.mp3` konursa o çalar
 - [ ] Kullanıcının kendi müzik dosyaları (`music/acilis.mp3`, `music/oyun.mp3`): altyapı hazır, **dosyayı kullanıcı verecek**
 - [x] Yıldızlı büyük bölüm ilerleme çubuğu (s17) · [x] zorluk ayarı: menüde Kolay / Normal / Zor (s17)
-- App Store / Google Play paketleme (Capacitor).
+- [x] App Store / Google Play paketleme hazırlığı (Capacitor 6): `package.json`, `capacitor.config.json`, `scripts/build-www.js`, adım adım `docs/MAGAZA.md` (Android projesi oluşturma test edildi). Mağazaya yükleme kullanıcının Apple/Google hesabıyla yapılır.

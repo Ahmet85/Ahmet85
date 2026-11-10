@@ -1,0 +1,8 @@
+{
+  "appId": "com.okto.derinlerinkasifi",
+  "appName": "Okto",
+  "webDir": "www",
+  "backgroundColor": "#2ba8e0",
+  "ios": { "contentInset": "never" },
+  "android": { "backgroundColor": "#2ba8e0" }
+}

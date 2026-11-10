@@ -18,7 +18,7 @@ Tasarım brifi: `docs/BRIF.md` ("OKTO – UNDERWATER DESCENT", kullanıcının 1
 - Dal: `claude/octopus-mobile-game-0is63u` → GitHub Pages: https://ahmet85.github.io/Ahmet85/
 - Aynı dalda başka bir oturumun `ritim/` klasörü var; **ona dokunma**, push öncesi `git fetch` + `git rebase` yap.
 - **Her yayında sürümü artır:** `index.html` içindeki tüm `?v=` ekleri, menüdeki `s<sürüm>` etiketi ve `sw.js` içindeki
-  `okto-v<sürüm>` birlikte. Kullanıcı sağ alttaki `s<sürüm>` ile güncellemenin geldiğini kontrol ediyor. Son sürüm: **s20**.
+  `okto-v<sürüm>` birlikte. Kullanıcı sağ alttaki `s<sürüm>` ile güncellemenin geldiğini kontrol ediyor. Son sürüm: **s21**.
 - Telefonda güncelleme: uygulamayı kapat-aç (gerekirse iki kez). Açılış görseli/simge değişirse sil-yeniden kur gerekir.
 
 ## Alınan kararlar
@@ -66,7 +66,7 @@ Tasarım brifi: `docs/BRIF.md` ("OKTO – UNDERWATER DESCENT", kullanıcının 1
 | `docs/REFERANSLAR.md` | 19 referansın tek tek değerlendirmesi ve sahneleri (`docs/referanslar/`) |
 | `YAPILACAKLAR.md` | Yapılacaklar ve fikir havuzu |
 
-## Brif karşılaştırması ve eksikler (s16)
+## Brif karşılaştırması ve eksikler (s21)
 **Tamam:** dikey dalış, aşağıdan gelen engeller, derinlikle kararan su, Okto ve kostümleri, Dev Balon Balığı ve büyük mor
 denizanası, askıda resifler (yosun, mercan, deniz yıldızı, mağara), yanlardan uzanan kayalıklar (dekor + küçük çarpışılabilir
 çıkıntı, koridor açık), ekranda en fazla 3 resif, sevimli 2D stil, kabarcık ve parıltılar, 3 katmanlı parallax, HUD'un tüm öğeleri.

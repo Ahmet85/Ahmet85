@@ -1,9 +1,11 @@
 /* OKTO müzikleri: açılış ekranı + oyun içinde 3 kademe (hepsi kodla üretilir)
-   Kendi müziğini koymak için: music/acilis.mp3 (açılış) ve music/oyun.mp3 (oyun içi). Dosya varsa o çalınır.
+   Kendi müziğini koymak için: music/acilis.mp3 (açılış) ve music/oyun.mp3 (oyun içi). Sonra aşağıdaki HAS_CUSTOM içinde true yap.
    window.OktoMusic: play('menu' | 'g1' | 'g2' | 'g3'), start() (= play('menu')), stop(sönüm), setMuted(bool), renderWav(sn, parça) */
 (() => {
 'use strict';
 const CUSTOM = { menu: 'music/acilis.mp3', game: 'music/oyun.mp3' };
+// Kendi dosyanı music/ klasörüne koyunca burada true yap (yoksa dosya hiç aranmaz, konsolda 404 hatası çıkmaz)
+const HAS_CUSTOM = { menu: false, game: false };
 const BPM = 112, EIGHTH = 60 / BPM / 2, BAR = 8, BARS = 8, STEPS = BAR * BARS;
 const VOLUME = 0.55;
 const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
@@ -182,7 +184,7 @@ async function checkCustom(key) {
   const c = custom[key] || (custom[key] = { checked: false, ok: false, audio: null });
   if (!c.checked) {
     c.checked = true;
-    try { const r = await fetch(CUSTOM[key], { method: 'HEAD' }); c.ok = r.ok; } catch { c.ok = false; }
+    if (HAS_CUSTOM[key]) { try { const r = await fetch(CUSTOM[key], { method: 'HEAD' }); c.ok = r.ok; } catch { c.ok = false; } }
     if (c.ok) { c.audio = new Audio(CUSTOM[key]); c.audio.loop = true; c.audio.volume = 0.7; }
   }
   return c.ok ? c.audio : null;

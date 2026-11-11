@@ -11,13 +11,13 @@ const TAU = Math.PI * 2;
 // Test adresi (yalnızca geliştirme): ?plan=grup  ?bolum=N  ?boss=kimlik  ?test
 // Böyle açılınca hiçbir şey kaydedilmez; normal açılışta (parametresiz) hiçbir etkisi yoktur.
 const TEST = (() => {
-  const q = new URLSearchParams(location.search), on = ['plan', 'bolum', 'boss', 'test', 'beceri', 'murekkep', 'xp'].some(k => q.has(k));
+  const q = new URLSearchParams(location.search), on = ['plan', 'bolum', 'boss', 'test', 'beceri', 'murekkep', 'xp', 'halka'].some(k => q.has(k));
   return { on, plan: q.get('plan'), level: parseInt(q.get('bolum'), 10) || 0, boss: q.get('boss') || '', oldInk: q.has('murekkep') };
 })();
 // Beceri halkası (s27'den beri normal oyunda; kullanıcı onayladı): mürekkep düğmesinin yerini beceri düğmesi aldı.
 // Eski mürekkep düğmesi yalnızca test adresinde: ?murekkep
 const SK = !TEST.oldInk && window.OktoSkills ? window.OktoSkills : null;
-if (SK && TEST.on) SK.setRingStyle('inci'); // s38: yeni halka görünümü önce test adresinde (normal oyunda klasik halka)
+if (SK) SK.setRingStyle(new URLSearchParams(location.search).get('halka') === 'klasik' ? 'klasik' : 'inci'); // s40: yeni inci kabarcık halkası her yerde; eski görünüm: ?halka=klasik
 if (TEST.on && TEST.plan && window.OktoCampaign) OktoCampaign.setMode(TEST.plan);
 const store = {
   get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } },

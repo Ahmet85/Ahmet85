@@ -258,7 +258,7 @@ function serve() {
     const { page, errors, close } = await open('', false);
     ok(await page.isVisible('#skillBtn'), 'menüde Beceriler düğmesi');
     ok(await page.evaluate(() => !!window.__okto.SK), 'beceri sistemi normal oyunda açık');
-    ok(await page.evaluate(() => window.__okto.SK.ringStyle) === 'klasik', 'normal oyunda halka değişmedi (klasik)');
+    ok(await page.evaluate(() => window.__okto.SK.ringStyle) === 'inci', 'normal oyunda yeni inci kabarcık halkası');
     await page.evaluate(() => { const P = window.__okto.Profile.data; P.wallet = 123; P.palette = 'galaxy'; });
     const code = await page.evaluate(() => { document.getElementById('helpBtn').click(); document.getElementById('saveCopy').click(); return document.getElementById('saveBox').value; });
     ok(code.startsWith('OKTO-'), 'kayıt kodu üretildi');
@@ -293,6 +293,11 @@ function serve() {
     });
     ok(r.every(x => x.endsWith('ateş')), '12 beceri ateşlendi ve düşmanlara etki etti' + (r.every(x => x.endsWith('ateş')) ? '' : ': ' + r.join(' ')));
     ok(errors.length === 0, 'hata yok' + (errors.length ? ': ' + errors.join(' / ') : ''));
+    await close();
+  }
+  {
+    const { page, close } = await open('?halka=klasik');
+    ok(await page.evaluate(() => window.__okto.SK.ringStyle) === 'klasik', 'test adresi ?halka=klasik: eski halka görünümü');
     await close();
   }
   {

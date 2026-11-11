@@ -18,7 +18,7 @@ Tasarım brifi: `docs/BRIF.md` ("OKTO – UNDERWATER DESCENT", kullanıcının 1
 - Dal: `claude/octopus-mobile-game-0is63u` → GitHub Pages: https://ahmet85.github.io/Ahmet85/
 - Aynı dalda başka bir oturumun `ritim/` klasörü var; **ona dokunma**, push öncesi `git fetch` + `git rebase` yap.
 - **Her yayında sürümü artır:** `index.html` içindeki tüm `?v=` ekleri, menüdeki `s<sürüm>` etiketi ve `sw.js` içindeki
-  `okto-v<sürüm>` birlikte. Kullanıcı sağ alttaki `s<sürüm>` ile güncellemenin geldiğini kontrol ediyor. Son sürüm: **s42**.
+  `okto-v<sürüm>` birlikte. Kullanıcı sağ alttaki `s<sürüm>` ile güncellemenin geldiğini kontrol ediyor. Son sürüm: **s43**.
 - Telefonda güncelleme: uygulamayı kapat-aç (gerekirse iki kez). Açılış görseli/simge değişirse sil-yeniden kur gerekir.
 - **Açılış görseli (s27):** Okto'suz sahne (oyuncunun rengi bilinemediği için); Okto oyunda oyuncunun renginle kumdan yükselir
   (`title.js` opts.intro). Görseller `preview/splash-gen.html` ile üretilir. Silip yeniden kurmada kayıt silinebilir:
@@ -68,6 +68,7 @@ Tasarım brifi: `docs/BRIF.md` ("OKTO – UNDERWATER DESCENT", kullanıcının 1
   açılmamışlar soluk + kilit. Bölüm sonu kartı → harita → Okto yüzer → Dal! → girdap. Menüde Harita: açık adaya dokun → o bölüm.
   Grup düzeni kendi kaydını tutar (`D.gcheck`, `D.gstart`; eskiden klasik `checkpoint`'i bozuyordu). s42 düzeltme: `campaign.js`'te
   s31'den beri bir yorum satırı `zones/env/intro`'yu yutuyordu (grup bölümlerinin ortamı, su rengi, sinematik yazısı); düzeldi + test.
+  s43: tik/kilit işareti etiketin hemen sağında (uzun adlara binmiyor); iPhone 13 çentikli ekranda yazı taşma/düğme çakışma testi.
   Kullanıcı pilotu onaylarsa ilk grup asıl oyuna alınacak; diğer gruplar pilotun ardından.
 
 ## Beceri halkası (s24 deneme → **s27'den beri normal oyunda**, kullanıcı onayladı)

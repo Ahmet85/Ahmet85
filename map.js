@@ -130,12 +130,13 @@ function draw(c, G) {
     labels.push(() => { c.save(); if (locked) c.globalAlpha = 0.45;
     const lab = big ? def.name.toLocaleLowerCase('tr').replace(/(^|\s)\S/g, m => m.toLocaleUpperCase('tr')) : L.name;
     const ly = nd.y + nd.w * 0.15;
-    pill(c, nd.x, ly, lab, (big ? 22 : 18) * S, cur ? 'rgba(200,60,150,.92)' : 'rgba(8,50,80,.88)', cur ? '#ffc8ec' : 'rgba(150,230,255,.7)', '#ffffff', FONT, W - 30);
+    const pw = pill(c, nd.x, ly, lab, (big ? 22 : 18) * S, cur ? 'rgba(200,60,150,.92)' : 'rgba(8,50,80,.88)', cur ? '#ffc8ec' : 'rgba(150,230,255,.7)', '#ffffff', FONT, W - 30);
     if (big) pill(c, nd.x, ly + 30 * S, `${L.end} m`, 15 * S, 'rgba(8,50,80,.9)', 'rgba(150,230,255,.6)', '#ffffff', FONT);
     c.restore();
     // durum işaretleri
-    if (n < G.current && !locked) { const bx = nd.x + nd.w * 0.36, by = ly - 2 * S; c.fillStyle = '#2fcf7a'; c.strokeStyle = '#fff'; c.lineWidth = 2.5 * S; c.beginPath(); c.arc(bx, by, 12 * S, 0, TAU); c.fill(); c.stroke(); c.lineWidth = 3 * S; c.beginPath(); c.moveTo(bx - 5 * S, by); c.lineTo(bx - 1 * S, by + 4 * S); c.lineTo(bx + 6 * S, by - 5 * S); c.stroke(); } // tik
-    if (locked) { const bx = nd.x + nd.w * 0.36, by = ly - 2 * S; c.fillStyle = '#ffd73a'; c.strokeStyle = '#ffd73a'; c.lineWidth = 3 * S; c.beginPath(); c.arc(bx, by - 6 * S, 6 * S, Math.PI, 0); c.stroke(); c.beginPath(); c.roundRect(bx - 9 * S, by - 6 * S, 18 * S, 14 * S, 3 * S); c.fill(); } // kilit
+    const bx0 = Math.min(nd.x + pw.w / 2 + 16 * S, W - 16 * S); // işaret etiketin hemen sağında
+    if (n < G.current && !locked) { const bx = bx0, by = ly - 2 * S; c.fillStyle = '#2fcf7a'; c.strokeStyle = '#fff'; c.lineWidth = 2.5 * S; c.beginPath(); c.arc(bx, by, 12 * S, 0, TAU); c.fill(); c.stroke(); c.lineWidth = 3 * S; c.beginPath(); c.moveTo(bx - 5 * S, by); c.lineTo(bx - 1 * S, by + 4 * S); c.lineTo(bx + 6 * S, by - 5 * S); c.stroke(); } // tik
+    if (locked) { const bx = bx0, by = ly - 2 * S; c.fillStyle = '#ffd73a'; c.strokeStyle = '#ffd73a'; c.lineWidth = 3 * S; c.beginPath(); c.arc(bx, by - 6 * S, 6 * S, Math.PI, 0); c.stroke(); c.beginPath(); c.roundRect(bx - 9 * S, by - 6 * S, 18 * S, 14 * S, 3 * S); c.fill(); } // kilit
     });
     layout.islands.push({ n, x: nd.x, y: nd.y - nd.w * 0.15, r: nd.w * 0.42, locked });
   }

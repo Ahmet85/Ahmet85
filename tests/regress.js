@@ -370,6 +370,22 @@ function serve() {
     ok(errors.length === 0, 'hata yok' + (errors.length ? ': ' + errors.join(' / ') : ''));
     await close();
   }
+  { // iPhone 13 (çentik payı 47) ekranında harita yazıları ekran içinde, çentiğin altında ve düğmelerle çakışmıyor
+    const { page, close } = await open('?plan=grup&bolum=2');
+    await page.addStyleTag({ content: '#safeProbe{height:47px!important}' }); await page.evaluate(() => { for (let i = 0; i < 40; i++) window.__okto.step(1 / 60); });
+    await page.evaluate(() => window.__okto.openMap('menu'));
+    const bad = [];
+    for (let g = 0; g < 3; g++) {
+      bad.push(...await page.evaluate(() => { const O = window.__okto; O.draw(); const T = OktoMap.layout.texts, st = O.safeTop, out = [];
+        const btn = ['mapClose', 'mapPrev', 'mapNext', 'mapGo'].map(id => document.getElementById(id)).filter(e => !e.classList.contains('hidden')).map(e => e.getBoundingClientRect());
+        for (const t of T) { if (t.x0 < 0 || t.x1 > innerWidth || t.y1 > innerHeight || t.y0 < st) out.push('ekran dışı ' + t.text); for (const r of btn) if (t.x0 < r.right && t.x1 > r.left && t.y0 < r.bottom && t.y1 > r.top) out.push('düğmeyle çakışma ' + t.text); }
+        return out; }));
+      await page.screenshot({ path: path.join(OUT, `8-harita-${g + 1}.png`) });
+      await page.evaluate(() => document.getElementById('mapNext').click());
+    }
+    ok(bad.length === 0, 'iPhone 13 ekranında (çentikli) 3 haritanın yazıları taşmıyor ve düğmelerle çakışmıyor' + (bad.length ? ': ' + bad.join(', ') : ''));
+    await close();
+  }
   { // normal (klasik) oyunda harita yok, bölüm sonu doğrudan girdaba gider
     const { page, close } = await open('');
     ok(!(await page.isVisible('#mapBtn')), 'normal oyunda Harita düğmesi yok');

@@ -6,7 +6,7 @@ Durum: **altyapı hazır, varsayılan oyun değişmedi.** Yeni düzen yalnızca 
 ## 0. Kullanıcının bölüm planı (s31) ve pilot durumu
 | Grup | Ortam → mini canavar | Büyük canavar | Durum |
 |---|---|---|---|
-| Güneşli Sular · 0–150 m | Resif Adacıkları → Dikenli Kestane · Mercan Kanyonu → Resif Yengeci · Güçlü Akıntı → Akıntı Vatozu | Dev Balon Balığı | **Pilot hazır** (test adresi), kodla çizim; PNG'ler gelince çizimler onlara göre düzeltilecek |
+| Güneşli Sular · 0–150 m | Resif Adacıkları → Dikenli Kestane · Mercan Kanyonu → Resif Yengeci · Güçlü Akıntı → Akıntı Vatozu | Dev Balon Balığı | **Pilot hazır** (test adresi); s32'de çizimler PNG'lere göre yenilendi (`docs/canavarlar/`) |
 | Alacakaranlık · 150–400 m | Sıcak Bacalar → Baca Yengeci · Batık Gemi → Zırhlı Balon Balığı · Mayın Tarlası → Mayın Yengeci | Elektrikli Denizanası | Plan işlendi, mini canavarlar geçici çizimli |
 | Karanlık Derinlikler · 400–700 m | Karanlık Mağara → Mağara Mürekkepçisi · Yosun Geçidi → Hayalet Denizanası · Fener Balığı Kaçışı → İri Fener Balığı | Dev Kalamar | Plan işlendi, mini canavarlar geçici çizimli |
 

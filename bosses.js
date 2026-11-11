@@ -417,11 +417,35 @@ function drawZirhliBalon(b, R, hit, stunned) { // sarı balon balığı, tepesin
   }
   ctx.strokeStyle = out; ctx.lineWidth = 3 * S; ctx.lineCap = 'round'; ctx.beginPath(); ctx.arc(0, RR * 0.38, RR * 0.13, Math.PI * 1.2, Math.PI * 1.8); ctx.stroke(); // somurtkan ağız
 }
+function drawMurekkepci(b, R, hit, stunned) { // koyu mor kubbe gövde, arkada dalgalı açık mor yaka, koyu benekler, açık mor yüz, kıvrık iki dokunaç
+  const out = '#2c0a3c', frill = hit ? '#fff' : '#b45ae0', light = hit ? '#fff' : '#c97cf2';
+  ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+  const scal = []; for (let i = 0; i < 9; i++) { const a = Math.PI * (0.95 + 1.1 * i / 8); scal.push([Math.cos(a) * R * 0.98, Math.sin(a) * R * 0.98 + R * 0.05]); } // dalgalı yaka: yuvarlak dilimler
+  ctx.strokeStyle = out; ctx.lineWidth = 3.5 * S; ctx.fillStyle = frill;
+  for (const [x, y] of scal) { ctx.beginPath(); ctx.arc(x, y, R * 0.3 * (1 + Math.sin(time * 3 + x) * 0.03), 0, TAU); ctx.stroke(); }
+  for (const [x, y] of scal) { ctx.beginPath(); ctx.arc(x, y, R * 0.3 * (1 + Math.sin(time * 3 + x) * 0.03), 0, TAU); ctx.fill(); }
+  for (const sx of [-1, 1]) { // kıvrık dokunaçlar: kalın, ucu içe kıvrılan
+    const k = Math.sin(time * 2.5 + sx) * 0.05, cx = sx * R * (0.62 + k), cy = R * 0.92;
+    const path = () => { ctx.beginPath(); ctx.moveTo(sx * R * 0.3, R * 0.5); ctx.quadraticCurveTo(sx * R * 0.3, R * 1.08, cx, R * 1.08); ctx.arc(cx, cy, R * 0.16, Math.PI / 2, sx > 0 ? -Math.PI * 0.6 : -Math.PI * 0.4, sx > 0); };
+    path(); ctx.strokeStyle = out; ctx.lineWidth = R * 0.26 + 6 * S; ctx.stroke();
+    path(); ctx.strokeStyle = light; ctx.lineWidth = R * 0.26; ctx.stroke();
+  }
+  const g = ctx.createRadialGradient(0, -R * 0.55, R * 0.05, 0, 0, R * 1.05); g.addColorStop(0, hit ? '#fff' : '#a52cc4'); g.addColorStop(0.6, hit ? '#fff' : '#6a1590'); g.addColorStop(1, hit ? '#fff' : '#4a0c6c');
+  ctx.fillStyle = g; ctx.strokeStyle = out; ctx.lineWidth = 3.5 * S; ctx.beginPath(); ctx.ellipse(0, 0, R * 0.98, R * 0.95, 0, 0, TAU); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = 'rgba(40,6,60,.55)'; for (const [x, y, rx, ry] of [[0.42, -0.55, 0.22, 0.15], [-0.32, -0.42, 0.1, 0.07], [-0.72, -0.08, 0.09, 0.12], [0.75, -0.02, 0.08, 0.1]]) { ctx.beginPath(); ctx.ellipse(x * R, y * R, rx * R, ry * R, 0.2, 0, TAU); ctx.fill(); } // koyu benekler
+  ctx.fillStyle = light; ctx.beginPath(); ctx.ellipse(0, R * 0.32, R * 0.62, R * 0.4, 0, 0, TAU); ctx.fill(); // açık mor yüz
+  for (const sx of [-1, 1]) { // yuvarlak gözler
+    const ex = sx * R * 0.33, ey = R * 0.28, er = R * 0.18;
+    ctx.fillStyle = '#fff'; ctx.strokeStyle = out; ctx.lineWidth = 2.5 * S; ctx.beginPath(); ctx.arc(ex, ey, er, 0, TAU); ctx.fill();
+    if (stunned) { ctx.strokeStyle = out; ctx.lineWidth = 2 * S; ctx.beginPath(); for (let a = 0; a < TAU * 2; a += 0.3) { const r = a / (TAU * 2) * er * 0.7, aa = a * sx + time * 8; ctx.lineTo(ex + Math.cos(aa) * r, ey + Math.sin(aa) * r); } ctx.stroke(); }
+    else { const lx = clamp((player.x - boss.x) / W, -1, 1) * er * 0.25; ctx.fillStyle = '#231a24'; ctx.beginPath(); ctx.arc(ex + lx, ey, er * 0.62, 0, TAU); ctx.fill(); }
+  }
+}
 // Canavar çizimleri kimliğe göre; yeni canavarın çizimi buraya eklenir: DRAWERS['kimlik'] = (b, R, hit, stunned) => {...}
 const DRAWERS = { puffer: drawPufferBoss, jelly: drawJellyBoss, squid: drawSquidBoss, 'puffer-big': drawPufferBoss, 'jelly-big': drawJellyBoss, 'squid-big': drawSquidBoss,
   kestane: drawKestane, yengec: drawYengec, vatoz: drawVatoz,
   'baca-yengeci': drawBacaYengeci, 'hayalet-denizanasi': drawHayaletDenizanasi, 'iri-fener': drawIriFener,
-  'mayin-yengeci': drawMayinYengeci, 'zirhli-balon': drawZirhliBalon };
+  'mayin-yengeci': drawMayinYengeci, 'zirhli-balon': drawZirhliBalon, murekkepci: drawMurekkepci };
 function drawBoss() {
   const b = boss;
   ctx.save(); ctx.translate(b.x, b.y);

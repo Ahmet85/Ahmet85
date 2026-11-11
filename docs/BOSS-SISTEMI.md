@@ -7,8 +7,8 @@ Durum: **altyapı hazır, varsayılan oyun değişmedi.** Yeni düzen yalnızca 
 | Grup | Ortam → mini canavar | Büyük canavar | Durum |
 |---|---|---|---|
 | Güneşli Sular · 0–150 m | Resif Adacıkları → Dikenli Kestane · Mercan Kanyonu → Resif Yengeci · Güçlü Akıntı → Akıntı Vatozu | Dev Balon Balığı | **Pilot hazır** (test adresi); s32'de çizimler PNG'lere göre yenilendi (`docs/canavarlar/`) |
-| Alacakaranlık · 150–400 m | Sıcak Bacalar → Baca Yengeci · Batık Gemi → Zırhlı Balon Balığı · Mayın Tarlası → Mayın Yengeci | Elektrikli Denizanası | Plan işlendi; s33'te üç mini canavar PNG'lere göre çizildi, saldırıları geçici (tanım bekleniyor) |
-| Karanlık Derinlikler · 400–700 m | Karanlık Mağara → Mağara Mürekkepçisi · Yosun Geçidi → Hayalet Denizanası · Fener Balığı Kaçışı → İri Fener Balığı | Dev Kalamar | Plan işlendi; Hayalet Denizanası ve İri Fener Balığı çizildi, **Mağara Mürekkepçisi görseli eksik**; saldırılar geçici |
+| Alacakaranlık · 150–400 m | Sıcak Bacalar → Baca Yengeci · Batık Gemi → Zırhlı Balon Balığı · Mayın Tarlası → Mayın Yengeci | Elektrikli Denizanası | Plan işlendi; üç mini canavar PNG'lere göre çizildi (s33), her birinin kendine özgü saldırısı var (s34) |
+| Karanlık Derinlikler · 400–700 m | Karanlık Mağara → Mağara Mürekkepçisi · Yosun Geçidi → Hayalet Denizanası · Fener Balığı Kaçışı → İri Fener Balığı | Dev Kalamar | Plan işlendi; üç mini canavar PNG'lere göre çizildi (s35), her birinin kendine özgü saldırısı var (s34) |
 
 Bölüm uzunlukları: 1. grup 40+40+40 m + 30 m arena; 2. grup 75×3 + 25; 3. grup 90×3 + 30. Her bölümde tek ortam baştan sona sürer.
 

@@ -265,7 +265,7 @@ register({ // Mayın Yengeci: kabuğundaki mayınları bırakır; mayınlar yuka
   },
 });
 register({ // Mağara Mürekkepçisi: mürekkep bulutuyla ekranı karartır (yalnızca Okto'nun çevresi görünür), karanlıkta mürekkep atar
-  id: 'murekkepci', name: 'MAĞARA MÜREKKEPÇİSİ', hp: 4, r: 50, restY: 140, color: '#9a7ae0', placeholder: true,
+  id: 'murekkepci', name: 'MAĞARA MÜREKKEPÇİSİ', hp: 4, r: 50, restY: 140, color: '#9a7ae0',
   look: { body: '#5a4a8a', line: '#140a30', iris: '#ffe14d', shape: 'blob' },
   tick(b, E, dt) {
     sway(b, E, 0.3, 0.45, 10);

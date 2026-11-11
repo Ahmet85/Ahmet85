@@ -183,6 +183,25 @@ function serve() {
     ok(!!r.ph && r.state === 'clear' && errors.length === 0, `${id}: 2. aşamaya geçti ve yenildi`);
     await close();
   }
+  // 5d) Alacakaranlık ve Karanlık Derinlikler baştan sona: 3 mini canavar → sinematik → büyük canavar → kupa kartı; test kaydı hepsini tutar
+  for (const [first, group, names] of [[5, 'Alacakaranlık', ['BACA YENGECİ', 'ZIRHLI BALON BALIĞI', 'MAYIN YENGECİ', 'ELEKTRİKLİ DENİZANASI']],
+    [9, 'Karanlık Derinlikler', ['MAĞARA MÜREKKEPÇİSİ', 'HAYALET DENİZANASI', 'İRİ FENER BALIĞI', 'DEV KALAMAR']]]) {
+    const { page, errors, close } = await open(`?plan=grup&bolum=${first}`);
+    const r = await page.evaluate(() => { const O = window.__okto; O.startGame(); const states = []; let cinema = false, t = 0, nx = 0, clears = 0;
+      for (let i = 0; i < 60 * 900 && clears < 4; i++) {
+        if (O.state === 'play') { O.lives = 3; O.invuln = 5; }
+        O.target.x = 195 + Math.sin(t * 0.7) * 110; O.target.y = 320 + Math.sin(t * 1.1) * 110; O.step(1 / 60); t += 1 / 60;
+        if (O.state === 'cinema') cinema = true;
+        if (O.boss && O.boss.phase === 'fight' && t > nx) { O.damageBoss(1); nx = t + 2.2; }
+        if (O.state === 'clear') { clears++; states.push(document.getElementById('clTitle').textContent); if (clears < 4) O.startTransition(); for (let k = 0; k < 240 && O.state === 'transition'; k++) O.step(1 / 60); }
+      }
+      return { cinema, titles: states, log: O.tlogText(), card: document.getElementById('clName').textContent }; });
+    ok(r.titles.length === 4 && r.titles[3].includes(group + ' Tamamlandı') && r.card.includes('Kupa'), `${group}: 4 karşılaşma, son kart "${r.titles[3]}" ve kupa`);
+    ok(r.cinema, `${group}: büyük canavardan önce sinematik giriş`);
+    ok(names.every(n => r.log.includes(n)) && !r.log.includes('bitmedi'), `${group}: test kaydı 4 karşılaşmanın hepsini tutuyor`);
+    ok(errors.length === 0, `${group}: hata yok` + (errors.length ? ': ' + errors.join(' / ') : ''));
+    await close();
+  }
   // 5b) büyük zafer ekranı ve dokunarak sinematiği geçme (gerçek döngüyle)
   {
     const { page, errors, close } = await open('?plan=grup&bolum=4&boss=ornek-buyuk', false);

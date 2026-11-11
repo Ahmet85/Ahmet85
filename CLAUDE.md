@@ -18,7 +18,7 @@ Tasarım brifi: `docs/BRIF.md` ("OKTO – UNDERWATER DESCENT", kullanıcının 1
 - Dal: `claude/octopus-mobile-game-0is63u` → GitHub Pages: https://ahmet85.github.io/Ahmet85/
 - Aynı dalda başka bir oturumun `ritim/` klasörü var; **ona dokunma**, push öncesi `git fetch` + `git rebase` yap.
 - **Her yayında sürümü artır:** `index.html` içindeki tüm `?v=` ekleri, menüdeki `s<sürüm>` etiketi ve `sw.js` içindeki
-  `okto-v<sürüm>` birlikte. Kullanıcı sağ alttaki `s<sürüm>` ile güncellemenin geldiğini kontrol ediyor. Son sürüm: **s36**.
+  `okto-v<sürüm>` birlikte. Kullanıcı sağ alttaki `s<sürüm>` ile güncellemenin geldiğini kontrol ediyor. Son sürüm: **s37**.
 - Telefonda güncelleme: uygulamayı kapat-aç (gerekirse iki kez). Açılış görseli/simge değişirse sil-yeniden kur gerekir.
 - **Açılış görseli (s27):** Okto'suz sahne (oyuncunun rengi bilinemediği için); Okto oyunda oyuncunun renginle kumdan yükselir
   (`title.js` opts.intro). Görseller `preview/splash-gen.html` ile üretilir. Silip yeniden kurmada kayıt silinebilir:
@@ -57,6 +57,8 @@ Tasarım brifi: `docs/BRIF.md` ("OKTO – UNDERWATER DESCENT", kullanıcının 1
   Elektrikli Denizanası: yatay şimşek şeritleri · dolanıp dağılan elektrik küreleri · dolan şok halkaları ·
   Dev Kalamar: sırayla yükselen dokunaç dalgası · işaretli yerde patlayan mürekkep bombası · tepeden inen yakalayıcı dokunaç.
   Saldırı adı canavarın üstünde yazar, canavar etrafında altın halka yanar (hazırlanıyor). Canın yarısında 2. aşama: sıklaşır, güçlenir.
+  **s37: Alacakaranlık (`?plan=grup&bolum=5`) ve Karanlık Derinlikler (`bolum=9`) test adresinde baştan sona oynanıyor** (3 mini →
+  sinematik → büyük canavar → kupa kartı; test kaydı 4 karşılaşmayı tutar; regress 5d).
   Kullanıcı pilotu onaylarsa ilk grup asıl oyuna alınacak; diğer gruplar pilotun ardından.
 
 ## Beceri halkası (s24 deneme → **s27'den beri normal oyunda**, kullanıcı onayladı)

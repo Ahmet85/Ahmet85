@@ -40,3 +40,20 @@ eski Bölüm 1 → yeni Bölüm 1, eski 2 → 5 (Sıcak Bacalar), eski 3 → 9 (
 3. Menüde sarı düğmede **Bölüm N · bölüm adı** yazar; dokunarak açtığın bölümler arasında değiştirebilirsin.
 4. Sağdaki **Harita** düğmesine bas: açtığın adalara dokunup o bölümü oynayabilirsin, kilitli adalar açılmaz.
 5. Eski düzeni görmek istersen (yalnızca deneme, kayıt tutmaz): Safari'de https://ahmet85.github.io/Ahmet85/?plan=klasik
+
+## 4. s45: her grupta 5 bölüm, 3 yeni mini canavar, karışık bölgeler
+**Ne değişti:** Her grupta artık 5 bölüm var. 1–4. bölümlerin sonunda mini canavar, 5. bölümün sonunda girdaplı girişle büyük
+canavar ve kupa. Büyük canavarı yenince haritada yeni bölge açılır. Yeni mini canavarlar: **Deniz Atı** (Güneşli Sular 4. bölüm),
+**Dev Deniz Yıldızı** (Alacakaranlık 4. bölüm), **Kılıç Balığı** (Karanlık Derinlikler 4. bölüm). Bölümlerde bölgeler yine karışık
+gelir; **Yosun Ormanı** ilk gruptan itibaren görünür.
+
+**Kayıtların ne olur:** Kaldığın yer aynı grupta, aynı sırada devam eder. Örneğin s44'te Alacakaranlık 1. bölümdeysen (Bölüm 5),
+yeni numarası Bölüm 6 olur. Büyük canavarın bölümüne ulaşmışsan önce o grubun yeni 4. mini canavarını yenersin. İncilerin,
+kostümlerin, becerilerin, Kaşif Puanın ve kupaların aynen kalır.
+
+**Adımlar:**
+1. Ana ekrandaki OKTO'yu tamamen kapat (alttan yukarı kaydır, OKTO'yu yukarı fırlat), sonra aç.
+2. Sağ altta **s45** yazmalı. Yazmıyorsa 1. adımı bir kez daha yap.
+3. **Harita** düğmesine bas: her grupta 5 ada görmelisin (4 mini canavar + en altta büyük canavar).
+4. Yeni canavarları hemen görmek istersen (kayıt tutmaz, deneme): Safari'de
+   https://ahmet85.github.io/Ahmet85/preview/boss-test.html sayfasındaki "(yeni)" bağlantıları.

@@ -54,7 +54,7 @@ let edgeColor = '';
 function setEdgeColor(c) { if (c !== edgeColor) { edgeColor = c; document.documentElement.style.background = c; document.body.style.background = c; } }
 function sceneBottomColor() {
   if (state === 'menu') return '#d9a95f';
-  return lerpColor('#0b5d8f', '#010a18', clamp(depth / 600, 0, 1));
+  return lerpColor('#0b5d8f', '#010a18', clamp(visD() / 600, 0, 1));
 }
 // Sayfanın yakınlaşmasını engelle (iki parmak / çift dokunuş): sahne kaymasın
 document.addEventListener('gesturestart', e => e.preventDefault());
@@ -72,14 +72,21 @@ const Profile = {
   }, store.get('okto_profile', {})),
   save() { store.set('okto_profile', this.data); },
 };
-// Eski kaydı grup düzenine taşı (yalnızca bir kez): klasik bölüm 1→1, 2→5, 3→9, 4+→13 (aynı derinlik).
-// inci, kostüm, beceri ve Kaşif Puanı ayrı alanlarda olduğu için olduğu gibi kalır; klasik alanlara dokunulmaz.
+// Eski kaydı grup düzenine taşı (yalnızca bir kez; bayrak D.gver = 45):
+// - klasik (s43 ve öncesi): bölüm 1→1, 2→6, 3→11, 4+→16 (aynı derinlik)
+// - s44 grup kaydı (grup başına 4 bölüm): aynı grup ve aynı sıra (OktoCampaign.migrate44)
+// inci, kostüm, beceri, Kaşif Puanı ve kupalar ayrı alanlarda olduğu için olduğu gibi kalır; klasik alanlara dokunulmaz.
 function gMigrate(D) {
-  if (D.gmigrated) return false;
-  const cp = Math.max(1, D.checkpoint | 0 || 1), sl = Math.min(Math.max(1, D.startLevel | 0 || 1), cp);
-  D.gcheck = Math.max(D.gcheck | 0 || 1, OktoCampaign.migrate(cp));
-  D.gstart = Math.min(Math.max(1, D.gstart | 0 || OktoCampaign.migrate(sl)), D.gcheck);
-  D.gmigrated = true; return true;
+  if (D.gver >= 45) return false;
+  if (D.gmigrated) { // s44 kaydı
+    D.gcheck = OktoCampaign.migrate44(D.gcheck || 1);
+    D.gstart = Math.min(OktoCampaign.migrate44(D.gstart || 1), D.gcheck);
+  } else { // klasik kayıt
+    const cp = Math.max(1, D.checkpoint | 0 || 1), sl = Math.min(Math.max(1, D.startLevel | 0 || 1), cp);
+    D.gcheck = Math.max(1, OktoCampaign.migrate(cp));
+    D.gstart = Math.min(OktoCampaign.migrate(sl), D.gcheck);
+  }
+  D.gmigrated = true; D.gver = 45; return true;
 }
 if (gMigrate(Profile.data)) Profile.save();
 const look = () => ({ palette: Profile.data.palette, accessory: Profile.data.accessory });
@@ -414,7 +421,7 @@ $('diffBtn').onclick = () => { const k = ['kolay', 'normal', 'zor'], i = k.index
 $('helpClose').onclick = () => show(ui.help, false);
 // ---------- Kayıt kodu: inci, kostüm, bölüm ve beceri ilerlemesini başka kuruluma taşımak için ----------
 // (iPhone ana ekrandan silinen uygulamanın kaydını da silebilir; silmeden önce kod kopyalanır, yeni kurulumda yapıştırılır)
-const SAVE_KEYS = ['wallet', 'best', 'owned', 'palette', 'accessory', 'checkpoint', 'startLevel', 'difficulty', 'skills', 'trophies', 'gcheck', 'gstart', 'gmigrated'];
+const SAVE_KEYS = ['wallet', 'best', 'owned', 'palette', 'accessory', 'checkpoint', 'startLevel', 'difficulty', 'skills', 'trophies', 'gcheck', 'gstart', 'gmigrated', 'gver'];
 function saveCode() {
   const D = Profile.data, o = {}; for (const k of SAVE_KEYS) if (D[k] !== undefined) o[k] = D[k];
   return 'OKTO-' + btoa(unescape(encodeURIComponent(JSON.stringify(o))));
@@ -424,7 +431,7 @@ function loadCode(code) {
     const t = String(code).trim().replace(/^OKTO-/, ''), o = JSON.parse(decodeURIComponent(escape(atob(t))));
     if (!o || typeof o !== 'object' || typeof o.wallet !== 'number') return false;
     const D = Profile.data; for (const k of SAVE_KEYS) if (o[k] !== undefined) D[k] = o[k];
-    if (!o.gmigrated) { delete D.gcheck; delete D.gstart; D.gmigrated = false; gMigrate(D); } // eski (s43 ve öncesi) kod: yeni düzene taşı
+    if (!o.gver) { D.gver = 0; if (!o.gmigrated) { delete D.gcheck; delete D.gstart; D.gmigrated = false; } gMigrate(D); } // eski kod (s43 klasik / s44 grup): yeni düzene taşı
     Profile.save(); if (SK) SK.load(skProf()); return true;
   } catch { return false; }
 }
@@ -617,7 +624,7 @@ function spawn() {
     case 'angler': entities.push({ type, x, y, r: 20 * S, t: Math.random() * 9 }); break;
     case 'shark': {
       const dir = Math.random() < 0.5 ? 1 : -1;
-      entities.push({ type, fixed: true, x: dir > 0 ? -90 * S : W + 90 * S, y: clamp(player.y + rand(-80, 80) * S, 60 * S, H - 60 * S), r: 26 * S, dir, warn: 1.1, sp: (360 + depth * 0.25) * S, t: 0 });
+      entities.push({ type, fixed: true, x: dir > 0 ? -90 * S : W + 90 * S, y: clamp(player.y + rand(-80, 80) * S, 60 * S, H - 60 * S), r: 26 * S, dir, warn: 1.1, sp: (360 + diffD() * 0.25) * S, t: 0 });
       break;
     }
     case 'glow': entities.push({ type, x, y, r: 15 * S, t: Math.random() * 9 }); break;
@@ -773,6 +780,19 @@ function makePlan(L) { // bölüm: açık su ile başlar, özel bölgeler arası
     add('open', 5); const b2 = L.end - 8; if (b2 > d) { segs.push({ type: L.zones[0], a: d, b: b2 }); d = b2; }
     segs.push({ type: 'open', a: d, b: L.end + 1000 }); return segs;
   }
+  if (L.zones && L.dd) { // s45 grup düzeni: açık su arasında 2–3 karışık bölge; ilki bölümün adını veren bölge, aynısı arka arkaya gelmez
+    const len = L.end - L.start, e2 = L.end - 12; d = L.start; segs.length = 0; last = '';
+    const put = (type, n) => { const b = Math.min(d + n, e2); if (b > d) segs.push({ type, a: d, b }); d = b; };
+    put('open', len * 0.1); let bag = L.zones.slice(1).sort(() => Math.random() - 0.5), first = true;
+    while (e2 - d > len * 0.15) {
+      if (!bag.length) bag = L.zones.slice().sort(() => Math.random() - 0.5);
+      let i = bag.findIndex(t => t !== last); if (i < 0) i = 0;
+      const type = first ? L.zones[0] : bag.splice(i, 1)[0]; first = false;
+      put(type, len * (type === 'kacis' ? rand(0.3, 0.34) : rand(0.2, 0.28))); last = type;
+      put('open', len * rand(0.05, 0.08));
+    }
+    segs.push({ type: 'open', a: d, b: L.end + 1000 }); return segs;
+  }
   const pool = L.zones ? L.zones : L.n === 1 ? ['reefs', 'canyon', 'akinti', 'yosun']
     : L.n === 2 ? ['reefs', 'canyon', 'akinti', 'yosun', 'baca', 'gemi', 'mayin']
     : ['reefs', 'canyon', 'akinti', 'yosun', 'baca', 'gemi', 'mayin', 'magara', 'kacis'];
@@ -856,7 +876,7 @@ function spawnLedge() {
   const len = ledgeSize(), a = OktoReef.make('ledge', len, tier, Math.floor(Math.random() * 1e6), ledgeSide);
   tryAddRock({ kind: 'ledge', x: ledgeSide < 0 ? 0 : W, y: H + a.ch * 0.6, a, hit: a.hit, mouth: null, used: false, safeT: 0 });
 }
-const FAR_COL = () => lerpColor('#1d6ea8', '#0a1c3a', clamp(depth / 700, 0, 1));
+const FAR_COL = () => lerpColor('#1d6ea8', '#0a1c3a', clamp(visD() / 700, 0, 1));
 function updateWorld(dt, scroll) {
   worldY += scroll * dt;
   // bölge değişimi
@@ -971,7 +991,7 @@ function damageBoss(n) {
   if (boss.armorT > 0 || (boss.vis != null && boss.vis < 0.5)) { addFloater(boss.x, boss.y - boss.r * 1.4, boss.armorT > 0 ? 'Zırh!' : 'Görünmez!', '#9fd6ff'); return; } // zırhlı / kaybolmuş: vurulmaz
   const te = TLOG.enc[TLOG.enc.length - 1]; if (te && te.dur == null) te.hits++;
   if (boss.openT > 0) { n += 1; addFloater(boss.x, boss.y - boss.r * 1.6, 'Çift vuruş!', '#7dffb0'); } // vatoz açık verdi
-  boss.hp -= n; boss.flashT = 0.3; boss.stun = 1.2; boss.dash = null; boss.puffT = 0; boss.act = null; boss.glowT = 0; boss.clawT = 0; boss.foldT = 0; boss.current = null; boss.ventT = 0; boss.dropT = 0; boss.lureT = 0; boss.lunge = null; boss.fade = null; boss.vis = 1; shake = 9;
+  boss.hp -= n; boss.flashT = 0.3; boss.stun = 1.2; boss.dash = null; boss.puffT = 0; boss.act = null; boss.glowT = 0; boss.clawT = 0; boss.foldT = 0; boss.current = null; boss.ventT = 0; boss.dropT = 0; boss.lureT = 0; boss.lunge = null; boss.fade = null; boss.vis = 1; boss.spinT = 0; if (boss.zig) { boss.zig = null; boss.backT = 1; } shake = 9;
   Sound.bossHit(); vibrate(60);
   burst(boss.x, boss.y - boss.r * 0.6, boss.def.color, 20, 220);
   addFloater(boss.x, boss.y - boss.r * 1.3, `-${n}`, '#ff8a8a');
@@ -1021,6 +1041,25 @@ function updateSlams(dt) {
     if (s.kind === 'drop') { // diken yağmuru: uyarı bitince tepeden diken düşer
       if (s.cancel && s.t < s.warn) { s.done = true; continue; }
       if (s.t >= s.warn) { entities.push({ type: 'spike', fixed: true, x: s.x, y: -10 * S, vx: 0, vy: s.sp, r: 7 * S, t: 0 }); s.done = true; }
+      continue;
+    }
+    // ---- s45: 4. mini canavarların saldırıları ----
+    if (s.kind === 'boomer') { // kabarcık bumerang: elips çizip canavara döner
+      if (s.cancel || s.t > s.dur) { s.done = true; burst(s.x, s.y, '#ffd9ef', 8, 80); continue; }
+      const th = s.t / s.dur * TAU; s.x = clamp(s.bx + s.side * s.ax * Math.sin(th), s.r, W - s.r); s.y = s.by - s.ay + s.ay * Math.cos(th);
+      if (Math.hypot(player.x - s.x, player.y - s.y) < s.r + player.r * 0.6) { hurt(); s.done = true; burst(s.x, s.y, '#ffd9ef', 10, 120); }
+      continue;
+    }
+    if (s.kind === 'star') { // yıldız: saçılır, durur, Okto'nun yerine kilitlenir, fırlar
+      if (s.cancel || s.x < -40 * S || s.x > W + 40 * S || s.y < -40 * S || s.y > H + 40 * S) { s.done = true; continue; }
+      if (s.st === 'out') { const k = Math.exp(-3.2 * dt); s.vx *= k; s.vy *= k; s.x = clamp(s.x + s.vx * dt, s.r, W - s.r); s.y = clamp(s.y + s.vy * dt, s.r + safeTop, H - s.r); if (s.t >= s.stopT) { s.st = 'hold'; s.ht = 0; s.tx = player.x; s.ty = player.y; Sound.tone(1200, 0.06, 'square', 0.03); } }
+      else if (s.st === 'hold') { s.ht += dt; if (s.ht >= s.hold) { const dx = s.tx - s.x, dy = s.ty - s.y, d = Math.hypot(dx, dy) || 1; s.vx = dx / d * s.go; s.vy = dy / d * s.go; s.st = 'go'; } }
+      else { s.x += s.vx * dt; s.y += s.vy * dt; }
+      if (Math.hypot(player.x - s.x, player.y - s.y) < s.r + player.r * 0.55) { hurt(); s.done = true; burst(s.x, s.y, '#ffb08a', 10, 120); }
+      continue;
+    }
+    if (s.kind === 'zigline') { // kılıç balığının yol işareti: atılış bitince kaybolur
+      if (s.cancel || !boss || !boss.zig) s.done = true;
       continue;
     }
     if (s.kind === 'hbub') { // kovalayan dikenli kabarcık: önce saydam ve zararsız, sonra Okto'ya doğru süzülür
@@ -1171,8 +1210,10 @@ function bigVictory() {
 let mapV = null;
 function openMap(mode, group) {
   const prog = mode === 'progress', groups = OktoCampaign.GROUPS.length;
-  const cur = prog ? levelN + 1 : startLevel(), g = group != null ? group : OktoMap.groupOf(prog ? levelN : cur);
-  mapV = { mode, group: g, current: cur, unlocked: Math.max(gUnlocked(), cur), swim: prog ? { from: levelN, to: levelN + 1, t: 0 } : null };
+  // büyük canavar yenildiyse yeni grubun haritası açılır: Okto yukarıdan ilk adaya yüzer, "Yeni bölge açıldı!" yazısı çıkar
+  const cur = prog ? levelN + 1 : startLevel(), fresh = prog && levelInfo(levelN).arena;
+  const g = group != null ? group : OktoMap.groupOf(prog && !fresh ? levelN : cur);
+  mapV = { mode, group: g, current: cur, unlocked: Math.max(gUnlocked(), cur), swim: prog ? { from: levelN, to: levelN + 1, t: 0 } : null, fresh: fresh ? 3.5 : 0 };
   state = 'map'; drag.active = false; window.OktoMusic && prog && OktoMusic.stop(0.6);
   for (const el of [ui.clear, ui.menu, ui.ink, ui.pauseBtn, ui.mute]) show(el, false);
   show($('mapUi'), true); show($('mapGo'), false); show($('mapClose'), !prog); show($('mapPrev'), !prog); show($('mapNext'), !prog);
@@ -1282,7 +1323,7 @@ function drawTransition() {
 // ---------- Güncelleme ----------
 function update(dt) {
   time += dt; TLOG.t += dt;
-  let scroll = (70 + Math.min(depth, 900) * 0.18) * S * diff().scroll; // piksel/sn
+  let scroll = (70 + Math.min(diffD(), 900) * 0.18) * S * diff().scroll; // piksel/sn
   if (boss) scroll *= 0.35;
   if (window.OktoZones) scroll *= OktoZones.speed();
   // bölüm ilerleyişi: sona gelince canavar çıkar, derinlik canavar yenilene kadar durur
@@ -1336,7 +1377,7 @@ function update(dt) {
   if (window.OktoZones && OktoZones.active()) OktoZones.update(zoneEnv(dt, scroll));
   // Doğurma
   spawnTimer -= dt;
-  if (spawnTimer <= 0) { spawn(); spawnTimer = (boss ? 1.3 : Math.max(0.32, 1.0 - depth * 0.0013)) * rand(0.7, 1.3) * diff().spawn; }
+  if (spawnTimer <= 0) { spawn(); spawnTimer = (boss ? 1.3 : Math.max(0.32, 1.0 - diffD() * 0.0013)) * rand(0.7, 1.3) * diff().spawn; }
   if (boss) updateBoss(dt);
   if (SK) SK.update(skEnv(), dt); // beceri efektleri (çarpışmalardan önce: kalkan mermiyi durdurur)
   updateSlams(dt);
@@ -1411,9 +1452,13 @@ function updateAmbient(dt, scroll) {
 
 // ---------- Çizim ----------
 let envCache = { n: -1, env: null };
+// s45: grup düzeninde bölümler uzun; zorluk ve su rengi klasik eşdeğer derinlikle (L.dd / L.vis) ilerler. Klasikte gerçek derinlik.
+let ddCache = { n: -1, L: null };
+function ddMap(key) { if (ddCache.n !== levelN) ddCache = { n: levelN, L: levelInfo(levelN) }; const L = ddCache.L, r = L && L[key]; if (!r) return depth; const k = clamp((depth - L.start) / ((L.end - L.start) || 1), 0, 1); return r[0] + (r[1] - r[0]) * k; }
+const diffD = () => ddMap('dd'), visD = () => ddMap('vis');
 function levelEnv() { if (envCache.n !== levelN) envCache = { n: levelN, env: (levelInfo(levelN).env || null) }; const e = envCache.env; return e && e.water ? e : null; }
 function drawBackground() {
-  const t = clamp(depth / 600, 0, 1), env = levelEnv();
+  const t = clamp(visD() / 600, 0, 1), env = levelEnv();
   const g = ctx.createLinearGradient(0, 0, 0, H);
   g.addColorStop(0, env ? env.water[0] : lerpColor('#3cc7f0', '#06223f', t)); // bölüm grubunda ortamın kendi su rengi
   g.addColorStop(1, env ? env.water[1] : lerpColor('#0b5d8f', '#010a18', t));
@@ -1763,7 +1808,7 @@ function stepFrame(now, dt) {
   else if (state === 'cinema') { updateCinema(dt); updateFx(dt); for (const q of particles) { q.x += q.vx * dt; q.y += q.vy * dt; q.life -= q.decay * dt; } particles = particles.filter(q => q.life > 0); }
   else if (state === 'transition') { updateTransition(dt); updateFx(dt); for (const q of particles) { q.x += q.vx * dt; q.y += q.vy * dt; q.life -= q.decay * dt; } particles = particles.filter(q => q.life > 0); }
   else if (state === 'clear') { time += dt; updateFx(dt); }
-  else if (state === 'map') { time += dt; if (mapV && mapV.swim && mapV.swim.t < 1) { mapV.swim.t += dt / 1.6; if (mapV.swim.t >= 1) { show($('mapGo'), true); Sound.tone(880, 0.15, 'triangle', 0.06, 200, 0, true); } } }
+  else if (state === 'map') { time += dt; if (mapV && mapV.fresh > 0) mapV.fresh = Math.max(0, mapV.fresh - dt); if (mapV && mapV.swim && mapV.swim.t < 1) { mapV.swim.t += dt / 1.6; if (mapV.swim.t >= 1) { show($('mapGo'), true); Sound.tone(880, 0.15, 'triangle', 0.06, 200, 0, true); } } }
   else if (state === 'over') {
     time += dt;
     for (const q of particles) { q.x += q.vx * dt; q.y += q.vy * dt; q.life -= q.decay * dt; }
@@ -1771,7 +1816,7 @@ function stepFrame(now, dt) {
     player.vx = 0; player.vy = 40 * S; player.y = Math.min(player.y + 40 * S * dt, H + 80 * S);
     updateFx(dt);
   } else if (state === 'menu') time += dt;
-  const scroll = state === 'play' ? (70 + Math.min(depth, 900) * 0.18) * S : 20 * S;
+  const scroll = state === 'play' ? (70 + Math.min(diffD(), 900) * 0.18) * S : 20 * S;
   if (state !== 'pause' && state !== 'menu') updateAmbient(dt, scroll);
 }
 let edgeDue = true;
@@ -1786,7 +1831,7 @@ function updateEdge() { // şerit rengi sahnenin zemin renginden hesaplanır (an
   let c;
   if (state === 'menu') c = [173, 139, 86]; // açılış sahnesinin kararmış kum rengi (ölçülmüş)
   else {
-    const t = clamp(depth / 600, 0, 1), A = [0x0b, 0x5d, 0x8f], B = [0x01, 0x0a, 0x18], env = levelEnv();
+    const t = clamp(visD() / 600, 0, 1), A = [0x0b, 0x5d, 0x8f], B = [0x01, 0x0a, 0x18], env = levelEnv();
     c = env ? [1, 3, 5].map(k => parseInt(env.water[1].slice(k, k + 2), 16)) : A.map((v, i) => lerp(v, B[i], t));
     if (seabedAmt > 0.01) { const sb = tier >= 3 ? [38, 38, 63] : [184, 138, 78]; c = c.map((v, i) => lerp(v, sb[i], seabedAmt)); }
   }
@@ -1797,7 +1842,7 @@ function drawFrame() {
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   ctx.save();
   if (shake > 0 && (state === 'play' || state === 'transition' || state === 'cinema')) ctx.translate(rand(-shake, shake), rand(-shake, shake));
-  if (state === 'map' && mapV && window.OktoMap) OktoMap.draw(ctx, { W, H, FONT, time, top: safeTop, group: mapV.group, unlocked: mapV.unlocked, current: mapV.current, swim: mapV.swim, look: look() });
+  if (state === 'map' && mapV && window.OktoMap) OktoMap.draw(ctx, { W, H, FONT, time, top: safeTop, group: mapV.group, unlocked: mapV.unlocked, current: mapV.current, swim: mapV.swim, fresh: mapV.fresh, look: look() });
   else if (state === 'menu' && window.OktoTitle) OktoTitle.draw(ctx, W, H, time, Object.assign(look(), { top: safeTop, intro: (performance.now() - BOOT) / 750 }));
   else {
     drawBackground();

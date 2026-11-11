@@ -18,7 +18,7 @@ Tasarım brifi: `docs/BRIF.md` ("OKTO – UNDERWATER DESCENT", kullanıcının 1
 - Dal: `claude/octopus-mobile-game-0is63u` → GitHub Pages: https://ahmet85.github.io/Ahmet85/
 - Aynı dalda başka bir oturumun `ritim/` klasörü var; **ona dokunma**, push öncesi `git fetch` + `git rebase` yap.
 - **Her yayında sürümü artır:** `index.html` içindeki tüm `?v=` ekleri, menüdeki `s<sürüm>` etiketi ve `sw.js` içindeki
-  `okto-v<sürüm>` birlikte. Kullanıcı sağ alttaki `s<sürüm>` ile güncellemenin geldiğini kontrol ediyor. Son sürüm: **s44**.
+  `okto-v<sürüm>` birlikte. Kullanıcı sağ alttaki `s<sürüm>` ile güncellemenin geldiğini kontrol ediyor. Son sürüm: **s45**.
 - Telefonda güncelleme: uygulamayı kapat-aç (gerekirse iki kez). Açılış görseli/simge değişirse sil-yeniden kur gerekir.
 - **Açılış görseli (s27):** Okto'suz sahne (oyuncunun rengi bilinemediği için); Okto oyunda oyuncunun renginle kumdan yükselir
   (`title.js` opts.intro). Görseller `preview/splash-gen.html` ile üretilir. Silip yeniden kurmada kayıt silinebilir:
@@ -29,8 +29,9 @@ Tasarım brifi: `docs/BRIF.md` ("OKTO – UNDERWATER DESCENT", kullanıcının 1
   `splash/`, ana ekran simgesi). Referans görseller sadece tasarım rehberi; oyuna resim olarak konmaz.
 - **Kayalar sabittir**: yerinde durur, sallanmaz; dünya kaydıkça yukarı kayar. Çarpınca can gider, Okto geri seker.
 - Kontrol: **göreli sürükleme** (parmak ekranın herhangi bir yerinde, hareket 1,5x). Okto dört yöne gider.
-- Bölümler: 1) 0–150 m Güneşli Sular / Dev Balon Balığı, 2) 150–400 m Alacakaranlık / Elektrikli Denizanası,
-  3) 400–700 m Karanlık Derinlikler / Dev Kalamar, sonra her 300 m'de sonsuz bölüm. Bölüm sonu: yıldızlı kart → girdap
+- Bölümler (s45'ten beri asıl oyun): 3 grup × 5 bölüm (Güneşli Sular, Alacakaranlık, Karanlık Derinlikler; 4 mini + 1 büyük canavar),
+  sonra "+1" ile güçlenerek tekrar. Eski klasik düzen (`?plan=klasik`): 1) 0–150 m Güneşli Sular / Dev Balon Balığı,
+  2) 150–400 m Alacakaranlık / Elektrikli Denizanası, 3) 400–700 m Karanlık Derinlikler / Dev Kalamar, sonra her 300 m'de sonsuz bölüm. Bölüm sonu: yıldızlı kart → girdap
   geçişi → yeni bölüm tanıtımı. Yanınca bölüm başından devam (kayıt noktası).
 - Bölüm içi **bölge planı**: açık su + Resif Adacıkları / Mercan Kanyonu, araya sakin dinlenme parçaları.
 - Tuvale çizilen yazılarda **emoji yok** (iPhone genişliğini ölçemiyor, yazı kayıyor). Duyurular elle ortalanır.
@@ -42,7 +43,7 @@ Tasarım brifi: `docs/BRIF.md` ("OKTO – UNDERWATER DESCENT", kullanıcının 1
 - ~~Kullanıcı onay vermeden varsayılan düzen değiştirilmez~~ → **s44: kullanıcı onayladı, normal oyun grup düzeninde.**
   Eski klasik düzen (s21) yalnızca test adresinde: `?plan=klasik` (eski s21 birebir karşılaştırması: `?plan=klasik&murekkep`).
 - Görseller ve bölüm planı tasarım yapay zekâsından gelecek; teslim biçimi ve tanım alanları: `docs/BOSS-SISTEMI.md`.
-- Test adresleri (hiçbir şey kaydetmez, sağ altta TEST yazar): `?boss=kimlik`, `?bolum=N`, `?plan=grup`; liste: `preview/boss-test.html`.
+- Test adresleri (hiçbir şey kaydetmez, sağ altta TEST yazar): `?boss=kimlik`, `?bolum=N`, `?plan=grup`, `?plan=klasik`; liste: `preview/boss-test.html`.
 - s22 yeniden düzenlemesinde mevcut canavarlar eski s21 koduyla aynı rastgele sayılarla yan yana oynatıldı: 4 bölümde birebir aynı.
 - **s31: kullanıcının bölüm planı işlendi** (`campaign.js` GROUPS; ayrıntı `docs/BOSS-SISTEMI.md` §0). Pilot: yalnızca Güneşli Sular
   test adresinde (`?plan=grup&bolum=1`): Dikenli Kestane, Resif Yengeci, Akıntı Vatozu (kodla çizim, PNG'ler henüz ulaşmadı) →
@@ -77,6 +78,13 @@ Tasarım brifi: `docs/BRIF.md` ("OKTO – UNDERWATER DESCENT", kullanıcının 1
   içermeyen eski kod yüklenince taşıma yeniden yapılır. Menüdeki bölüm seçimi grup numaralarıyla (`gstart` açık bölümler arasında
   döner); bölüm seçimi düğmesi artık beceri/harita sırasının üstünde (eskiden altında kalıp yazısı kesiliyordu). Yardım metni
   grupları, haritayı, mini ve büyük canavarları anlatır. Regress bölüm 9 (parametresiz oyun, taşıma, kayıt kodu, çakışma).
+  **s45: grup başına 5 bölüm** (kullanıcı kararı): 1–4. bölüm mini canavar, 5. bölüm sinematik + büyük canavar + kupa; büyük canavardan
+  sonra harita yeni grubu açar (Okto yukarıdan ilk adaya yüzer, "Yeni bölge açıldı!"). 3 yeni mini (Claude'un tasarımı, önce PNG gösterildi):
+  Deniz Atı (kabarcık bumerang), Dev Deniz Yıldızı (duran, kilitlenen, fırlayan yıldızlar), Kılıç Balığı (gösterilen zikzak yolda atılış);
+  toplam 12 mini. Bölgeler yine karışık: her bölümde 2–3 bölge (`makePlan` grup dalı, `L.zones` ilki bölümün adı), Yosun ilk grupta.
+  Bölüm uzunluğu 100/150/200 m; zorluk ve su rengi klasik eşdeğer derinlikle (`L.dd`, `L.vis`; `diffD()`, `visD()`). Harita 5 ada
+  (zikzak). Kayıt: `D.gver = 45`; klasik 1→1, 2→6, 3→11, 4+→16; s44 numarası `migrate44` (aynı grup, aynı sıra). Ayrıntı:
+  `docs/BOSS-SISTEMI.md` §0a. Test adresleri: büyük canavarlar `bolum=5/10/15`, yeni miniler `bolum=4/9/14`.
 
 ## Beceri halkası (s24 deneme → **s27'den beri normal oyunda**, kullanıcı onayladı)
 - Kullanıcı isteği: 12 beceri, oyuncu 3'ünü kuşanır; menüden ve bölüm geçişinde ("Becerileri Değiştir") değiştirilir; seçim kayıtlı kalır.

@@ -3,6 +3,25 @@
 Bu belge, yeni canavarları tasarlayan yapay zekâ ve oyun geliştirme için ortak başvuru.
 Durum: **altyapı hazır, varsayılan oyun değişmedi.** Yeni düzen yalnızca test adresinde açılır.
 
+## 0a. s45: grup başına 5 bölüm (kullanıcı kararı, asıl oyunda)
+1–4. bölümlerin sonunda mini canavar, 5. bölümün sonunda sinematik girişli büyük canavar ve kupa; büyük canavar yenilince
+haritada yeni grup açılır ("Yeni bölge açıldı!"). Her bölümde açık su arasında 2–3 karışık bölge (ilki bölümün adını verir).
+
+| Grup · derinlik | 1–4. bölüm → mini canavar | 5. bölüm → büyük canavar |
+|---|---|---|
+| Güneşli Sular · 0–500 m (bölüm 100 m) | Resif Adacıkları → Kestane · Mercan Kanyonu → Yengeç · Güçlü Akıntı → Vatoz · **Yosun Ormanı → Deniz Atı** | Balon Balığı Yuvası → Dev Balon Balığı |
+| Alacakaranlık · 500–1250 m (150 m) | Sıcak Bacalar → Baca Yengeci · Batık Gemi → Zırhlı Balon · Mayın Tarlası → Mayın Yengeci · **Yıldız Resifi → Dev Deniz Yıldızı** | Fırtına Çukuru → Elektrikli Denizanası |
+| Karanlık Derinlikler · 1250–2250 m (200 m) | Karanlık Mağara → Mürekkepçi · Yosun Geçidi → Hayalet Denizanası · Fener Balığı Kaçışı → İri Fener · **Uçurum Kenarı → Kılıç Balığı** | Kalamar İni → Dev Kalamar |
+
+Yeni mini canavarlar (Claude'un tasarımı, saldırıları diğerlerinden farklı):
+- **Deniz Atı** (`deniz-ati`): kuyruğunu döndürür (0,8 sn) → iki kabarcık bumerang Okto'nun hizasına kadar ters yönlerde elips çizip geri döner.
+- **Dev Deniz Yıldızı** (`deniz-yildizi`): dönerek 5–7 yıldız saçar; yıldızlar durur, Okto'nun o anki yerine kilitlenir (kesik çizgi, 0,9 sn), sonra fırlar.
+- **Kılıç Balığı** (`kilic-baligi`): zikzak yolunu kırmızı kesik çizgi ve oklarla 1,1 sn gösterir, sonra o yol boyunca çok hızlı atılır ve yerine döner.
+
+Zorluk ve su rengi gerçek derinlikle değil, klasik eşdeğer derinlikle (`dd`/`vis`) ilerler: Güneşli Sular 0–150, Alacakaranlık 150–400,
+Karanlık Derinlikler 400–700; tekrar turunda zorluk +300. Kayıt taşıma: klasik 1→1, 2→6, 3→11, 4+→16; s44 numarası `n + floor((n-1)/4)`.
+Aşağıdaki §0 s31–s44 dönemini (grup başına 3 bölüm + arena) anlatır; tarihçe olarak duruyor.
+
 ## 0. Kullanıcının bölüm planı (s31) ve pilot durumu
 | Grup | Ortam → mini canavar | Büyük canavar | Durum |
 |---|---|---|---|

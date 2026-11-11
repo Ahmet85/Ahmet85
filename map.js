@@ -1,5 +1,5 @@
 /* OKTO bölüm haritası (grup düzeni): kullanıcının "Güneşli Sular" görseli model alınarak kodla çizilir.
-   Dikey harita: üstte grup adı + derinlik aralığı; aşağı doğru 3 ortam adası (ortam süsü + mini canavar + ad etiketi),
+   Dikey harita: üstte grup adı + derinlik aralığı; aşağı doğru zikzak 4 ortam adası (s45) (ortam süsü + mini canavar + ad etiketi),
    en altta büyük canavarın adası (adı + derinliği); adalar noktalı yolla bağlı; en altta sonraki grubun adı ve ok.
    İlerleme: bitirilen adalar tikli, şu anki ada parlar ve Okto üstünde durur, açılmamış adalar soluk ve kilitli.
    OktoMap.draw(ctx, G) — G = { W, H, S, FONT, time, top, group (0..), unlocked (en büyük açık bölüm no), current (bölüm no),
@@ -75,10 +75,11 @@ function island(c, kind, x, y, w, s, t, dark) {
   }
   c.restore();
 }
-// harita düzeni: 4 ada (3 bölüm + büyük canavar), yukarıdan aşağı
+// harita düzeni (s45): 5 ada (4 mini canavar bölümü + büyük canavar), yukarıdan aşağı zikzak
+const NB = 5, BIG = NB - 1;
 function nodes(W, H, top) {
-  const ys = [0.25, 0.405, 0.56, 0.765].map(k => top + (H - top) * k);
-  return ys.map((y, i) => ({ x: W / 2 + [0, -0.06, 0.06, 0][i] * W, y, w: Math.min(W * (i === 3 ? 0.78 : 0.62), i === 3 ? 330 : 260) }));
+  const ys = [0.19, 0.32, 0.45, 0.58, 0.755].map(k => top + (H - top) * k);
+  return ys.map((y, i) => ({ x: W / 2 + [-0.17, 0.17, -0.17, 0.17, 0][i] * W, y, w: Math.min(W * (i === BIG ? 0.74 : 0.5), i === BIG ? 320 : 210) }));
 }
 function pathPt(a, b, k) { const mx = (a.x + b.x) / 2 + (a === b ? 0 : (b.y - a.y) * 0.45 * (a.x <= b.x ? -1 : 1)), my = (a.y + b.y) / 2; const u = 1 - k; return { x: u * u * a.x + 2 * u * k * mx + k * k * b.x, y: u * u * (a.y + 26) + 2 * u * k * my + k * k * (b.y - 40) }; }
 
@@ -95,7 +96,7 @@ function draw(c, G) {
   for (const sx of [0, 1]) { c.beginPath(); const x0 = sx ? W : 0, d = sx ? -1 : 1; c.moveTo(x0, 0); for (let k = 0; k <= 12; k++) { const y = k / 12 * H; c.lineTo(x0 + d * (W * 0.07 + Math.sin(k * 1.7 + sx) * W * 0.04 + (k % 3 === 0 ? W * 0.05 : 0)), y); } c.lineTo(x0, H); c.closePath(); c.fill(); }
   c.fillStyle = 'rgba(255,255,255,.35)'; for (let i = 0; i < 26; i++) { const x = (i * 97 % 100) / 100 * W, y = H - ((t * 18 + i * 61) % (H + 20)); c.beginPath(); c.arc(x, y, (1.2 + (i % 3)) * S, 0, TAU); c.fill(); } // kabarcıklar
   // başlık
-  const L1 = OktoCampaign.level(first), L4 = OktoCampaign.level(first + 3), GR = { name: L1.groupName }; // tekrar turunda "+1" eki
+  const L1 = OktoCampaign.level(first), L4 = OktoCampaign.level(first + BIG), GR = { name: L1.groupName }; // tekrar turunda "+1" eki
   c.font = `700 ${40 * S}px ${FONT}`; let tw = c.measureText(GR.name).width, ts = 40 * S; if (tw > W - 120) { ts *= (W - 120) / tw; /* kapat düğmesine değmesin */ c.font = `700 ${ts}px ${FONT}`; tw = c.measureText(GR.name).width; }
   const ty = top + 48 * S;
   c.lineJoin = 'round'; c.lineWidth = ts * 0.22; c.strokeStyle = 'rgba(8,40,80,.85)'; c.textAlign = 'left'; c.textBaseline = 'middle'; c.strokeText(GR.name, W / 2 - tw / 2, ty); c.fillStyle = th.title; c.fillText(GR.name, W / 2 - tw / 2, ty);
@@ -103,15 +104,15 @@ function draw(c, G) {
   pill(c, W / 2, ty + 40 * S, `${L1.start}–${L4.end} m`, 17 * S, 'rgba(10,50,90,.75)', null, '#ffffff', FONT);
   const N = nodes(W, H, top + 20 * S);
   // noktalı yol
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < NB; i++) {
     const a = i === 0 ? { x: W / 2, y: ty + 64 * S } : N[i - 1], b = N[i], done = first + i <= G.unlocked;
     for (let k = 0.05; k < 1; k += 0.07) { const p = pathPt(a, b, k); c.fillStyle = done ? 'rgba(255,255,255,.85)' : 'rgba(255,255,255,.3)'; c.beginPath(); c.arc(p.x, p.y, 3.2 * S, 0, TAU); c.fill(); }
   }
-  { const a = N[3], b = { x: W / 2, y: H - 80 * S }; for (let k = 0.55; k < 1; k += 0.15) { c.fillStyle = 'rgba(255,255,255,.5)'; c.beginPath(); c.arc(a.x, a.y + (b.y - a.y) * k + 30 * S, 3 * S, 0, TAU); c.fill(); } }
+  { const a = N[BIG], b = { x: W / 2, y: H - 80 * S }; for (let k = 0.55; k < 1; k += 0.15) { c.fillStyle = 'rgba(255,255,255,.5)'; c.beginPath(); c.arc(a.x, a.y + (b.y - a.y) * k + 30 * S, 3 * S, 0, TAU); c.fill(); } }
   // adalar
   const labels = [];
-  for (let i = 0; i < 4; i++) {
-    const n = first + i, L = OktoCampaign.level(n), nd = N[i], big = i === 3, kind = big ? 'arena' : (L.zones && L.zones[0]) || 'reefs';
+  for (let i = 0; i < NB; i++) {
+    const n = first + i, L = OktoCampaign.level(n), nd = N[i], big = i === BIG, kind = big ? 'arena' : (L.zones && L.zones[0]) || 'reefs';
     const done = n < G.current || n < G.unlocked && !(n === G.current), cur = n === G.current, locked = n > G.unlocked;
     const s = S * (big ? 1.15 : 1);
     c.save(); if (locked) c.globalAlpha = 0.45;
@@ -147,12 +148,16 @@ function draw(c, G) {
   c.strokeStyle = '#ffffff'; c.lineWidth = 4 * S; c.lineCap = 'round'; c.beginPath(); c.moveTo(W / 2 - 12 * S, ny + 20 * S); c.lineTo(W / 2, ny + 31 * S); c.lineTo(W / 2 + 12 * S, ny + 20 * S); c.stroke();
   // Okto: şu anki adada; yüzerken iki ada arasında
   let ox, oy;
-  const idx = n => n - first, nodeOf = n => { const i = idx(n); return i >= 0 && i < 4 ? N[i] : i >= 4 ? { x: W / 2, y: ny - 30 * S, w: 0 } : { x: W / 2, y: ty + 60 * S, w: 0 }; };
-  const okAt = nd => ({ x: nd.x - (nd.w ? nd.w * 0.26 : 0), y: nd.y - (nd.w ? nd.w * 0.06 : 0) - 14 * S });
+  const idx = n => n - first, nodeOf = n => { const i = idx(n); return i >= 0 && i < NB ? N[i] : i >= NB ? { x: W / 2, y: ny - 30 * S, w: 0 } : { x: W / 2, y: ty + 60 * S, w: 0 }; };
+  const okAt = nd => ({ x: nd.x - (nd.w ? nd.w * (nd.w < W * 0.6 ? 0.36 : 0.26) : 0), y: nd.y - (nd.w ? nd.w * 0.06 : 0) - 14 * S });
   if (G.swim && G.swim.t < 1) { const a = okAt(nodeOf(G.swim.from)), b = okAt(nodeOf(G.swim.to)), k = ease(G.swim.t); ox = a.x + (b.x - a.x) * k + Math.sin(k * Math.PI) * 40 * S; oy = a.y + (b.y - a.y) * k; }
   else { const p = okAt(nodeOf(G.swim ? G.swim.to : G.current)); ox = p.x; oy = p.y; }
-  const here = G.swim ? idx(G.swim.from) >= 0 && idx(G.swim.from) < 4 : idx(G.current) >= 0 && idx(G.current) < 4; // Okto yalnızca kendi grubunun haritasında
+  const inG = n => idx(n) >= 0 && idx(n) < NB, here = G.swim ? inG(G.swim.from) || inG(G.swim.to) : inG(G.current); // Okto yalnızca kendi grubunun haritasında
   if (here && window.OktoChar) OktoChar.draw(c, ox, oy + Math.sin(t * 3) * 3 * S, 22 * S, t, Object.assign({ expr: { wave: G.swim && G.swim.t < 1 ? 0 : 0.6 }, bob: Math.sin(t * 3) }, G.look || {}));
+  if (G.fresh > 0) { // büyük canavardan sonra: yeni grup açıldı
+    const a = Math.min(1, G.fresh / 0.6); c.save(); c.globalAlpha = a;
+    pill(c, W / 2, top + (H - top) * 0.39, 'Yeni bölge açıldı!', 26 * S, 'rgba(255,200,40,.95)', '#fff6c8', '#5a3000', FONT, W - 40); c.restore();
+  }
   last = layout.islands.slice();
 }
 function hit(x, y) { if (!last) return null; for (const I of last) if (Math.hypot(x - I.x, (y - I.y) * 1.3) < I.r) return I.locked ? { n: I.n, locked: true } : { n: I.n, locked: false }; return null; }

@@ -441,11 +441,86 @@ function drawMurekkepci(b, R, hit, stunned) { // koyu mor kubbe gövde, arkada d
     else { const lx = clamp((player.x - boss.x) / W, -1, 1) * er * 0.25; ctx.fillStyle = '#231a24'; ctx.beginPath(); ctx.arc(ex + lx, ey, er * 0.62, 0, TAU); ctx.fill(); }
   }
 }
+// ---------- s45: her grubun 4. mini canavarı (Claude'un tasarımı) ----------
+function sideEye(ex, ey, er, dir, line, iris, stunned, tilt) { // yandan görünen tek kızgın göz
+  ctx.fillStyle = '#fbf8ff'; ctx.strokeStyle = line; ctx.lineWidth = 3 * S; ctx.beginPath(); ctx.arc(ex, ey, er, 0, TAU); ctx.fill(); ctx.stroke();
+  if (stunned) { ctx.lineWidth = 2.5 * S; ctx.beginPath(); for (let a = 0; a < TAU * 2; a += 0.3) { const r = a / (TAU * 2) * er * 0.7, aa = a + time * 8; ctx.lineTo(ex + Math.cos(aa) * r, ey + Math.sin(aa) * r); } ctx.stroke(); }
+  else {
+    ctx.fillStyle = iris; ctx.beginPath(); ctx.arc(ex + dir * er * 0.2, ey + er * 0.08, er * 0.62, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#120a14'; ctx.beginPath(); ctx.arc(ex + dir * er * 0.26, ey + er * 0.1, er * 0.36, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(ex + dir * er * 0.38, ey - er * 0.12, er * 0.14, 0, TAU); ctx.fill();
+  }
+  ctx.strokeStyle = line; ctx.lineWidth = er * 0.34; ctx.lineCap = 'round'; // kızgın kaş: öne doğru iner
+  ctx.beginPath(); ctx.moveTo(ex - dir * er * 1.0, ey - er * (1.25 + (tilt || 0))); ctx.lineTo(ex + dir * er * 0.9, ey - er * 0.75); ctx.stroke();
+}
+function drawDenizAti(b, R, hit, stunned) { // altın turuncu deniz atı: kıvrık kuyruk, çizgili karın, uzun burun, tepede taç, pembe sırt yüzgeci
+  const line = '#6b3200', body = hit ? '#fff' : '#ffb238', belly = hit ? '#fff' : '#ffe08a', fin = hit ? '#fff' : '#ff7fb0', dir = player.x < b.x ? -1 : 1, spin = b.spinT > 0;
+  ctx.save(); ctx.scale(dir, 1); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+  // kuyruk: incelen kıvrım (dönerken kuyruk ucu fırıl fırıl)
+  const tail = []; for (let i = 0; i <= 26; i++) { const t = i / 26; let x, y;
+    if (t < 0.45) { const k = t / 0.45; x = -0.05 + 0.1 * k; y = 0.55 + 0.55 * k; }
+    else { const k = (t - 0.45) / 0.55, a = Math.PI + k * 4.2 + (spin ? time * 14 : Math.sin(time * 2) * 0.2), rr = 0.32 * (1 - k * 0.7); x = 0.37 + Math.cos(a) * rr; y = 1.1 + Math.sin(a) * rr * 0.9; }
+    tail.push([x * R, y * R, (0.22 - 0.16 * t) * R]); }
+  for (const [x, y, r] of tail) { ctx.fillStyle = line; ctx.beginPath(); ctx.arc(x, y, r + 2.5 * S, 0, TAU); ctx.fill(); }
+  for (const [x, y, r] of tail) { ctx.fillStyle = body; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill(); }
+  if (spin) { ctx.strokeStyle = 'rgba(255,220,240,.8)'; ctx.lineWidth = 3 * S; ctx.beginPath(); ctx.arc(0.37 * R, 1.1 * R, 0.5 * R, time * 10, time * 10 + 4); ctx.stroke(); }
+  // sırt yüzgeci (dalgalanır)
+  ctx.fillStyle = fin; ctx.strokeStyle = line; ctx.lineWidth = 3 * S; ctx.beginPath(); ctx.moveTo(-0.45 * R, -0.25 * R);
+  for (let i = 0; i <= 5; i++) { const a = -0.5 + i * 0.25, w = 0.42 + Math.sin(time * 9 + i) * 0.06; ctx.lineTo((-0.45 - Math.cos(a) * w) * R, (0.05 + Math.sin(a) * w) * R); }
+  ctx.lineTo(-0.45 * R, 0.35 * R); ctx.closePath(); ctx.fill(); ctx.stroke();
+  // gövde ve karın
+  ctx.fillStyle = body; ctx.beginPath(); ctx.ellipse(0, 0.1 * R, 0.52 * R, 0.72 * R, 0.12, 0, TAU); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = belly; ctx.beginPath(); ctx.ellipse(0.2 * R, 0.18 * R, 0.28 * R, 0.56 * R, 0.12, 0, TAU); ctx.fill();
+  ctx.strokeStyle = hit ? '#fff' : '#e08a20'; ctx.lineWidth = 2.5 * S; for (let i = -2; i <= 3; i++) { const y = (0.18 + i * 0.16) * R; ctx.beginPath(); ctx.moveTo(0.02 * R, y); ctx.quadraticCurveTo(0.22 * R, y + 0.06 * R, 0.44 * R, y - 0.02 * R); ctx.stroke(); }
+  // baş, burun, taç
+  ctx.strokeStyle = line; ctx.lineWidth = 3 * S;
+  ctx.fillStyle = body; ctx.beginPath(); ctx.moveTo(0.3 * R, -0.82 * R); ctx.lineTo(1.0 * R, -0.72 * R); ctx.quadraticCurveTo(1.16 * R, -0.6 * R, 1.0 * R, -0.5 * R); ctx.lineTo(0.3 * R, -0.45 * R); ctx.closePath(); ctx.fill(); ctx.stroke(); // burun
+  for (const [x, h] of [[-0.18, 0.28], [0.02, 0.36], [0.22, 0.26]]) { ctx.beginPath(); ctx.moveTo((x - 0.09) * R, -1.0 * R); ctx.lineTo(x * R, (-1.0 - h) * R); ctx.lineTo((x + 0.09) * R, -1.0 * R); ctx.closePath(); ctx.fillStyle = fin; ctx.fill(); ctx.stroke(); } // taç
+  ctx.fillStyle = body; ctx.beginPath(); ctx.arc(0.05 * R, -0.72 * R, 0.42 * R, 0, TAU); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = 'rgba(255,120,150,.45)'; ctx.beginPath(); ctx.ellipse(0.14 * R, -0.5 * R, 0.12 * R, 0.07 * R, 0, 0, TAU); ctx.fill(); // yanak
+  ctx.restore();
+  sideEye(0.12 * R * dir, -0.8 * R, 0.2 * R, dir, line, '#ff8a3a', stunned);
+}
+function drawDenizYildizi(b, R, hit, stunned) { // turuncu-mercan dev deniz yıldızı: beş yuvarlak uçlu kol, üstünde sarı kabartılar, ortada kızgın yüz
+  const line = '#6a1a08', rot = b.rot || 0, spin = b.spinT > 0;
+  ctx.save(); ctx.rotate(rot);
+  const pts = []; for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? 0.52 : 1.22; pts.push([Math.cos(a) * r * R, Math.sin(a) * r * R]); }
+  const path = () => { ctx.beginPath(); pts.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.closePath(); };
+  ctx.lineJoin = 'round'; path(); ctx.strokeStyle = line; ctx.lineWidth = R * 0.42 + 7 * S; ctx.stroke(); // kalın kenar: yuvarlak uçlar
+  const g = ctx.createRadialGradient(0, 0, R * 0.1, 0, 0, R * 1.3); g.addColorStop(0, hit ? '#fff' : '#ffa36b'); g.addColorStop(1, hit ? '#fff' : '#f0552a');
+  path(); ctx.strokeStyle = g; ctx.lineWidth = R * 0.42; ctx.stroke(); ctx.fillStyle = g; ctx.fill();
+  for (let i = 0; i < 5; i++) { const a = -Math.PI / 2 + i * TAU / 5; for (let k = 0; k < 3; k++) { const r = (0.55 + k * 0.24) * R, bx = Math.cos(a) * r, by = Math.sin(a) * r; // kabartılar
+    ctx.fillStyle = hit ? '#fff' : spin ? '#fff6c0' : '#ffd36b'; ctx.beginPath(); ctx.arc(bx, by, (0.09 - k * 0.015) * R, 0, TAU); ctx.fill(); } }
+  ctx.restore();
+  ctx.fillStyle = hit ? '#fff' : '#ff8f5c'; ctx.beginPath(); ctx.arc(0, 0, R * 0.5, 0, TAU); ctx.fill();
+  angryEyes(-R * 0.06, R * 0.2, R * 0.17, line, stunned, line);
+  ctx.strokeStyle = line; ctx.lineWidth = 3 * S; ctx.beginPath(); ctx.arc(0, R * 0.32, R * 0.12, Math.PI * 1.15, Math.PI * 1.85); ctx.stroke(); // somurtkan ağız
+}
+function drawKilicBaligi(b, R, hit, stunned) { // lacivert sırtlı gümüş karınlı kılıç balığı: uzun kılıç burun, hilal yüzgeç ve kuyruk
+  const line = '#0b1a3a', ang = b.ang || 0, dash = !!(b.zig && b.zig.tele <= 0);
+  let dir = player.x < b.x ? -1 : 1, rot = 0;
+  if (b.zig || b.backT > 0) { dir = Math.cos(ang) < 0 ? -1 : 1; rot = dir < 0 ? ang - Math.PI : ang; }
+  ctx.save(); ctx.rotate(rot); ctx.scale(dir, 1); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+  if (dash) { ctx.strokeStyle = 'rgba(200,230,255,.5)'; ctx.lineWidth = 3 * S; for (let i = 0; i < 3; i++) { const y = (-0.3 + i * 0.3) * R; ctx.beginPath(); ctx.moveTo(-1.3 * R, y); ctx.lineTo(-2.2 * R, y); ctx.stroke(); } } // hız çizgileri
+  const fin = hit ? '#fff' : '#2a4c8a';
+  ctx.fillStyle = fin; ctx.strokeStyle = line; ctx.lineWidth = 3 * S;
+  ctx.beginPath(); ctx.moveTo(-0.95 * R, 0); ctx.quadraticCurveTo(-1.35 * R, -0.3 * R, -1.45 * R, -0.75 * R); ctx.quadraticCurveTo(-1.2 * R, -0.2 * R, -1.15 * R, 0); ctx.quadraticCurveTo(-1.2 * R, 0.2 * R, -1.45 * R, 0.75 * R); ctx.quadraticCurveTo(-1.35 * R, 0.3 * R, -0.95 * R, 0); ctx.closePath(); ctx.fill(); ctx.stroke(); // hilal kuyruk
+  ctx.beginPath(); ctx.moveTo(-0.15 * R, -0.5 * R); ctx.quadraticCurveTo(-0.05 * R, -1.3 * R, -0.55 * R, -1.25 * R); ctx.quadraticCurveTo(-0.35 * R, -0.85 * R, -0.55 * R, -0.45 * R); ctx.closePath(); ctx.fill(); ctx.stroke(); // sırt yüzgeci
+  ctx.fillStyle = hit ? '#fff' : '#dfe8f4'; ctx.beginPath(); ctx.moveTo(0.95 * R, -0.08 * R); ctx.lineTo(2.05 * R, -0.04 * R); ctx.lineTo(0.95 * R, 0.1 * R); ctx.closePath(); ctx.fill(); ctx.stroke(); // kılıç
+  const g = ctx.createLinearGradient(0, -0.55 * R, 0, 0.55 * R); g.addColorStop(0, hit ? '#fff' : '#2f5aa0'); g.addColorStop(0.48, hit ? '#fff' : '#5f8fd0'); g.addColorStop(0.52, hit ? '#fff' : '#c9d6e8'); g.addColorStop(1, hit ? '#fff' : '#eef3fa');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(0, 0, 1.0 * R, 0.55 * R, 0, 0, TAU); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = hit ? '#fff' : 'rgba(150,200,255,.7)'; ctx.lineWidth = 2.5 * S; ctx.beginPath(); ctx.moveTo(-0.8 * R, 0.02 * R); ctx.quadraticCurveTo(0, -0.08 * R, 0.85 * R, 0.02 * R); ctx.stroke(); // yan çizgi
+  ctx.fillStyle = fin; ctx.strokeStyle = line; ctx.lineWidth = 3 * S; ctx.beginPath(); ctx.moveTo(0.1 * R, 0.2 * R); ctx.lineTo(-0.35 * R, 0.62 * R); ctx.lineTo(0.25 * R, 0.38 * R); ctx.closePath(); ctx.fill(); ctx.stroke(); // yan yüzgeç
+  ctx.strokeStyle = line; ctx.lineWidth = 3 * S; ctx.beginPath(); ctx.moveTo(0.62 * R, 0.24 * R); ctx.quadraticCurveTo(0.78 * R, 0.18 * R, 0.92 * R, 0.2 * R); ctx.stroke(); // ağız
+  sideEye(0.55 * R, -0.12 * R, 0.19 * R, 1, line, '#4fc3ff', stunned);
+  ctx.restore();
+}
 // Canavar çizimleri kimliğe göre; yeni canavarın çizimi buraya eklenir: DRAWERS['kimlik'] = (b, R, hit, stunned) => {...}
 const DRAWERS = { puffer: drawPufferBoss, jelly: drawJellyBoss, squid: drawSquidBoss, 'puffer-big': drawPufferBoss, 'jelly-big': drawJellyBoss, 'squid-big': drawSquidBoss,
   kestane: drawKestane, yengec: drawYengec, vatoz: drawVatoz,
   'baca-yengeci': drawBacaYengeci, 'hayalet-denizanasi': drawHayaletDenizanasi, 'iri-fener': drawIriFener,
-  'mayin-yengeci': drawMayinYengeci, 'zirhli-balon': drawZirhliBalon, murekkepci: drawMurekkepci };
+  'mayin-yengeci': drawMayinYengeci, 'zirhli-balon': drawZirhliBalon, murekkepci: drawMurekkepci,
+  'deniz-ati': drawDenizAti, 'deniz-yildizi': drawDenizYildizi, 'kilic-baligi': drawKilicBaligi };
 function drawBoss() {
   const b = boss;
   ctx.save(); ctx.translate(b.x, b.y);
@@ -519,6 +594,30 @@ function drawBig(s) {
     const a = warnA(s.t), g = ctx.createLinearGradient(0, 0, 0, H * 0.5); g.addColorStop(0, `rgba(255,90,60,${a * 0.6})`); g.addColorStop(1, 'rgba(255,90,60,0)');
     ctx.fillStyle = g; ctx.fillRect(s.x - s.w, 0, s.w * 2, H * 0.5);
     ctx.fillStyle = `rgba(255,255,255,${0.6 + 0.3 * Math.sin(s.t * 14)})`; ctx.beginPath(); ctx.moveTo(s.x, 30 * S + safeTopG()); ctx.lineTo(s.x - 9 * S, 14 * S + safeTopG()); ctx.lineTo(s.x + 9 * S, 14 * S + safeTopG()); ctx.closePath(); ctx.fill();
+    return true;
+  }
+  if (s.kind === 'boomer') { // kabarcık bumerang: pembe-beyaz, içinde dönen sarmal
+    ctx.save(); ctx.translate(s.x, s.y); ctx.rotate(s.t * 9 * s.side);
+    ctx.fillStyle = 'rgba(255,200,230,.55)'; ctx.strokeStyle = '#fff0f8'; ctx.lineWidth = 2.5 * S; ctx.beginPath(); ctx.arc(0, 0, s.r, 0, TAU); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = '#ff6fae'; ctx.lineWidth = 3 * S; ctx.beginPath(); for (let a = 0; a < TAU * 1.5; a += 0.3) { const r = a / (TAU * 1.5) * s.r * 0.75; ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); } ctx.stroke();
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(-s.r * 0.4, -s.r * 0.4, s.r * 0.18, 0, TAU); ctx.fill(); ctx.restore();
+    return true;
+  }
+  if (s.kind === 'star') { // yıldız: dururken Okto'ya kesik çizgi (kilit), fırlarken iz
+    if (s.st === 'hold') { ctx.strokeStyle = `rgba(255,140,100,${0.35 + 0.3 * Math.sin(s.ht * 16)})`; ctx.lineWidth = 2.5 * S; ctx.setLineDash([7 * S, 7 * S]); ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(s.x + (s.tx - s.x) * 3, s.y + (s.ty - s.y) * 3); ctx.stroke(); ctx.setLineDash([]);
+      ctx.strokeStyle = 'rgba(255,140,100,.7)'; ctx.lineWidth = 2 * S; ctx.beginPath(); ctx.arc(s.tx, s.ty, 14 * S, 0, TAU); ctx.stroke(); }
+    ctx.save(); ctx.translate(s.x, s.y); ctx.rotate(s.t * (s.st === 'hold' ? 3 : 12));
+    ctx.fillStyle = s.st === 'hold' ? '#fff3c0' : '#ff9a5c'; ctx.strokeStyle = '#6a1a08'; ctx.lineWidth = 2 * S; ctx.lineJoin = 'round';
+    ctx.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? s.r * 0.45 : s.r; ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); } ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore();
+    return true;
+  }
+  if (s.kind === 'zigline') { // kılıç balığının gideceği zikzak yol: kesik kırmızı çizgi ve oklar
+    if (s.t > s.warn) return true;
+    ctx.strokeStyle = `rgba(255,80,90,${warnA(s.t) + 0.25})`; ctx.lineWidth = 5 * S; ctx.setLineDash([14 * S, 9 * S]); ctx.lineCap = 'round';
+    ctx.beginPath(); s.pts.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y))); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = 'rgba(255,255,255,.85)';
+    for (let i = 1; i < s.pts.length; i++) { const a = s.pts[i - 1], p = s.pts[i], m = { x: (a.x + p.x) / 2, y: (a.y + p.y) / 2 }, an = Math.atan2(p.y - a.y, p.x - a.x);
+      ctx.save(); ctx.translate(m.x, m.y); ctx.rotate(an); ctx.beginPath(); ctx.moveTo(10 * S, 0); ctx.lineTo(-7 * S, -8 * S); ctx.lineTo(-7 * S, 8 * S); ctx.closePath(); ctx.fill(); ctx.restore(); }
     return true;
   }
   if (s.kind === 'hbub') { // dikenli kabarcık

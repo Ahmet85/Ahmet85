@@ -374,6 +374,61 @@ register({ // İri Fener Balığı: feneri parlar ve Okto'yu kendine çeker, son
   },
 });
 
+// ---------- s45: her grubun 4. mini canavarı (Claude'un tasarımı) ----------
+register({ // Deniz Atı: kuyruğunu fırıl fırıl döndürür, iki kabarcık bumerang fırlatır; kabarcıklar Okto'nun hizasına kadar
+  // birbirine ters yönde elips çizer ve canavara geri döner (içi ve dışı güvenli, yalnızca yolları tehlikeli)
+  id: 'deniz-ati', name: 'DENİZ ATI', hp: 4, r: 50, restY: 150, color: '#ffb238', contactY: 0.1,
+  tick(b, E, dt) {
+    sway(b, E, 0.22, 0.6, 12);
+    if (b.spinT > 0) { b.spinT -= dt; if (b.spinT <= 0) {
+      const by = b.y - b.r * 0.8, top = E.clamp(E.player.y - 10 * E.S, E.H * 0.16, by - 140 * E.S), ay = (by - top) / 2;
+      const ax = Math.max(E.W * 0.2, Math.min(E.W * 0.38, b.x - 18 * E.S, E.W - b.x - 18 * E.S) + E.W * 0.08), dur = 2.6 - Math.min(0.6, b.lv * 0.1);
+      for (const side of [-1, 1]) E.slams.push({ kind: 'boomer', bx: b.x, by, ax, ay, side, t: 0, warn: 0, dur, r: 15 * E.S, x: b.x, y: by });
+      E.sound.tone(620, 0.25, 'triangle', 0.07, 300); E.sound.noise(0.25, 0.08, 1800); } return; }
+    b.attackT -= dt;
+    if (b.attackT <= 0) { b.attackT = E.interval * 1.25; b.spinT = 0.8; E.floater(b.x, b.y - b.r * 1.6, 'Bumerang!', '#ffd36b'); E.sound.tone(440, 0.7, 'sine', 0.06, 440); }
+  },
+});
+register({ // Dev Deniz Yıldızı: hızla dönüp yelpaze gibi yıldız saçar; yıldızlar havada durur, Okto'nun o anki yerine
+  // kilitlenir (kesik çizgi), sonra kilitlendikleri noktaya doğru fırlar. Kaçmak için çizgiden çekil.
+  id: 'deniz-yildizi', name: 'DEV DENİZ YILDIZI', hp: 4, r: 48, restY: 150, color: '#ff7a45', contactY: 0,
+  tick(b, E, dt) {
+    if (b.rot == null) b.rot = 0;
+    if (b.spinT > 0) { b.rot += dt * 12; b.spinT -= dt; if (b.spinT <= 0) {
+      const n = 5 + Math.min(2, Math.floor(b.lv / 2));
+      for (let i = 0; i < n; i++) { const a = -Math.PI / 2 + (i - (n - 1) / 2) * 0.42, sp = E.rand(260, 300) * E.S;
+        E.slams.push({ kind: 'star', x: b.x, y: b.y - b.r * 0.4, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, t: 0, warn: 0, stopT: 0.55 + i * 0.07, hold: 0.9, r: 13 * E.S, st: 'out', go: (380 + b.lv * 15) * E.S }); }
+      E.sound.tone(900, 0.2, 'square', 0.05, -300); } return; }
+    b.rot += dt * 0.7; sway(b, E, 0.26, 0.5, 8);
+    b.attackT -= dt;
+    if (b.attackT <= 0) { b.attackT = E.interval * 1.3; b.spinT = 0.7; E.floater(b.x, b.y - b.r * 1.6, 'Yıldızlar!', '#ffb08a'); E.sound.tone(300, 0.6, 'sawtooth', 0.05, 500); }
+  },
+});
+register({ // Kılıç Balığı: zikzak yolunu kesik çizgiyle gösterir, sonra o yol boyunca çok hızlı atılır (Okto'nun hizasından geçer),
+  // ardından yerine döner. Çizgilerin arasındaki boşlukta bekle.
+  id: 'kilic-baligi', name: 'KILIÇ BALIĞI', hp: 4, r: 46, restY: 150, color: '#8fc4ff', contactY: 0,
+  tick(b, E, dt) {
+    if (b.zig) { const Z = b.zig;
+      if (Z.tele > 0) { Z.tele -= dt; b.x += Math.sin(b.t * 60) * 1.5 * E.S; if (Z.tele <= 0) E.sound.noise(0.3, 0.12, 1500); return; }
+      const P = Z.pts[Z.i], dx = P.x - b.x, dy = P.y - b.y, d = Math.hypot(dx, dy), step = Z.sp * dt;
+      b.ang = Math.atan2(dy, dx);
+      if (d <= step) { b.x = P.x; b.y = P.y; Z.i++; E.sound.tone(500, 0.12, 'sawtooth', 0.05, -250); if (Z.i >= Z.pts.length) { b.zig = null; b.backT = 1; } }
+      else { b.x += dx / d * step; b.y += dy / d * step; }
+      return; }
+    if (b.backT > 0) { b.backT -= dt; b.y = E.lerp(b.y, E.restY, dt * 2.5); b.ang = E.lerp(b.ang || 0, 0, dt * 5); return; }
+    b.ang = 0; sway(b, E, 0.25, 0.55, 8);
+    b.attackT -= dt;
+    if (b.attackT <= 0) {
+      b.attackT = E.interval * 1.3;
+      const S = E.S, py = E.clamp(E.player.y, E.H * 0.22, E.H * 0.62), s0 = b.x < E.W / 2 ? 1 : -1, X = sd => (sd > 0 ? E.W - b.r : b.r);
+      const pts = [{ x: X(s0), y: py + 55 * S }, { x: X(-s0), y: py - 45 * S }, { x: X(s0), y: py + 70 * S }, { x: E.W / 2, y: E.restY }];
+      b.zig = { tele: 1.1, sp: (640 + b.lv * 20) * S, i: 0, pts };
+      E.slams.push({ kind: 'zigline', pts: [{ x: b.x, y: b.y }].concat(pts.slice(0, 3)), t: 0, warn: 1.1 });
+      E.floater(b.x, b.y - b.r * 1.6, 'Zikzak!', '#8fc4ff'); E.sound.tone(200, 0.9, 'sine', 0.06, 200);
+    }
+  },
+});
+
 // ---------- Örnek (yer tutucu) canavarlar: yalnızca test düzeninde (?plan=grup) görünür ----------
 // Kullanıcının görselleri ve bölüm planı gelince bunların yerini gerçek canavarlar alacak.
 register({

@@ -407,8 +407,46 @@ function drawFx(c, E) {
   }
 }
 
+// ---------- Çizim: yeni halka "inci kabarcık halkası" (s38, test adresinde) ----------
+// Okto'nun çevresinde yarı saydam cam halka; beceriler halkanın üstünde inci gibi parlayan kabarcıklarda.
+// Seçilen kabarcık büyür, altın parlar, adı altında yazar; Okto'dan ona küçük bir ok uzanır. Bekleme: kabarcıkta kararan dilim + saniye.
+let ringStyle = 'klasik';
+function drawRingPearl(c, E) {
+  const h = st.hold; if (!h || !h.open) return;
+  const P = E.player, S = E.S, R = 92 * S, n = st.equipped.length, ANG = slotAng(n);
+  const cx = clamp(P.x, R + 46 * S, E.W - R - 46 * S), cy = clamp(P.y, R + 80 * S, E.H - R - 110 * S), t = E.time || 0;
+  c.save();
+  const vg = c.createRadialGradient(cx, cy, R * 0.6, cx, cy, Math.max(E.W, E.H) * 0.8); vg.addColorStop(0, 'rgba(2,12,34,.15)'); vg.addColorStop(1, 'rgba(2,12,34,.55)');
+  c.fillStyle = vg; c.fillRect(0, 0, E.W, E.H); // kenarlara doğru kararan arka plan
+  c.translate(cx, cy);
+  c.strokeStyle = 'rgba(190,240,255,.28)'; c.lineWidth = 18 * S; c.beginPath(); c.arc(0, 0, R, 0, Math.PI * 2); c.stroke(); // cam halka
+  c.strokeStyle = 'rgba(255,255,255,.55)'; c.lineWidth = 2 * S; c.beginPath(); c.arc(0, 0, R + 9 * S, 0, Math.PI * 2); c.stroke(); c.beginPath(); c.arc(0, 0, R - 9 * S, 0, Math.PI * 2); c.stroke();
+  for (let i = 0; i < 18; i++) { const a = i / 18 * Math.PI * 2 + t * 0.4; c.fillStyle = 'rgba(255,255,255,.35)'; c.beginPath(); c.arc(Math.cos(a) * R, Math.sin(a) * R, 1.8 * S, 0, Math.PI * 2); c.fill(); } // halkada dönen kabarcıklar
+  const hv = h.hover; // Okto'dan seçilen kabarcığa ok
+  if (hv != null && n > 1) { const a = ANG[hv], l = R - 40 * S; c.strokeStyle = 'rgba(255,215,90,.9)'; c.lineWidth = 4 * S; c.lineCap = 'round'; c.beginPath(); c.moveTo(Math.cos(a) * 34 * S, Math.sin(a) * 34 * S); c.lineTo(Math.cos(a) * l, Math.sin(a) * l); c.stroke();
+    c.fillStyle = 'rgba(255,215,90,.95)'; c.beginPath(); c.moveTo(Math.cos(a) * (l + 10 * S), Math.sin(a) * (l + 10 * S)); c.lineTo(Math.cos(a + 0.35) * (l - 6 * S), Math.sin(a + 0.35) * (l - 6 * S)); c.lineTo(Math.cos(a - 0.35) * (l - 6 * S), Math.sin(a - 0.35) * (l - 6 * S)); c.closePath(); c.fill(); }
+  for (let i = 0; i < n; i++) {
+    const a = ANG[i], on = i === hv, id = st.equipped[i], d = byId(id), cdl = st.cd[id] || 0;
+    const x = n === 1 ? 0 : Math.cos(a) * R, y = n === 1 ? -R : Math.sin(a) * R, r = (on ? 40 : 31) * S;
+    if (on) { const g = c.createRadialGradient(x, y, r * 0.6, x, y, r * 1.7); g.addColorStop(0, 'rgba(255,215,90,.55)'); g.addColorStop(1, 'rgba(255,215,90,0)'); c.fillStyle = g; c.beginPath(); c.arc(x, y, r * 1.7, 0, Math.PI * 2); c.fill(); }
+    const g = c.createRadialGradient(x - r * 0.35, y - r * 0.4, r * 0.1, x, y, r); g.addColorStop(0, on ? '#fff6d8' : '#e9f6ff'); g.addColorStop(0.55, on ? '#f3c95a' : '#3c6fa8'); g.addColorStop(1, on ? '#b07a00' : '#16345e');
+    c.fillStyle = g; c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fill();
+    c.strokeStyle = on ? '#fff3c4' : 'rgba(255,255,255,.6)'; c.lineWidth = (on ? 4 : 2.5) * S; c.stroke();
+    c.save(); c.translate(x, y); (ICONS[id] || ICONS.generic)(c, r * 0.72); c.restore();
+    if (cdl > 0) { c.fillStyle = 'rgba(5,15,35,.62)'; c.beginPath(); c.moveTo(x, y); c.arc(x, y, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (cdl / d.cd)); c.closePath(); c.fill();
+      c.fillStyle = '#fff'; c.font = `700 ${16 * S}px Fredoka, sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(Math.ceil(cdl), x, y); }
+    c.fillStyle = 'rgba(255,255,255,.75)'; c.beginPath(); c.ellipse(x - r * 0.35, y - r * 0.45, r * 0.22, r * 0.11, -0.5, 0, Math.PI * 2); c.fill(); // inci parıltısı
+    if (on) { // ad etiketi
+      c.font = `700 ${13 * S}px Fredoka, sans-serif`; const label = d.name, tw = c.measureText(label).width + 18 * S, ly = y + r + 16 * S;
+      c.fillStyle = 'rgba(40,24,0,.85)'; c.beginPath(); c.roundRect(x - tw / 2, ly - 11 * S, tw, 22 * S, 11 * S); c.fill(); c.strokeStyle = '#ffd36b'; c.lineWidth = 1.5 * S; c.stroke();
+      c.fillStyle = '#ffe9a8'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(label, x, ly);
+    }
+  }
+  c.restore();
+}
 // ---------- Çizim: halka (Okto'nun çevresinde) ----------
 function drawRing(c, E) {
+  if (ringStyle === 'inci') return drawRingPearl(c, E);
   const h = st.hold; if (!h || !h.open) return;
   const P = E.player, S = E.S, R0 = 36 * S, R1 = 104 * S;
   c.save();
@@ -473,6 +511,7 @@ window.OktoSkills = {
   refill() { st.cd = {}; }, // deniz yıldızı: bütün bekleme süreleri dolar
   setEquipped(list) { if (Array.isArray(list) && list.length === 3) st.equipped = list.slice(); },
   select(i) { st.sel = clamp(i | 0, 0, 2); },
+  setRingStyle(v) { ringStyle = v === 'inci' ? 'inci' : 'klasik'; }, get ringStyle() { return ringStyle; },
   lights, down, move, up, cancel, activate, update, drawFx, drawRing, drawButton, shielding, timeScale, reset,
 };
 })();

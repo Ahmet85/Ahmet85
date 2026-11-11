@@ -18,7 +18,7 @@ Tasarım brifi: `docs/BRIF.md` ("OKTO – UNDERWATER DESCENT", kullanıcının 1
 - Dal: `claude/octopus-mobile-game-0is63u` → GitHub Pages: https://ahmet85.github.io/Ahmet85/
 - Aynı dalda başka bir oturumun `ritim/` klasörü var; **ona dokunma**, push öncesi `git fetch` + `git rebase` yap.
 - **Her yayında sürümü artır:** `index.html` içindeki tüm `?v=` ekleri, menüdeki `s<sürüm>` etiketi ve `sw.js` içindeki
-  `okto-v<sürüm>` birlikte. Kullanıcı sağ alttaki `s<sürüm>` ile güncellemenin geldiğini kontrol ediyor. Son sürüm: **s37**.
+  `okto-v<sürüm>` birlikte. Kullanıcı sağ alttaki `s<sürüm>` ile güncellemenin geldiğini kontrol ediyor. Son sürüm: **s38**.
 - Telefonda güncelleme: uygulamayı kapat-aç (gerekirse iki kez). Açılış görseli/simge değişirse sil-yeniden kur gerekir.
 - **Açılış görseli (s27):** Okto'suz sahne (oyuncunun rengi bilinemediği için); Okto oyunda oyuncunun renginle kumdan yükselir
   (`title.js` opts.intro). Görseller `preview/splash-gen.html` ile üretilir. Silip yeniden kurmada kayıt silinebilir:
@@ -74,6 +74,9 @@ Tasarım brifi: `docs/BRIF.md` ("OKTO – UNDERWATER DESCENT", kullanıcının 1
 - s27: beceri düğmesi mürekkep düğmesinin yerini aldı. Mürekkep Yelpazesi canavara eski güdümlü mürekkep topunu da atar
   (başta tek beceriyle 1. canavar ~3 basışta yenilir). Deniz yıldızı bütün bekleme sürelerini doldurur. İlk açılışta en iyi puan
   Kaşif Puanı sayılır. Eski mürekkep düğmesi yalnızca test adresinde: `?murekkep` (eski s21 ile birebir aynılık testi bununla yapılır).
+- **s38: yeni halka görünümü "inci kabarcık halkası"** (Claude'un tasarımı; kullanıcının referans görseli hiç ulaşmadı): cam halka,
+  beceriler parlayan inci kabarcıklarda, seçilen büyür + altın parlar + ad etiketi, Okto'dan oka, bekleme kararan dilim + saniye.
+  Yalnızca test adresinde (`SK.setRingStyle('inci')`); normal oyunda klasik halka. Kullanıcı beğenirse normal oyuna alınacak.
 - **s28: 12 becerinin hepsi çalışıyor.** "Küçük düşman" = köpekbalığı ve canavarlar dışındakiler.
   Dokunaç Darbesi (5 sn, 4 kısa darbe iter+1,2 sn sersem, canavara 1) · Akıntı İtişi (6 sn, 4 geniş dalga savurur, mermileri siler) ·
   Kabarcık Kapanı (7 sn, 4 kabarcık ilk küçük düşmanı 3 sn hapseder) · Fener Nabzı (8 sn, 4,5 sn dört huzme; karanlık mağarayı

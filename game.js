@@ -17,6 +17,7 @@ const TEST = (() => {
 // Beceri halkası (s27'den beri normal oyunda; kullanıcı onayladı): mürekkep düğmesinin yerini beceri düğmesi aldı.
 // Eski mürekkep düğmesi yalnızca test adresinde: ?murekkep
 const SK = !TEST.oldInk && window.OktoSkills ? window.OktoSkills : null;
+if (SK && TEST.on) SK.setRingStyle('inci'); // s38: yeni halka görünümü önce test adresinde (normal oyunda klasik halka)
 if (TEST.on && TEST.plan && window.OktoCampaign) OktoCampaign.setMode(TEST.plan);
 const store = {
   get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } },

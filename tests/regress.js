@@ -230,6 +230,7 @@ function serve() {
       await close();
     }
     const { page, errors, close } = await open('?beceri&xp=900', false);
+    ok(await page.evaluate(() => window.__okto.SK.ringStyle) === 'inci', 'test adresinde yeni inci kabarcık halkası');
     ok(JSON.stringify(await page.evaluate(() => window.__okto.SK.state.equipped)) === '["inkFan","pearlShot","shieldArcs"]', '900 puanda üç beceri açık ve kuşanılı');
     await page.evaluate(() => window.__okto.startGame(1)); await page.waitForTimeout(2500);
     const bb = await page.locator('#inkBtn').boundingBox(), bx = bb.x + bb.width / 2, by = bb.y + bb.height / 2;
@@ -257,6 +258,7 @@ function serve() {
     const { page, errors, close } = await open('', false);
     ok(await page.isVisible('#skillBtn'), 'menüde Beceriler düğmesi');
     ok(await page.evaluate(() => !!window.__okto.SK), 'beceri sistemi normal oyunda açık');
+    ok(await page.evaluate(() => window.__okto.SK.ringStyle) === 'klasik', 'normal oyunda halka değişmedi (klasik)');
     await page.evaluate(() => { const P = window.__okto.Profile.data; P.wallet = 123; P.palette = 'galaxy'; });
     const code = await page.evaluate(() => { document.getElementById('helpBtn').click(); document.getElementById('saveCopy').click(); return document.getElementById('saveBox').value; });
     ok(code.startsWith('OKTO-'), 'kayıt kodu üretildi');

@@ -1609,7 +1609,7 @@ let edgeDue = true;
 function updateEdge() { // şerit rengi sahnenin zemin renginden hesaplanır (anlık efektler etkilemez)
   edgeDue = false;
   const open = id => !$(id).classList.contains('hidden');
-  if (open('shop') || open('missions') || open('skills')) return setEdgeColor('#06223f'); // panellerin alt rengi
+  if (open('shop') || open('missions') || open('skills') || open('help')) return setEdgeColor('#06223f'); // panellerin alt rengi
   let c;
   if (state === 'menu') c = [173, 139, 86]; // açılış sahnesinin kararmış kum rengi (ölçülmüş)
   else {

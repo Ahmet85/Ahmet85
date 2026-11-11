@@ -18,7 +18,7 @@ Tasarım brifi: `docs/BRIF.md` ("OKTO – UNDERWATER DESCENT", kullanıcının 1
 - Dal: `claude/octopus-mobile-game-0is63u` → GitHub Pages: https://ahmet85.github.io/Ahmet85/
 - Aynı dalda başka bir oturumun `ritim/` klasörü var; **ona dokunma**, push öncesi `git fetch` + `git rebase` yap.
 - **Her yayında sürümü artır:** `index.html` içindeki tüm `?v=` ekleri, menüdeki `s<sürüm>` etiketi ve `sw.js` içindeki
-  `okto-v<sürüm>` birlikte. Kullanıcı sağ alttaki `s<sürüm>` ile güncellemenin geldiğini kontrol ediyor. Son sürüm: **s38**.
+  `okto-v<sürüm>` birlikte. Kullanıcı sağ alttaki `s<sürüm>` ile güncellemenin geldiğini kontrol ediyor. Son sürüm: **s39**.
 - Telefonda güncelleme: uygulamayı kapat-aç (gerekirse iki kez). Açılış görseli/simge değişirse sil-yeniden kur gerekir.
 - **Açılış görseli (s27):** Okto'suz sahne (oyuncunun rengi bilinemediği için); Okto oyunda oyuncunun renginle kumdan yükselir
   (`title.js` opts.intro). Görseller `preview/splash-gen.html` ile üretilir. Silip yeniden kurmada kayıt silinebilir:
@@ -90,6 +90,8 @@ Tasarım brifi: `docs/BRIF.md` ("OKTO – UNDERWATER DESCENT", kullanıcının 1
   "gerçek ekran yüksekliği" denemeleri titreme ve kaymaya yol açtı.
 - En alttaki ana ekran çubuğu şeridi oyuna verilmiyor; rengi **hesaplanarak** (`updateEdge`) sahne zeminine eşitlenir.
   Ekrandan piksel okuma yöntemi (inci, yıldırım geçince) şeridi boyuyordu, bırakıldı.
+- s39: panel açılıp kapanınca alt şerit rengi **anında** güncellenir (MutationObserver); eskiden 0,5 sn gecikme kum rengini gösteriyordu.
+  Kullanıcıya telefon adımları: `docs/TELEFON-ADIMLARI.md` (pembe Okto için silip yeniden kurma + kayıt kodu).
 - Çentik payı (`safeTop`) ilk açılışta geç gelebilir: gizli `#safeProbe` kutusundan yarım saniyede bir okunur.
 - Arka plana geçerken **AudioContext'i askıya alma** (bip sesi yaptı): müziği kısa sönümle durdur, dönünce yeniden başlat.
 - Sarsıntı (`shake`) her durumda sönmeli; yalnızca oyun ve girdap sırasında uygulanır (yoksa ölünce ekran titrer).
@@ -123,6 +125,8 @@ Tasarım brifi: `docs/BRIF.md` ("OKTO – UNDERWATER DESCENT", kullanıcının 1
 | `docs/MAGAZA.md`, `package.json`, `capacitor.config.json`, `scripts/` | Mağaza paketleme (Capacitor) |
 | `docs/REFERANSLAR.md` | 19 referansın tek tek değerlendirmesi ve sahneleri (`docs/referanslar/`) |
 | `YAPILACAKLAR.md` | Yapılacaklar ve fikir havuzu |
+| `docs/TELEFON-ADIMLARI.md` | Kullanıcının telefonda yapacağı adımlar (açılış görseli için yeniden kurma, alt şerit kontrolü) |
+| `docs/canavarlar/` | Kullanıcının canavar PNG'leri (çizimlerin modeli) |
 
 ## Brif karşılaştırması ve eksikler (s21)
 **Tamam:** dikey dalış, aşağıdan gelen engeller, derinlikle kararan su, Okto ve kostümleri, Dev Balon Balığı ve büyük mor

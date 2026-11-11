@@ -1721,6 +1721,9 @@ function stepFrame(now, dt) {
   if (state !== 'pause' && state !== 'menu') updateAmbient(dt, scroll);
 }
 let edgeDue = true;
+// Panel açılıp kapanınca alt şerit rengi hemen güncellensin (eskiden en geç 0,5 sn sonra güncelleniyordu; arada kum rengi görünüyordu)
+try { const mo = new MutationObserver(() => { edgeDue = true; try { updateEdge(); } catch {} });
+  for (const el of document.querySelectorAll('.overlay, #menu')) mo.observe(el, { attributes: true, attributeFilter: ['class'] }); } catch {}
 function updateEdge() { // şerit rengi sahnenin zemin renginden hesaplanır (anlık efektler etkilemez)
   edgeDue = false;
   const open = id => !$(id).classList.contains('hidden');

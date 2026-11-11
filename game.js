@@ -282,6 +282,7 @@ const bounds = () => ({ x0: player.r, x1: W - player.r, y0: player.r + 50 * S + 
 cvs.addEventListener('pointerdown', e => {
   Sound.init();
   if (state === 'cinema') { if (cine && cine.t > 1.2) cine.t = Math.max(cine.t, cine.dur - 0.5); return; } // sinematiği geç
+  if (state === 'map') { mapTap(e.clientX, e.clientY); return; } // haritada adaya dokunma
   if (state === 'menu') {
     if (hitPlay(e.clientX, e.clientY)) { startGame(); return; }
     const T = window.OktoTitle, r = T && (T.down ? T.down(e.clientX, e.clientY, time) : T.tap(e.clientX, e.clientY, time));
@@ -370,8 +371,11 @@ document.addEventListener('pointerdown', e => { if (state === 'menu' && !Sound.m
 document.addEventListener('keydown', () => { if (state === 'menu' && !Sound.muted) menuMusic(); }, true);
 function startLevel() {
   if (TEST.level) return TEST.level; const D = Profile.data, n = clamp(D.startLevel || 1, 1, D.checkpoint || 1);
-  return OktoCampaign.mode === 'grup' ? OktoCampaign.migrate(n) : n; // grup düzeninde eski (klasik) kayıt noktası yeni düzene taşınır
+  if (OktoCampaign.mode === 'grup') return D.gstart || OktoCampaign.migrate(n); // grup düzeni: kendi kaydı; yoksa eski (klasik) kayıt taşınır
+  return n;
 }
+// grup düzeninde açılmış en büyük bölüm (harita için): kendi kaydı ile taşınmış eski kayıttan büyüğü
+function gUnlocked() { const D = Profile.data; return Math.max(D.gcheck || 1, OktoCampaign.migrate(clamp(D.checkpoint || 1, 1, 999))); }
 function refreshMenu() {
   const lp = $('levelPick'), cp = Profile.data.checkpoint || 1, sl = startLevel();
   lp.classList.toggle('hidden', cp < 2);
@@ -379,7 +383,7 @@ function refreshMenu() {
   $('menuBest').textContent = `⚪ ${Profile.data.wallet} inci` + (Profile.data.best > 0 ? `   🏆 ${Profile.data.best}` : '');
   $('missionBadge').classList.toggle('hidden', !Missions.claimable());
   if (TEST.on && OktoCampaign.mode === 'grup') { lp.classList.remove('hidden'); const L = levelInfo(startLevel()); lp.innerHTML = `▶ Bölüm ${startLevel()} · ${L.name} <small>(eski kayıt: klasik ${clamp(Profile.data.startLevel || 1, 1, Profile.data.checkpoint || 1)})</small>`; }
-  show($('skillBtn'), !!SK);
+  show($('skillBtn'), !!SK); show($('mapBtn'), OktoCampaign.mode === 'grup' && !!window.OktoMap);
   if (SK) { const P = skProf(); $('skillBadge').classList.toggle('hidden', SK.unlockedIds(P.xp).length <= (P.seen || 1)); }
 }
 function layoutMenuButtons() { // mağaza ve görev düğmeleri oyna düğmesinin iki yanında
@@ -388,6 +392,7 @@ function layoutMenuButtons() { // mağaza ve görev düğmeleri oyna düğmesini
     const el = $(id); if (!el) continue;
     el.style.left = (W / 2 + sx * dx - 30) + 'px'; el.style.top = (y - 30) + 'px';
   }
+  const mb = $('mapBtn'); if (mb) { mb.style.left = (W / 2 + dx - 30) + 'px'; mb.style.top = (y - 30 - 96 * u) + 'px'; } // harita: görevlerin üstünde
   const sb = $('skillBtn'); if (sb) { sb.style.left = (W / 2 - dx - 30) + 'px'; sb.style.top = (y - 30 - 96 * u) + 'px'; } // beceriler: mağazanın üstünde
   const lp = $('levelPick'); if (lp) lp.style.top = (y - 32 * u - 50) + 'px';
 }
@@ -423,7 +428,7 @@ $('saveLoad').onclick = () => {
   else $('saveMsg').textContent = 'Bu kod okunamadı. Tamamını kopyaladığından emin ol.';
 };
 $('againBtn').onclick = () => startGame(levelN);
-$('clearNext').onclick = () => startTransition();
+$('clearNext').onclick = () => (OktoCampaign.mode === 'grup' && window.OktoMap ? openMap('progress') : startTransition());
 $('levelPick').onclick = () => { const D = Profile.data, cp = D.checkpoint || 1; D.startLevel = startLevel() >= cp ? 1 : startLevel() + 1; Profile.save(); refreshMenu(); };
 $('homeBtn').onclick = () => toMenu();
 $('quitBtn').onclick = () => { bankRun(); toMenu(); };
@@ -1143,6 +1148,34 @@ function bigVictory() {
   const D = Profile.data; D.trophies = D.trophies || {}; D.trophies[boss.kind] = (D.trophies[boss.kind] || 0) + 1; Profile.save();
 }
 
+// ---------- Bölüm haritası (grup düzeni; map.js) ----------
+// 'progress': bölüm sonu kartından sonra açılır, Okto bir sonraki adaya yüzer, sonra Dal! → girdap
+// 'menu': menüden açılır; açık bir adaya dokununca o bölüm başlar; önceki/sonraki grup düğmeleri
+let mapV = null;
+function openMap(mode, group) {
+  const prog = mode === 'progress', groups = OktoCampaign.GROUPS.length;
+  const cur = prog ? levelN + 1 : startLevel(), g = group != null ? group : OktoMap.groupOf(prog ? levelN : cur);
+  mapV = { mode, group: g % groups, current: cur, unlocked: Math.max(gUnlocked(), cur), swim: prog ? { from: levelN, to: levelN + 1, t: 0 } : null };
+  state = 'map'; drag.active = false; window.OktoMusic && prog && OktoMusic.stop(0.6);
+  for (const el of [ui.clear, ui.menu, ui.ink, ui.pauseBtn, ui.mute]) show(el, false);
+  show($('mapUi'), true); show($('mapGo'), false); show($('mapClose'), !prog); show($('mapPrev'), !prog); show($('mapNext'), !prog);
+  if (prog) Sound.tone(500, 0.6, 'sine', 0.05, 300);
+}
+function closeMap() { show($('mapUi'), false); mapV = null; }
+function mapGo() { if (!mapV) return; closeMap(); startTransition(); } // haritadan girdaba
+function mapTap(x, y) {
+  if (!mapV) return;
+  const h = OktoMap.hit(x, y); if (!h) return;
+  if (h.locked) { Sound.tone(200, 0.12, 'square', 0.05); return; }
+  if (mapV.mode === 'progress') { if (h.n === mapV.current && !(mapV.swim && mapV.swim.t < 1)) mapGo(); return; }
+  closeMap(); startGame(h.n); // menüden: açık adaya dokununca o bölüm başlar
+}
+$('mapGo').onclick = () => mapGo();
+$('mapClose').onclick = () => { closeMap(); toMenu(); };
+$('mapPrev').onclick = () => { if (mapV) mapV.group = (mapV.group + OktoCampaign.GROUPS.length - 1) % OktoCampaign.GROUPS.length; };
+$('mapNext').onclick = () => { if (mapV) mapV.group = (mapV.group + 1) % OktoCampaign.GROUPS.length; };
+$('mapBtn').onclick = () => { if (OktoCampaign.mode === 'grup' && window.OktoMap) openMap('menu'); };
+
 // ---------- Bölüm sonu: özet kartı ve girdap geçişi ----------
 let trans = null;
 function levelClear() {
@@ -1156,7 +1189,9 @@ function levelClear() {
   const reward = 10 + 5 * n + stars * 10;
   bonusPearls += reward;
   const D = Profile.data;
-  D.checkpoint = Math.max(D.checkpoint || 1, n + 1); D.startLevel = n + 1; Profile.save();
+  if (OktoCampaign.mode === 'grup') { D.gcheck = Math.max(gUnlocked(), n + 1); D.gstart = n + 1; } // grup düzeni kendi kaydını tutar
+  else { D.checkpoint = Math.max(D.checkpoint || 1, n + 1); D.startLevel = n + 1; }
+  Profile.save();
   const LI = levelInfo(n), bigWin = LI.arena;
   $('clTitle').textContent = bigWin ? `${LI.groupName} Tamamlandı!` : `Bölüm ${n} Tamamlandı!`;
   $('clName').textContent = bigWin ? `Büyük canavar yenildi · Kupa kazandın` : LI.name;
@@ -1169,7 +1204,7 @@ function levelClear() {
   setTimeout(() => { if (state === 'clear') show(ui.clear, true); }, 400);
 }
 function startTransition() {
-  show(ui.clear, false);
+  show(ui.clear, false); show($('mapUi'), false); mapV = null;
   state = 'transition';
   trans = { t: 0, fx: player.x, fy: player.y, switched: false };
   Sound.vortex();
@@ -1710,6 +1745,7 @@ function stepFrame(now, dt) {
   else if (state === 'cinema') { updateCinema(dt); updateFx(dt); for (const q of particles) { q.x += q.vx * dt; q.y += q.vy * dt; q.life -= q.decay * dt; } particles = particles.filter(q => q.life > 0); }
   else if (state === 'transition') { updateTransition(dt); updateFx(dt); for (const q of particles) { q.x += q.vx * dt; q.y += q.vy * dt; q.life -= q.decay * dt; } particles = particles.filter(q => q.life > 0); }
   else if (state === 'clear') { time += dt; updateFx(dt); }
+  else if (state === 'map') { time += dt; if (mapV && mapV.swim && mapV.swim.t < 1) { mapV.swim.t += dt / 1.6; if (mapV.swim.t >= 1) { show($('mapGo'), true); Sound.tone(880, 0.15, 'triangle', 0.06, 200, 0, true); } } }
   else if (state === 'over') {
     time += dt;
     for (const q of particles) { q.x += q.vx * dt; q.y += q.vy * dt; q.life -= q.decay * dt; }
@@ -1728,6 +1764,7 @@ function updateEdge() { // şerit rengi sahnenin zemin renginden hesaplanır (an
   edgeDue = false;
   const open = id => !$(id).classList.contains('hidden');
   if (open('shop') || open('missions') || open('skills') || open('help')) return setEdgeColor('#06223f'); // panellerin alt rengi
+  if (state === 'map' && mapV && window.OktoMap) return setEdgeColor(OktoMap.THEMES[mapV.group % OktoMap.THEMES.length].bot); // haritanın alt rengi
   let c;
   if (state === 'menu') c = [173, 139, 86]; // açılış sahnesinin kararmış kum rengi (ölçülmüş)
   else {
@@ -1742,7 +1779,8 @@ function drawFrame() {
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   ctx.save();
   if (shake > 0 && (state === 'play' || state === 'transition' || state === 'cinema')) ctx.translate(rand(-shake, shake), rand(-shake, shake));
-  if (state === 'menu' && window.OktoTitle) OktoTitle.draw(ctx, W, H, time, Object.assign(look(), { top: safeTop, intro: (performance.now() - BOOT) / 750 }));
+  if (state === 'map' && mapV && window.OktoMap) OktoMap.draw(ctx, { W, H, FONT, time, top: safeTop, group: mapV.group, unlocked: mapV.unlocked, current: mapV.current, swim: mapV.swim, look: look() });
+  else if (state === 'menu' && window.OktoTitle) OktoTitle.draw(ctx, W, H, time, Object.assign(look(), { top: safeTop, intro: (performance.now() - BOOT) / 750 }));
   else {
     drawBackground();
     drawWorldBack();
@@ -1785,7 +1823,7 @@ requestAnimationFrame(frame);
 // Test/hata ayıklama için
 window.__okto = {
   get state() { return state; }, get score() { return score; }, get depth() { return depth; }, set depth(v) { depth = v; },
-  TLOG, tlogText, step: dt => stepFrame(0, dt), SK, draw: () => drawFrame(), levelInfo: n => levelInfo(n), get cine() { return cine; }, get victory() { return victory; }, TEST,
+  get mapV() { return mapV; }, openMap, mapTap, TLOG, tlogText, step: dt => stepFrame(0, dt), SK, draw: () => drawFrame(), levelInfo: n => levelInfo(n), get cine() { return cine; }, get victory() { return victory; }, TEST,
   get lives() { return lives; }, diff: () => diff(), get safeTop() { return safeTop; }, get rocks() { return rocks; }, get zoneName() { return zone; }, setZone: z => { plan = [{ type: 'open', a: 0, b: depth + 1 }, { type: z, a: depth + 1, b: depth + 200 }, { type: 'open', a: depth + 200, b: 1e6 }]; }, rockStats: () => ({ onScreen: rocks.filter(onScreen).length, all: rocks.length }), corridorNow: () => { let worst = 1e9; for (let y = 0; y < H; y += 4) worst = Math.min(worst, widestGap(blockedAt(y, rocks))); return worst; }, get plan() { return plan; }, get zone() { return zone; }, get shake() { return shake; }, set lives(v) { lives = v; }, set invuln(v) { invuln = v; }, get boss() { return boss; }, get slams() { return slams; }, get tier() { return tier; }, get levelN() { return levelN; }, get phase() { return phase; }, damageBoss, startTransition,
   Sound, TIERS, startGame, useInk, lightBomb: () => lightBomb(player.x, player.y), get entities() { return entities; }, get player() { return player; }, get target() { return target; },
   Profile, Missions, spawnGift: () => entities.push({ type: 'gift', x: player.x, y: player.y + 70 * S, r: 14 * S, t: 0, hue: 330 }), spawnGlow: () => entities.push({ type: 'glow', x: player.x, y: player.y + 80 * S, r: 15 * S, t: 0 }),

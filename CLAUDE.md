@@ -18,7 +18,7 @@ Tasarım brifi: `docs/BRIF.md` ("OKTO – UNDERWATER DESCENT", kullanıcının 1
 - Dal: `claude/octopus-mobile-game-0is63u` → GitHub Pages: https://ahmet85.github.io/Ahmet85/
 - Aynı dalda başka bir oturumun `ritim/` klasörü var; **ona dokunma**, push öncesi `git fetch` + `git rebase` yap.
 - **Her yayında sürümü artır:** `index.html` içindeki tüm `?v=` ekleri, menüdeki `s<sürüm>` etiketi ve `sw.js` içindeki
-  `okto-v<sürüm>` birlikte. Kullanıcı sağ alttaki `s<sürüm>` ile güncellemenin geldiğini kontrol ediyor. Son sürüm: **s41**.
+  `okto-v<sürüm>` birlikte. Kullanıcı sağ alttaki `s<sürüm>` ile güncellemenin geldiğini kontrol ediyor. Son sürüm: **s42**.
 - Telefonda güncelleme: uygulamayı kapat-aç (gerekirse iki kez). Açılış görseli/simge değişirse sil-yeniden kur gerekir.
 - **Açılış görseli (s27):** Okto'suz sahne (oyuncunun rengi bilinemediği için); Okto oyunda oyuncunun renginle kumdan yükselir
   (`title.js` opts.intro). Görseller `preview/splash-gen.html` ile üretilir. Silip yeniden kurmada kayıt silinebilir:
@@ -61,6 +61,13 @@ Tasarım brifi: `docs/BRIF.md` ("OKTO – UNDERWATER DESCENT", kullanıcının 1
   saldırılar arası süre kısalır (~4,0→3,5 sn; 3,7→3,0; 3,4→2,7).
   **s37: Alacakaranlık (`?plan=grup&bolum=5`) ve Karanlık Derinlikler (`bolum=9`) test adresinde baştan sona oynanıyor** (3 mini →
   sinematik → büyük canavar → kupa kartı; test kaydı 4 karşılaşmayı tutar; regress 5d).
+  **s42: bölüm haritası** (`map.js`, kullanıcının "Güneşli Sular" görseli model alınarak kodla çizildi; yalnızca grup düzeninde):
+  üstte grup adı + derinlik; 3 ortam adası (ortama göre süs: resif mercanları, kanyon sütunları, akıntı girdabı, baca dumanı, batık
+  tahta, mayınlar, mağara kemeri, yosun) + mini canavar + ad etiketi; altta büyük canavar adası (ad + derinlik); noktalı yol; en altta
+  sonraki grup + ok. Grup renkleri: açık mavi / lacivert-mor / koyu. Bitenler tikli, şu anki ada pembe parlar + Okto üstünde,
+  açılmamışlar soluk + kilit. Bölüm sonu kartı → harita → Okto yüzer → Dal! → girdap. Menüde Harita: açık adaya dokun → o bölüm.
+  Grup düzeni kendi kaydını tutar (`D.gcheck`, `D.gstart`; eskiden klasik `checkpoint`'i bozuyordu). s42 düzeltme: `campaign.js`'te
+  s31'den beri bir yorum satırı `zones/env/intro`'yu yutuyordu (grup bölümlerinin ortamı, su rengi, sinematik yazısı); düzeldi + test.
   Kullanıcı pilotu onaylarsa ilk grup asıl oyuna alınacak; diğer gruplar pilotun ardından.
 
 ## Beceri halkası (s24 deneme → **s27'den beri normal oyunda**, kullanıcı onayladı)
@@ -112,6 +119,7 @@ Tasarım brifi: `docs/BRIF.md` ("OKTO – UNDERWATER DESCENT", kullanıcının 1
 | `boss-ai.js` | Canavar sistemi: tanımlar (`OktoBossAI.register`), ortak saldırı kütüphanesi, can eşiğiyle aşamalar, büyük/mini |
 | `campaign.js` | Bölüm düzeni: `klasik` (varsayılan, s21) ve `grup` (3 bölüm + mini canavar, sonra büyük canavar; TASLAK) |
 | `cinema.js` | Büyük canavar sinematik girişi ve büyük zafer kutlaması |
+| `map.js` | Bölüm haritası (grup düzeni): adalar, ilerleme, Okto'nun yüzmesi, dokunma |
 | `skills.js` | Beceri halkası: 12 beceri (mantık, efektler, simgeler), halka girdisi, açılma (Kaşif Puanı), düğme ve halka çizimi |
 | `tests/regress.js` | Gerileme testleri (`node tests/regress.js`): her yayından önce çalıştır |
 | `yedek/s21/` | Yeni altyapıdan önceki s21'in oynanabilir yedeği (dokunma) |

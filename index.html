@@ -11,16 +11,16 @@
 <title>Okto: Derinlerin Kaşifi</title>
 <link rel="manifest" href="manifest.json">
 <!-- iPhone açılış görselleri: beyaz flaş yerine menünün ilk karesi görünür -->
-<link rel="apple-touch-startup-image" media="screen and (device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/splash-1170x2532.png?v=41">
-<link rel="apple-touch-startup-image" media="screen and (device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/splash-1179x2556.png?v=41">
-<link rel="apple-touch-startup-image" media="screen and (device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/splash-1290x2796.png?v=41">
-<link rel="apple-touch-startup-image" media="screen and (device-width: 402px) and (device-height: 874px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/splash-1206x2622.png?v=41">
-<link rel="apple-touch-startup-image" media="screen and (device-width: 440px) and (device-height: 956px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/splash-1320x2868.png?v=41">
-<link rel="apple-touch-startup-image" media="screen and (device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/splash-1284x2778.png?v=41">
-<link rel="apple-touch-startup-image" media="screen and (device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/splash-1125x2436.png?v=41">
-<link rel="apple-touch-startup-image" media="screen and (device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/splash-1242x2688.png?v=41">
-<link rel="apple-touch-startup-image" media="screen and (device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="splash/splash-828x1792.png?v=41">
-<link rel="apple-touch-startup-image" media="screen and (device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="splash/splash-750x1334.png?v=41">
+<link rel="apple-touch-startup-image" media="screen and (device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/splash-1170x2532.png?v=42">
+<link rel="apple-touch-startup-image" media="screen and (device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/splash-1179x2556.png?v=42">
+<link rel="apple-touch-startup-image" media="screen and (device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/splash-1290x2796.png?v=42">
+<link rel="apple-touch-startup-image" media="screen and (device-width: 402px) and (device-height: 874px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/splash-1206x2622.png?v=42">
+<link rel="apple-touch-startup-image" media="screen and (device-width: 440px) and (device-height: 956px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/splash-1320x2868.png?v=42">
+<link rel="apple-touch-startup-image" media="screen and (device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/splash-1284x2778.png?v=42">
+<link rel="apple-touch-startup-image" media="screen and (device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/splash-1125x2436.png?v=42">
+<link rel="apple-touch-startup-image" media="screen and (device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/splash-1242x2688.png?v=42">
+<link rel="apple-touch-startup-image" media="screen and (device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="splash/splash-828x1792.png?v=42">
+<link rel="apple-touch-startup-image" media="screen and (device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="splash/splash-750x1334.png?v=42">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>
@@ -35,6 +35,13 @@
     padding:max(24px,env(safe-area-inset-top)) 20px max(24px,env(safe-area-inset-bottom)); text-align:center;
     background:radial-gradient(ellipse at center, rgba(4,33,61,.55), rgba(2,12,26,.85)); backdrop-filter:blur(2px); z-index:5; }
   .hidden { display:none !important; }
+  /* Bölüm haritası düğmeleri: kapat sağ üstte, grup okları alt köşelerde, Dal! sağ altta (yazılarla çakışmaz) */
+  #mapUi { position:fixed; inset:0; z-index:4; pointer-events:none; }
+  #mapUi button { pointer-events:auto; position:absolute; }
+  #mapClose { top:calc(max(10px,env(safe-area-inset-top)) + 4px); right:12px; }
+  .mapNav { width:46px; height:46px; border-radius:50%; border:2px solid rgba(255,255,255,.6); background:rgba(0,0,0,.3); color:#fff; font:700 28px/1 Fredoka,sans-serif; bottom:calc(max(12px,env(safe-area-inset-bottom)) + 8px); }
+  #mapPrev { left:14px; } #mapNext { right:14px; }
+  #mapGo { right:14px; bottom:calc(max(12px,env(safe-area-inset-bottom)) + 8px); padding:12px 22px; font-size:20px; animation:pulse .7s infinite alternate; }
   /* Beceriler paneli (deneme) */
   #skills { z-index:6; }
   .xpbar { height:14px; border-radius:7px; background:rgba(0,0,0,.35); overflow:hidden; margin-top:6px; }
@@ -154,9 +161,10 @@
   <button id="levelPick" class="hidden">▶ Bölüm 2'den başla</button>
   <button id="shopBtn" class="roundBtn" aria-label="Mağaza">🛍️<span>Mağaza</span></button>
   <button id="skillBtn" class="roundBtn hidden" aria-label="Beceriler">✨<span>Beceriler</span><b id="skillBadge" class="badge hidden">!</b></button>
+  <button id="mapBtn" class="roundBtn hidden" aria-label="Harita">🗺️<span>Harita</span></button>
   <button id="missionBtn" class="roundBtn" aria-label="Görevler">📋<span>Görevler</span><b id="missionBadge" class="badge hidden">!</b></button>
   <div id="menuBest" class="best"></div>
-  <div id="ver" class="ver">s41</div>
+  <div id="ver" class="ver">s42</div>
 </div>
 
 <div id="shop" class="overlay panel hidden">
@@ -236,6 +244,13 @@
   </div>
 </div>
 
+<div id="mapUi" class="hidden">
+  <button id="mapClose" class="x" aria-label="Kapat">✕</button>
+  <button id="mapPrev" class="mapNav" aria-label="Önceki grup">‹</button>
+  <button id="mapNext" class="mapNav" aria-label="Sonraki grup">›</button>
+  <button id="mapGo" class="btn hidden">Dal!</button>
+</div>
+
 <div id="skills" class="overlay panel hidden">
   <div class="phead"><h2>✨ Beceriler</h2><button id="skillsClose" class="x" aria-label="Kapat">✕</button></div>
   <div id="skXp" class="card"></div>
@@ -245,18 +260,19 @@
   <div id="skGrid" class="grid"></div>
 </div>
 
-<script src="okto.js?v=41"></script>
-<script src="reef.js?v=41"></script>
-<script src="zones.js?v=41"></script>
-<script src="enemies.js?v=41"></script>
-<script src="bosses.js?v=41"></script>
-<script src="title.js?v=41"></script>
-<script src="music.js?v=41"></script>
-<script src="campaign.js?v=41"></script>
-<script src="boss-ai.js?v=41"></script>
-<script src="cinema.js?v=41"></script>
-<script src="skills.js?v=41"></script>
-<script src="game.js?v=41"></script>
+<script src="okto.js?v=42"></script>
+<script src="reef.js?v=42"></script>
+<script src="zones.js?v=42"></script>
+<script src="enemies.js?v=42"></script>
+<script src="bosses.js?v=42"></script>
+<script src="title.js?v=42"></script>
+<script src="music.js?v=42"></script>
+<script src="campaign.js?v=42"></script>
+<script src="boss-ai.js?v=42"></script>
+<script src="cinema.js?v=42"></script>
+<script src="map.js?v=42"></script>
+<script src="skills.js?v=42"></script>
+<script src="game.js?v=42"></script>
 <script>
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
     window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));

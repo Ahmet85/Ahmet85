@@ -121,6 +121,7 @@ function serve() {
     const G = await page.evaluate(() => [1, 2, 3, 4, 5].map(n => { const l = window.__okto.levelInfo(n); return { n, boss: l.boss, arena: l.arena, group: l.group, start: l.start, end: l.end }; }));
     ok(G.slice(0, 4).map(g => g.boss).join() === 'kestane,yengec,vatoz,puffer-big' && G[3].arena && G[3].end === 150 && G[4].group === 2 && G[4].start === 150, 'Güneşli Sular: Kestane, Yengeç, Vatoz, Dev Balon Balığı (0–150 m), sonra 2. grup');
     ok(await page.evaluate(() => [1, 2, 3, 4, 7].map(n => OktoCampaign.migrate(n)).join()) === '1,5,9,13,13', 'eski kayıt noktası taşınıyor (1→1, 2→5, 3→9, 4+→13)');
+    ok(await page.evaluate(() => { const L = n => OktoCampaign.level(n); return L(1).zones[0] === 'reefs' && L(2).zones[0] === 'canyon' && L(3).zones[0] === 'akinti' && L(4).zones.length === 0 && L(5).env && L(4).intro && L(4).intro.title === 'DEV BALON BALIĞI'; }), 'her bölümün ortamı, su rengi ve sinematik yazısı tanımlı');
     ok(await page.textContent('#ver').then(v => v.includes('TEST')), 'test etiketi görünüyor');
     // üç mini canavar sırayla: her biri saldırısını yapıyor ve yeniliyor
     await page.evaluate(() => window.__okto.startGame(1));
@@ -329,6 +330,53 @@ function serve() {
   {
     const { page, close } = await open('?murekkep', false);
     ok(await page.evaluate(() => !window.__okto.SK) && !(await page.isVisible('#skillBtn')), 'test adresi ?murekkep: eski mürekkep düğmesi');
+    await close();
+  }
+
+  // 8) bölüm haritası (grup düzeni, test adresi)
+  console.log('8. Bölüm haritası (?plan=grup)');
+  {
+    const { page, errors, close } = await open('?plan=grup&bolum=1');
+    // üç grubun haritası kendi renginde, yazılar ekrandan taşmıyor
+    const r0 = await page.evaluate(() => { const out = []; for (let g = 0; g < 3; g++) { const cv = document.createElement('canvas'); cv.width = 390; cv.height = 844;
+        OktoMap.draw(cv.getContext('2d'), { W: 390, H: 844, FONT: 'Fredoka', time: 1, top: 47, group: g, unlocked: 2, current: 2 });
+        const px = cv.getContext('2d').getImageData(195, 830, 1, 1).data; out.push({ col: px.slice(0, 3).join(), over: OktoMap.layout.texts.filter(t => t.x0 < 0 || t.x1 > 390 || t.y1 > 844).map(t => t.text), islands: OktoMap.layout.islands.length, texts: OktoMap.layout.texts.map(t => t.text) }); }
+      return out; });
+    ok(new Set(r0.map(x => x.col)).size === 3, 'üç grubun haritası farklı renkte');
+    ok(r0.every(x => x.over.length === 0), 'harita yazıları iPhone 13 ekranından taşmıyor');
+    ok(r0.every(x => x.islands === 4), 'her haritada 3 ortam adası + büyük canavar adası');
+    ok(r0[0].texts.includes('Güneşli Sular') && r0[0].texts.includes('0–150 m') && r0[0].texts.includes('Resif Adacıkları') && r0[0].texts.includes('Dev Balon Balığı') && r0[0].texts.includes('150 m') && r0[0].texts.includes('Alacakaranlık'), 'Güneşli Sular haritası: başlık, derinlik, adalar, büyük canavar ve sonraki grup');
+    // bölüm sonu → harita → Okto yüzer → Dal! → girdap → sonraki bölüm
+    await page.evaluate(() => { const O = window.__okto; O.startGame(); O.depth = O.levelInfo(1).end - 1;
+      for (let i = 0; i < 60 * 40 && O.state === 'play'; i++) { O.lives = 3; O.invuln = 5; O.step(1 / 60); if (O.boss && O.boss.phase === 'fight') { O.boss.hp = 1; O.damageBoss(1); } } for (let i = 0; i < 300 && O.state !== 'clear'; i++) O.step(1 / 60); });
+    await page.waitForTimeout(500);
+    await page.evaluate(() => document.getElementById('clearNext').click());
+    const m1 = await page.evaluate(() => { const O = window.__okto, M = O.mapV; return { state: O.state, mode: M && M.mode, from: M && M.swim.from, to: M && M.swim.to, go: !document.getElementById('mapGo').classList.contains('hidden') }; });
+    ok(m1.state === 'map' && m1.mode === 'progress' && m1.from === 1 && m1.to === 2 && !m1.go, 'bölüm sonu kartından sonra harita açıldı, Okto 1. adadan 2. adaya yüzüyor');
+    await page.evaluate(() => { const O = window.__okto; for (let i = 0; i < 120; i++) O.step(1 / 60); });
+    ok(await page.evaluate(() => !document.getElementById('mapGo').classList.contains('hidden')), 'yüzme bitince Dal! düğmesi çıktı');
+    await page.evaluate(() => { document.getElementById('mapGo').click(); const O = window.__okto; for (let i = 0; i < 60 * 4 && O.state !== 'play'; i++) O.step(1 / 60); });
+    ok(await page.evaluate(() => [window.__okto.state, window.__okto.levelN].join()) === 'play,2', 'Dal! ile girdaptan 2. bölüme geçildi');
+    // menüden harita: kilitli ada başlatmaz, açık ada başlatır
+    await page.evaluate(() => { const O = window.__okto; document.getElementById('pauseBtn').click(); document.getElementById('quitBtn').click(); });
+    ok(await page.isVisible('#mapBtn'), 'menüde Harita düğmesi (grup düzeninde)');
+    await page.evaluate(() => { document.getElementById('mapBtn').click(); window.__okto.draw(); });
+    const isl = await page.evaluate(() => OktoMap.layout.islands);
+    const lockd = isl.find(i => i.locked), open1 = isl.find(i => i.n === 1);
+    await page.evaluate(([x, y]) => window.__okto.mapTap(x, y), [lockd.x, lockd.y]);
+    ok(await page.evaluate(() => window.__okto.state) === 'map', 'kilitli adaya dokununca bölüm başlamadı');
+    await page.evaluate(([x, y]) => window.__okto.mapTap(x, y), [open1.x, open1.y]);
+    ok(await page.evaluate(() => [window.__okto.state, window.__okto.levelN].join()) === 'play,1', 'açık adaya dokununca o bölüm başladı');
+    ok(errors.length === 0, 'hata yok' + (errors.length ? ': ' + errors.join(' / ') : ''));
+    await close();
+  }
+  { // normal (klasik) oyunda harita yok, bölüm sonu doğrudan girdaba gider
+    const { page, close } = await open('');
+    ok(!(await page.isVisible('#mapBtn')), 'normal oyunda Harita düğmesi yok');
+    await page.evaluate(() => { const O = window.__okto; O.startGame(1); O.depth = 148;
+      for (let i = 0; i < 60 * 40 && O.state === 'play'; i++) { O.lives = 3; O.invuln = 5; O.step(1 / 60); if (O.boss && O.boss.phase === 'fight') { O.boss.hp = 1; O.damageBoss(1); } } for (let i = 0; i < 300 && O.state !== 'clear'; i++) O.step(1 / 60); });
+    await page.waitForTimeout(500); await page.evaluate(() => document.getElementById('clearNext').click());
+    ok(await page.evaluate(() => window.__okto.state) === 'transition', 'normal oyunda bölüm sonu kartından doğrudan girdaba');
     await close();
   }
 

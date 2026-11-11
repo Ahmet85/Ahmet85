@@ -72,7 +72,8 @@ function grouped(n) {
   return {
     n, name: st.name, start, end: start + st.len, tier: st.tier, boss: st.boss, news: st.news || '',
     group: gi + 1, groupName: G.name + (loop ? ` +${loop}` : ''), slot, arena: slot === 3,
-    power: 1 + gi + loop * 2, // canavar gücü: grup başına bir kademe zones: slot < 3 ? st.zones : [], env: st.env || null, intro: st.intro || null,
+    power: 1 + gi + loop * 2, // canavar gücü: grup başına bir kademe
+    zones: slot < 3 ? st.zones : [], env: st.env || null, intro: st.intro || null,
   };
 }
 

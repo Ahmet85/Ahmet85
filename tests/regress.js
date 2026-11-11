@@ -202,6 +202,32 @@ function serve() {
     ok(errors.length === 0, `${group}: hata yok` + (errors.length ? ': ' + errors.join(' / ') : ''));
     await close();
   }
+  // 5e) 2. aşama ölçümü: canın yarısında başlar; saldırılar sıklaşır ve kalabalıklaşır (aynı saldırı 1. ve 2. aşamada karşılaştırılır)
+  for (const [lv, id] of [[4, 'puffer-big'], [8, 'jelly-big'], [12, 'squid-big']]) {
+    const { page, close } = await open(`?plan=grup&bolum=${lv}`);
+    const r = await page.evaluate(() => {
+      const O = window.__okto; O.startGame();
+      for (let i = 0; i < 60 * 60 && !(O.boss && O.boss.phase === 'fight'); i++) { O.lives = 3; O.invuln = 5; O.step(1 / 60); }
+      const B = O.boss, measure = () => { // 3 saldırıyı izle: her saldırıda doğan saldırı parçası sayısı ve saldırılar arası süre
+        const counts = {}, gaps = []; let lastFire = null, t = 0, prevSeq = B.seq, prev = new Set(O.slams);
+        for (let i = 0; i < 60 * 40 && Object.keys(counts).length < 3; i++) { O.lives = 3; O.invuln = 5; O.step(1 / 60); t += 1 / 60;
+          const fresh = O.slams.filter(x => !prev.has(x)); prev = new Set(O.slams);
+          if (fresh.length) { const k = fresh[0].kind; if (!(k in counts) && B.seq !== prevSeq) { counts[k] = fresh.length + (k === 'tentacle' ? 0 : 0); if (lastFire != null) gaps.push(t - lastFire); lastFire = t; prevSeq = B.seq; } }
+        }
+        return { counts, gap: gaps.length ? gaps.reduce((a, b) => a + b) / gaps.length : 0 };
+      };
+      const p1 = measure(), hpBefore = B.hp, half = B.maxHp / 2;
+      let phaseAt = null; while (B.hp > 0 && !B.ph) { B.stun = 0; B.phase = 'fight'; O.damageBoss(1); if (B.ph) phaseAt = B.hp; }
+      B.stun = 0; B.seq = -1; B.attackT = 0.1;
+      const p2 = measure();
+      return { p1, p2, phaseAt, half, maxHp: B.maxHp };
+    });
+    const ks = Object.keys(r.p1.counts).filter(k => k in r.p2.counts), more = ks.filter(k => r.p2.counts[k] > r.p1.counts[k]);
+    ok(r.phaseAt != null && r.phaseAt <= r.half && r.phaseAt > r.half - 1, `${id}: 2. aşama canın yarısında başladı (can ${r.phaseAt}/${r.maxHp})`);
+    ok(more.length >= 2, `${id}: 2. aşamada saldırılar kalabalıklaştı (${ks.map(k => k + ' ' + r.p1.counts[k] + '→' + r.p2.counts[k]).join(', ')})`);
+    ok(r.p2.gap > 0 && r.p2.gap < r.p1.gap, `${id}: 2. aşamada saldırılar sıklaştı (ortalama ${r.p1.gap.toFixed(1)} sn → ${r.p2.gap.toFixed(1)} sn)`);
+    await close();
+  }
   // 5b) büyük zafer ekranı ve dokunarak sinematiği geçme (gerçek döngüyle)
   {
     const { page, errors, close } = await open('?plan=grup&bolum=4&boss=ornek-buyuk', false);

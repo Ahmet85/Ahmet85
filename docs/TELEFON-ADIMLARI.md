@@ -6,7 +6,7 @@ güncellemez. s27'den beri sitedeki açılış görselinde Okto yok (Okto oyunda
 kurulum eski pembe Okto'lu görseli tutuyor. Bu yalnızca oyunu silip yeniden ekleyince düzelir.
 
 **Adımlar:**
-1. Oyunu aç, sağ altta **s40** (veya daha yeni) yazdığından emin ol.
+1. Oyunu aç, sağ altta **s41** (veya daha yeni) yazdığından emin ol.
 2. Menüde **?** düğmesine bas, en alta kaydır, **Kaydımı kopyala**'ya bas. Kodu **Notlar** uygulamasına yapıştırıp sakla.
 3. Ana ekranda OKTO simgesine basılı tut → **Uygulamayı Sil** → **Ana Ekrandan Sil** (veya **Uygulamayı Sil**).
 4. Safari'de **https://ahmet85.github.io/Ahmet85/** adresini aç.
@@ -21,6 +21,6 @@ açıldığı anda şerit panelin koyu mavisine döner. s30'dan beri yardım pan
 
 **Kontrol adımları:**
 1. Oyunu tamamen kapat (alttan yukarı kaydır, OKTO'yu yukarı fırlat), sonra aç; gerekirse bir kez daha kapatıp aç.
-2. Sağ altta **s40** (veya daha yeni) yazmalı.
+2. Sağ altta **s41** (veya daha yeni) yazmalı.
 3. **?** düğmesine bas: en alttaki şerit hemen koyu mavi olmalı. Kapatınca açılış ekranının kum rengine döner (bu normal).
 4. Hâlâ sarı görüyorsan ekran görüntüsü al ve gönder.

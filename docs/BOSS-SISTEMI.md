@@ -18,6 +18,14 @@ Pilot mini canavarlar:
 - **Akıntı Vatozu** (`vatoz`): kanatlarını 0,8 sn toplar → 1,6 sn yan akıntı Okto'yu sürükler → 1,8 sn **açık**: her vuruş +1 hasar ("Çift vuruş!"); arada nişanlı mürekkep lekeleri.
 - **Dev Balon Balığı** büyük canavar olarak (`puffer-big`): aynı saldırılar, can 7, daha büyük, sinematik girişli.
 
+s34 saldırıları (her biri farklı):
+- **Baca Yengeci:** bacalar parlar → Okto'nun altında ve yanında 2 lav sütunu (turuncu uyarı) → yana seker.
+- **Zırhlı Balon Balığı:** 1,4 sn zırh (mavi kalkan, vurulmaz) → 2,6 sn duvarlardan sekerek yuvarlanır.
+- **Mayın Yengeci:** 3–5 mayın bırakır; yukarı süzülür, son anlarda kesik çizgili patlama alanı görünür ve patlar.
+- **Mağara Mürekkepçisi:** ekranı 3,2 sn karartır (Okto'nun çevresi görünür), karanlıkta 3 kez mürekkep atar.
+- **Hayalet Denizanası:** kaybolur (vurulmaz), Okto'nun altında belirir, genişleyen hayalet halka yayar.
+- **İri Fener Balığı:** feneri parlar ve Okto'yu 1,4 sn kendine çeker → ileri atılır.
+
 Eski kayıt taşıma (`OktoCampaign.migrate`): klasik bölüm 1 → grup 1, 2 (150 m) → 5, 3 (400 m) → 9, 4+ (700 m+) → 13.
 Test kaydı: test adresinde bölüm kartı ve oyun sonunda kopyalanabilir özet (karşılaşma süreleri, isabet, hasar, beceri kullanımı, açılma derinliği).
 

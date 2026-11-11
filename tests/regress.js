@@ -159,6 +159,17 @@ function serve() {
     ok(errors.length === 0, 'hata yok' + (errors.length ? ': ' + errors.join(' / ') : ''));
     await close();
   }
+  // 5a) 2. ve 3. grubun mini canavarları: her biri kendine özgü saldırısını yapıyor ve yenilebiliyor
+  for (const [lv, id, cond] of [[5, 'baca-yengeci', "O.slams.some(s => s.kind === 'lava')"], [6, 'zirhli-balon', 'O.boss.roll'], [7, 'mayin-yengeci', "O.slams.some(s => s.kind === 'mine')"],
+    [9, 'murekkepci', "O.slams.some(s => s.kind === 'dark')"], [10, 'hayalet-denizanasi', "O.slams.some(s => s.kind === 'ring')"], [11, 'iri-fener', 'O.boss.lureT > 0']]) {
+    const { page, errors, close } = await open(`?plan=grup&bolum=${lv}&boss=${id}`);
+    const r = await page.evaluate(([cond]) => { const O = window.__okto, C = new Function('O', 'return ' + cond); O.startGame(); let saw = false, t = 0, nx = 0;
+      for (let i = 0; i < 60 * 60 && !saw; i++) { O.lives = 3; O.invuln = 5; O.step(1 / 60); if (O.boss && O.boss.phase === 'fight' && C(O)) saw = true; }
+      for (let i = 0; i < 60 * 120 && O.state === 'play'; i++) { O.lives = 3; O.invuln = 5; O.step(1 / 60); t += 1 / 60; if (O.boss && O.boss.phase === 'fight' && t > nx) { O.damageBoss(1); nx = t + 2; } }
+      return { saw, state: O.state }; }, [cond]);
+    ok(r.saw && r.state === 'clear' && errors.length === 0, `${id}: kendine özgü saldırı ve yenilme`);
+    await close();
+  }
   // 5b) büyük zafer ekranı ve dokunarak sinematiği geçme (gerçek döngüyle)
   {
     const { page, errors, close } = await open('?plan=grup&bolum=4&boss=ornek-buyuk', false);

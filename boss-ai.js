@@ -217,13 +217,94 @@ register(Object.assign({}, DEFS.puffer, { id: 'puffer-big', size: 'big', hp: 7, 
 register(Object.assign({}, DEFS.jelly, { id: 'jelly-big', size: 'big', hp: 8, r: 72, restY: 170 }));
 register(Object.assign({}, DEFS.squid, { id: 'squid-big', size: 'big', hp: 9, r: 76, restY: 160 }));
 // 2. ve 3. grubun mini canavarları: görseller gelene kadar geçici çizimli, veriyle tanımlı
-const mini = (id, name, body, line, attacks, move) => register({ id, name, hp: 4, r: 50, restY: 140, color: body, placeholder: true, look: { body, line, iris: '#ffe14d', shape: 'blob' }, move: move || { type: 'sway', amp: 0.24, speed: 0.6, bob: 8 }, attacks, phases: [{ below: 0.5, name: 'Öfkelendi!', rate: 0.8 }] });
-mini('baca-yengeci', 'BACA YENGECİ', '#ff7a4a', '#5a1a08', [{ id: 'tentacle', w: 1 }, { id: 'aimed', w: 1, count: 3 }]);
-mini('zirhli-balon', 'ZIRHLI BALON BALIĞI', '#c9b25a', '#4a3a08', [{ id: 'spikeFan', w: 1 }, { id: 'dash', w: 1 }], { type: 'follow', speed: 0.8, bob: 6 });
-mini('mayin-yengeci', 'MAYIN YENGECİ', '#8a6a7a', '#2a1020', [{ id: 'aimed', w: 1, count: 4 }, { id: 'tentacle', w: 1 }]);
-mini('murekkepci', 'MAĞARA MÜREKKEPÇİSİ', '#5a4a8a', '#140a30', [{ id: 'aimed', w: 2, count: 3 }, { id: 'minions', w: 1, hue: 260 }]);
-mini('hayalet-denizanasi', 'HAYALET DENİZANASI', '#cfe8ff', '#30506a', [{ id: 'zap', w: 1, count: 2 }, { id: 'minions', w: 1, hue: 200 }]);
-mini('iri-fener', 'İRİ FENER BALIĞI', '#3a4a5a', '#0a1018', [{ id: 'dash', w: 1 }, { id: 'aimed', w: 1, count: 3 }], { type: 'follow', speed: 0.7, bob: 6 });
+// Her mini canavarın kendine özgü saldırısı var (aynı saldırıyı iki canavar paylaşmaz).
+const sway = (b, E, amp, sp, bob) => { b.x = E.W / 2 + Math.sin(b.t * sp) * E.W * amp; b.y = E.restY + Math.sin(b.t * 2) * bob * E.S; };
+register({ // Baca Yengeci: bacaları parlar, Okto'nun altından ve yanından lav sütunları fışkırır; sonra yana seker
+  id: 'baca-yengeci', name: 'BACA YENGECİ', hp: 4, r: 50, restY: 140, color: '#ff8a3a', contactY: 0,
+  tick(b, E, dt) {
+    if (b.hop) { b.hop.t += dt; b.x = E.lerp(b.hop.x0, b.hop.x1, Math.min(1, b.hop.t / 0.5)); b.y = E.restY - Math.sin(Math.min(1, b.hop.t / 0.5) * Math.PI) * 40 * E.S; if (b.hop.t >= 0.5) b.hop = null; return; }
+    b.y = E.restY + Math.sin(b.t * 3) * 3 * E.S;
+    if (b.ventT > 0) { b.ventT -= dt; if (b.ventT <= 0) {
+      const xs = [E.clamp(E.player.x, 30 * E.S, E.W - 30 * E.S)]; xs.push(E.clamp(xs[0] + (Math.random() < 0.5 ? -1 : 1) * E.rand(110, 150) * E.S, 30 * E.S, E.W - 30 * E.S));
+      for (const x of xs) E.slams.push({ kind: 'lava', x, t: 0, warn: 0.9, w: 30 * E.S, maxReach: 0.7 });
+      E.sound.tone(120, 0.6, 'sawtooth', 0.07, -40); b.hopNext = true; } return; }
+    if (b.hopNext) { b.hopNext = false; const x1 = E.clamp(b.x + (b.x < E.W / 2 ? 1 : -1) * E.rand(90, 140) * E.S, b.r, E.W - b.r); b.hop = { t: 0, x0: b.x, x1 }; return; }
+    b.attackT -= dt;
+    if (b.attackT <= 0) { b.attackT = E.interval * 1.1; b.ventT = 0.6; E.sound.tone(90, 0.6, 'sine', 0.1, 40); }
+  },
+});
+register({ // Zırhlı Balon Balığı: pullu zırhına saklanır (vurulmaz), sonra top gibi duvarlardan sekerek yuvarlanır
+  id: 'zirhli-balon', name: 'ZIRHLI BALON BALIĞI', hp: 4, r: 50, restY: 150, color: '#ffd23a', contactY: 0,
+  contactR: b => (b.roll ? 0.95 : 0.85),
+  tick(b, E, dt) {
+    if (b.roll) { // yuvarlanma: alt yarıda duvarlardan seker
+      const R = b.roll; R.t += dt; b.rollA = (b.rollA || 0) + R.vx / b.r * dt;
+      b.x += R.vx * dt; b.y += R.vy * dt;
+      if (b.x < b.r || b.x > E.W - b.r) { R.vx = -R.vx; b.x = E.clamp(b.x, b.r, E.W - b.r); E.sound.tone(160, 0.08, 'square', 0.05); }
+      if (b.y < E.H * 0.45 || b.y > E.restY + 10 * E.S) { R.vy = -R.vy; b.y = E.clamp(b.y, E.H * 0.45, E.restY + 10 * E.S); }
+      if (R.t > 2.6) { b.roll = null; b.backT = 1; }
+      return;
+    }
+    if (b.backT > 0) { b.backT -= dt; b.y = E.lerp(b.y, E.restY, dt * 3); b.rollA = E.lerp(b.rollA || 0, 0, dt * 4); return; }
+    if (b.armorT > 0) { b.armorT -= dt; if (b.armorT <= 0) { const sp = (230 + b.lv * 10) * E.S, a = E.rand(-2.5, -0.6); b.roll = { t: 0, vx: Math.cos(a) * sp * (Math.random() < 0.5 ? -1 : 1), vy: Math.sin(a) * sp }; E.sound.noise(0.3, 0.12, 700); } return; }
+    sway(b, E, 0.2, 0.55, 6);
+    b.attackT -= dt;
+    if (b.attackT <= 0) { b.attackT = E.interval * 1.2; b.armorT = 1.4; E.floater(b.x, b.y - b.r * 1.5, 'Zırh!', '#9fd6ff'); E.sound.tone(400, 0.3, 'triangle', 0.07, -200); }
+  },
+});
+register({ // Mayın Yengeci: kabuğundaki mayınları bırakır; mayınlar yukarı süzülür, yanıp söner ve patlar
+  id: 'mayin-yengeci', name: 'MAYIN YENGECİ', hp: 4, r: 50, restY: 140, color: '#8a8af0', contactY: 0,
+  tick(b, E, dt) {
+    if (!(b.dropT > 0)) sway(b, E, 0.28, 0.5, 5);
+    if (b.dropT > 0) { b.dropT -= dt; if (b.dropT <= 0) {
+      const n = 3 + Math.min(2, Math.floor(b.lv / 2));
+      for (let i = 0; i < n; i++) E.slams.push({ kind: 'mine', x: E.clamp(b.x + (i - (n - 1) / 2) * 70 * E.S, 24 * E.S, E.W - 24 * E.S), y: b.y - b.r, vx: (i - (n - 1) / 2) * 20 * E.S, vy: -E.rand(70, 110) * E.S, t: 0, warn: 0, fuse: E.rand(2.2, 3.0), r: 70 * E.S });
+      E.sound.tone(300, 0.2, 'square', 0.05, -100); } return; }
+    b.attackT -= dt;
+    if (b.attackT <= 0) { b.attackT = E.interval * 1.3; b.dropT = 0.6; E.sound.tone(500, 0.12, 'square', 0.05, 0, 0, true); E.sound.tone(500, 0.12, 'square', 0.05, 0, 0.2, true); }
+  },
+});
+register({ // Mağara Mürekkepçisi: mürekkep bulutuyla ekranı karartır (yalnızca Okto'nun çevresi görünür), karanlıkta mürekkep atar
+  id: 'murekkepci', name: 'MAĞARA MÜREKKEPÇİSİ', hp: 4, r: 50, restY: 140, color: '#9a7ae0', placeholder: true,
+  look: { body: '#5a4a8a', line: '#140a30', iris: '#ffe14d', shape: 'blob' },
+  tick(b, E, dt) {
+    sway(b, E, 0.3, 0.45, 10);
+    if (b.darkShots > 0) { b.shotT -= dt; if (b.shotT <= 0) { b.shotT = 0.9; b.darkShots--; ATTACKS.aimed.start(b, E, { count: 2, spread: 0.35, speed: 130 }); } return; }
+    b.attackT -= dt;
+    if (b.attackT <= 0) { b.attackT = E.interval * 1.4; E.slams.push({ kind: 'dark', t: 0, warn: 0, dur: 3.2 }); b.darkShots = 3; b.shotT = 0.8; E.sound.tone(150, 0.8, 'sine', 0.1, -60); E.sound.noise(0.6, 0.12, 500); }
+  },
+});
+register({ // Hayalet Denizanası: kaybolur (vurulmaz), Okto'nun altında belirir ve genişleyen hayalet halka yayar
+  id: 'hayalet-denizanasi', name: 'HAYALET DENİZANASI', hp: 4, r: 50, restY: 150, color: '#e2b8ff', contactY: 0.3,
+  tick(b, E, dt) {
+    if (b.vis == null) b.vis = 1;
+    if (b.fade) { // kaybol → yer değiştir → belir
+      const F = b.fade; F.t += dt;
+      if (F.t < 0.6) b.vis = 1 - F.t / 0.6;
+      else if (!F.moved) { F.moved = true; b.x = E.clamp(E.player.x + E.rand(-40, 40) * E.S, b.r, E.W - b.r); }
+      else if (F.t < 1.3) b.vis = (F.t - 0.6) / 0.7;
+      else { b.vis = 1; b.fade = null; E.slams.push({ kind: 'ring', x: b.x, y: b.y - b.r * 0.2, t: 0, warn: 0, speed: 170 * E.S, maxR: 330 * E.S, w: 12 * E.S }); E.sound.tone(700, 0.6, 'sine', 0.07, -300); }
+      return;
+    }
+    b.x = E.lerp(b.x, E.W / 2 + Math.sin(b.t * 0.4) * E.W * 0.2, dt); b.y = E.restY + Math.sin(b.t * 1.6) * 12 * E.S;
+    b.attackT -= dt;
+    if (b.attackT <= 0) { b.attackT = E.interval * 1.15; b.fade = { t: 0 }; E.sound.tone(900, 0.5, 'sine', 0.05, -500); }
+  },
+});
+register({ // İri Fener Balığı: feneri parlar ve Okto'yu kendine çeker, sonra ağzını açıp ileri atılır
+  id: 'iri-fener', name: 'İRİ FENER BALIĞI', hp: 4, r: 50, restY: 145, color: '#5ff5e0', contactY: 0,
+  tick(b, E, dt) {
+    if (b.lunge) { const L = b.lunge; L.t += dt;
+      if (L.t < 0.35) { b.x = E.lerp(b.x, L.x, dt * 6); b.y -= 520 * E.S * dt; } else { b.y = E.lerp(b.y, E.restY, dt * 3); b.x = E.lerp(b.x, L.x, dt * 2); if (L.t > 1.2) b.lunge = null; }
+      return; }
+    if (b.lureT > 0) { b.lureT -= dt; // fener çekimi: Okto canavara doğru sürüklenir
+      const dx = b.x - E.player.x, dy = b.y - E.player.y, d = Math.hypot(dx, dy) || 1; E.push(dx / d * 120 * E.S * dt, dy / d * 120 * E.S * dt);
+      if (b.lureT <= 0) { b.lunge = { t: 0, x: E.clamp(E.player.x, b.r, E.W - b.r) }; E.sound.tone(110, 0.3, 'sawtooth', 0.09, 80); } return; }
+    b.x = E.lerp(b.x, E.clamp(E.player.x, b.r, E.W - b.r), dt * 0.6); b.y = E.restY + Math.sin(b.t * 2) * 6 * E.S;
+    b.attackT -= dt;
+    if (b.attackT <= 0) { b.attackT = E.interval * 1.2; b.lureT = 1.4; E.floater(b.x, b.y - b.r * 1.6, 'Fener!', '#5ff5e0'); E.sound.tone(1100, 1.2, 'sine', 0.04, -300, 0, true); }
+  },
+});
 
 // ---------- Örnek (yer tutucu) canavarlar: yalnızca test düzeninde (?plan=grup) görünür ----------
 // Kullanıcının görselleri ve bölüm planı gelince bunların yerini gerçek canavarlar alacak.

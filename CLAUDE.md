@@ -18,7 +18,7 @@ Tasarım brifi: `docs/BRIF.md` ("OKTO – UNDERWATER DESCENT", kullanıcının 1
 - Dal: `claude/octopus-mobile-game-0is63u` → GitHub Pages: https://ahmet85.github.io/Ahmet85/
 - Aynı dalda başka bir oturumun `ritim/` klasörü var; **ona dokunma**, push öncesi `git fetch` + `git rebase` yap.
 - **Her yayında sürümü artır:** `index.html` içindeki tüm `?v=` ekleri, menüdeki `s<sürüm>` etiketi ve `sw.js` içindeki
-  `okto-v<sürüm>` birlikte. Kullanıcı sağ alttaki `s<sürüm>` ile güncellemenin geldiğini kontrol ediyor. Son sürüm: **s33**.
+  `okto-v<sürüm>` birlikte. Kullanıcı sağ alttaki `s<sürüm>` ile güncellemenin geldiğini kontrol ediyor. Son sürüm: **s34**.
 - Telefonda güncelleme: uygulamayı kapat-aç (gerekirse iki kez). Açılış görseli/simge değişirse sil-yeniden kur gerekir.
 - **Açılış görseli (s27):** Okto'suz sahne (oyuncunun rengi bilinemediği için); Okto oyunda oyuncunun renginle kumdan yükselir
   (`title.js` opts.intro). Görseller `preview/splash-gen.html` ile üretilir. Silip yeniden kurmada kayıt silinebilir:
@@ -48,7 +48,10 @@ Tasarım brifi: `docs/BRIF.md` ("OKTO – UNDERWATER DESCENT", kullanıcının 1
   sinematik → büyük Dev Balon Balığı (`puffer-big`). s32: üç mini canavarın çizimi kullanıcının PNG'lerine göre yenilendi
   (referanslar `docs/canavarlar/`; yetenek halkası referansı henüz ulaşmadı).
   s33: Baca Yengeci, Zırhlı Balon Balığı, Mayın Yengeci, Hayalet Denizanası, İri Fener Balığı da PNG'lerine göre çizildi
-  (davranışları hâlâ geçici; tanımlar gelince). Yalnızca Mağara Mürekkepçisi görseli eksik. Eski kayıt taşıma `OktoCampaign.migrate`. Test adresinde test kaydı (TLOG).
+  Yalnızca Mağara Mürekkepçisi görseli eksik. **s34: her mini canavarın kendine özgü saldırısı var** (kullanıcı isteği:
+  aynı saldırı tekrarlanmasın): Kestane diken halkası · Yengeç yatay kıskaç · Vatoz yan akıntı + çift vuruş · Baca Yengeci lav
+  sütunları + sekme · Zırhlı Balon zırh (vurulmaz) + seken yuvarlanma · Mayın Yengeci süzülüp patlayan mayınlar · Mürekkepçi
+  ekran karartma + karanlıkta mürekkep · Hayalet kaybolup belirme (vurulmaz) + genişleyen halka · İri Fener feneriyle çekme + atılma. Eski kayıt taşıma `OktoCampaign.migrate`. Test adresinde test kaydı (TLOG).
   Kullanıcı pilotu onaylarsa ilk grup asıl oyuna alınacak; diğer gruplar pilotun ardından.
 
 ## Beceri halkası (s24 deneme → **s27'den beri normal oyunda**, kullanıcı onayladı)

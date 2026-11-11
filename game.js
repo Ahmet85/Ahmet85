@@ -945,9 +945,10 @@ function startBoss(kind) {
 }
 function damageBoss(n) {
   if (!boss || boss.phase !== 'fight') return;
+  if (boss.armorT > 0 || (boss.vis != null && boss.vis < 0.5)) { addFloater(boss.x, boss.y - boss.r * 1.4, boss.armorT > 0 ? 'Zırh!' : 'Görünmez!', '#9fd6ff'); return; } // zırhlı / kaybolmuş: vurulmaz
   const te = TLOG.enc[TLOG.enc.length - 1]; if (te && te.dur == null) te.hits++;
   if (boss.openT > 0) { n += 1; addFloater(boss.x, boss.y - boss.r * 1.6, 'Çift vuruş!', '#7dffb0'); } // vatoz açık verdi
-  boss.hp -= n; boss.flashT = 0.3; boss.stun = 1.2; boss.dash = null; boss.puffT = 0; boss.act = null; boss.glowT = 0; boss.clawT = 0; boss.foldT = 0; boss.current = null; shake = 9;
+  boss.hp -= n; boss.flashT = 0.3; boss.stun = 1.2; boss.dash = null; boss.puffT = 0; boss.act = null; boss.glowT = 0; boss.clawT = 0; boss.foldT = 0; boss.current = null; boss.ventT = 0; boss.dropT = 0; boss.lureT = 0; boss.lunge = null; boss.fade = null; boss.vis = 1; shake = 9;
   Sound.bossHit(); vibrate(60);
   burst(boss.x, boss.y - boss.r * 0.6, boss.def.color, 20, 220);
   addFloater(boss.x, boss.y - boss.r * 1.3, `-${n}`, '#ff8a8a');
@@ -993,6 +994,19 @@ function updateSlams(dt) {
     s.t += dt;
     if (s.cancel && s.t < s.warn) s.done = true;
     const up = s.t - s.warn;
+    if (s.kind === 'mine') { // mayın yengecinin mayını: yukarı süzülür, sonunda patlar
+      if (s.cancel) { s.done = true; burst(s.x, s.y, '#ff8a8a', 10, 120); continue; }
+      s.x += s.vx * dt; s.y += s.vy * dt; s.vy *= Math.pow(0.5, dt); s.vx *= Math.pow(0.5, dt);
+      if (s.t >= s.fuse && !s.boom) { s.boom = true; burst(s.x, s.y, '#ffb070', 22, 220); Sound.noise(0.35, 0.18, 900); shake = Math.max(shake, 6); if (Math.hypot(player.x - s.x, player.y - s.y) < s.r + player.r * 0.5) hurt(); }
+      if (s.t > s.fuse + 0.35) s.done = true;
+      continue;
+    }
+    if (s.kind === 'dark') { if (s.cancel || s.t > s.dur) s.done = true; continue; } // mürekkep karartması (yalnızca görüş)
+    if (s.kind === 'ring') { // hayalet halka: genişler; halkanın çizgisine değen Okto hasar alır
+      const r = s.t * s.speed; if (s.cancel || r > s.maxR) { s.done = true; continue; }
+      if (Math.abs(Math.hypot(player.x - s.x, player.y - s.y) - r) < s.w + player.r * 0.5) hurt();
+      continue;
+    }
     if (s.kind === 'claw') { // yengeç kıskacı: yatay şerit; önce uyarı, sonra kıskaç kenardan kenara süpürür
       if (s.warnOnly) { if (s.t >= s.warn) s.done = true; continue; }
       s.reach = Math.min(1, s.t / 0.55); if (s.t > 0.8) s.done = true;
@@ -1004,7 +1018,7 @@ function updateSlams(dt) {
     if (s.kind === 'zap') { s.reach = up >= 0 && up < 0.55 ? 1 : 0; if (up >= 0 && !s.zapped) { s.zapped = true; Sound.noise(0.4, 0.2, 4000); Sound.tone(80, 0.4, 'sawtooth', 0.1); } if (up > 0.55) s.done = true; }
     else { s.reach = up < 0 ? 0 : up < 0.3 ? up / 0.3 : up < 0.9 ? 1 : Math.max(0, 1 - (up - 0.9) / 0.3); if (up > 1.2) s.done = true; }
     if (s.reach > 0.3 && !s.cancel) {
-      const tipY = H - s.reach * H * (s.kind === 'zap' ? 1.05 : 0.92);
+      const tipY = H - s.reach * H * (s.maxReach || (s.kind === 'zap' ? 1.05 : 0.92));
       if (Math.abs(player.x - s.x) < s.w + player.r * 0.6 && player.y > tipY) hurt();
     }
   }
@@ -1258,7 +1272,7 @@ function update(dt) {
   }
   rockCollisions();
   if (window.OktoZones && OktoZones.active()) OktoZones.collide(zoneEnv(dt, scroll));
-  if (boss && boss.phase === 'fight') { const cy = OktoBossAI.contactY(boss); if (Math.hypot(boss.x - p.x, cy - p.y) < bossContactR() + p.r * (0.6 + 0.85 * p.big)) {
+  if (boss && boss.phase === 'fight' && !(boss.vis != null && boss.vis < 0.5)) { const cy = OktoBossAI.contactY(boss); if (Math.hypot(boss.x - p.x, cy - p.y) < bossContactR() + p.r * (0.6 + 0.85 * p.big)) {
     if (p.bigT > 0) { if (p.bossBumpT <= 0) { p.bossBumpT = 1; damageBoss(1); pushTarget(0, -90 * S); } } else hurt();
   } }
   entities = entities.filter(e => !e.dead && Number.isFinite(e.x) && Number.isFinite(e.y) && e.y > -120 * S && e.y < H + 400 * S && e.x > -200 * S && e.x < W + 200 * S);

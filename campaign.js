@@ -1,11 +1,9 @@
 /* OKTO bölüm düzeni (kampanya). game.js bölüm bilgisini buradan alır: OktoCampaign.level(n).
 
    İki düzen var:
-   - 'klasik' (VARSAYILAN, s21 ile birebir aynı): 3 bölüm + her 300 m'de tekrar eden sonsuz bölüm.
-   - 'grup' (TASLAK, yalnızca test adresinde açılır: ?plan=grup): bölüm grupları. Her grupta 3 bölüm, her bölümün sonunda
-     mini canavar; ardından kısa bir "arena" bölümü, sinematik giriş ve BÜYÜK canavar. Sonraki grupta yeni ortamlar.
-     Buradaki grup verileri yer tutucudur; kullanıcının bölüm planı ve görselleri gelince doldurulacak.
-     Kullanıcı onay vermeden varsayılan düzen değiştirilmez.
+   - 'grup' (s44'ten beri asıl oyun, kullanıcı onayladı): bölüm grupları. Her grupta 3 bölüm, her bölümün sonunda
+     mini canavar; ardından kısa bir "arena" bölümü, sinematik giriş ve BÜYÜK canavar. Üç gruptan sonra güçlenerek tekrar.
+   - 'klasik' (s21 ile birebir aynı, yalnızca test adresinde: ?plan=klasik): 3 bölüm + her 300 m'de tekrar eden sonsuz bölüm.
 
    level(n) şunları döndürür:
    { n, name, start, end, tier, boss, news }                         ← her iki düzende
@@ -80,7 +78,7 @@ function grouped(n) {
 // Eski (klasik) kayıt noktasını grup düzenine taşı: aynı derinlikten devam edilir
 // klasik 1 (0 m) → grup bölümü 1 · klasik 2 (150 m) → 5 · klasik 3 (400 m) → 9 · klasik 4+ (700 m+) → 13
 function migrate(classicLevel) { const n = Math.max(1, classicLevel | 0); return n <= 1 ? 1 : n === 2 ? 5 : n === 3 ? 9 : 13; }
-let mode = 'klasik';
+let mode = 'klasik'; // game.js açılışta ayarlar (parametresiz: grup)
 window.OktoCampaign = {
   CLASSIC, GROUPS, PER_GROUP, migrate,
   get mode() { return mode; },

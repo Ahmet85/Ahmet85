@@ -18,7 +18,8 @@ const TEST = (() => {
 // Eski mürekkep düğmesi yalnızca test adresinde: ?murekkep
 const SK = !TEST.oldInk && window.OktoSkills ? window.OktoSkills : null;
 if (SK) SK.setRingStyle(new URLSearchParams(location.search).get('halka') === 'klasik' ? 'klasik' : 'inci'); // s40: yeni inci kabarcık halkası her yerde; eski görünüm: ?halka=klasik
-if (TEST.on && TEST.plan && window.OktoCampaign) OktoCampaign.setMode(TEST.plan);
+// s44: normal oyun grup düzeniyle oynanır; eski (klasik, s21) düzen yalnızca test adresinde: ?plan=klasik
+if (window.OktoCampaign) OktoCampaign.setMode(TEST.plan === 'klasik' ? 'klasik' : 'grup');
 const store = {
   get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } },
   set(k, v) { if (TEST.on) return; try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
@@ -71,6 +72,16 @@ const Profile = {
   }, store.get('okto_profile', {})),
   save() { store.set('okto_profile', this.data); },
 };
+// Eski kaydı grup düzenine taşı (yalnızca bir kez): klasik bölüm 1→1, 2→5, 3→9, 4+→13 (aynı derinlik).
+// inci, kostüm, beceri ve Kaşif Puanı ayrı alanlarda olduğu için olduğu gibi kalır; klasik alanlara dokunulmaz.
+function gMigrate(D) {
+  if (D.gmigrated) return false;
+  const cp = Math.max(1, D.checkpoint | 0 || 1), sl = Math.min(Math.max(1, D.startLevel | 0 || 1), cp);
+  D.gcheck = Math.max(D.gcheck | 0 || 1, OktoCampaign.migrate(cp));
+  D.gstart = Math.min(Math.max(1, D.gstart | 0 || OktoCampaign.migrate(sl)), D.gcheck);
+  D.gmigrated = true; return true;
+}
+if (gMigrate(Profile.data)) Profile.save();
 const look = () => ({ palette: Profile.data.palette, accessory: Profile.data.accessory });
 // Beceri ilerlemesi (Kaşif Puanı ve kuşanılan beceriler) profilde saklanır; test adresinde ?xp=N ile başlangıç puanı verilebilir
 function skProf() { // ilk kez: şimdiye kadarki en iyi puan Kaşif Puanı olarak sayılır (eski oyuncular sıfırdan başlamasın)
@@ -371,18 +382,18 @@ document.addEventListener('pointerdown', e => { if (state === 'menu' && !Sound.m
 document.addEventListener('keydown', () => { if (state === 'menu' && !Sound.muted) menuMusic(); }, true);
 function startLevel() {
   if (TEST.level) return TEST.level; const D = Profile.data, n = clamp(D.startLevel || 1, 1, D.checkpoint || 1);
-  if (OktoCampaign.mode === 'grup') return D.gstart || OktoCampaign.migrate(n); // grup düzeni: kendi kaydı; yoksa eski (klasik) kayıt taşınır
+  if (OktoCampaign.mode === 'grup') return clamp(D.gstart || 1, 1, gUnlocked()); // grup düzeni: kendi kaydı (eski kayıt bir kez taşındı)
   return n;
 }
 // grup düzeninde açılmış en büyük bölüm (harita için): kendi kaydı ile taşınmış eski kayıttan büyüğü
-function gUnlocked() { const D = Profile.data; return Math.max(D.gcheck || 1, OktoCampaign.migrate(clamp(D.checkpoint || 1, 1, 999))); }
+function gUnlocked() { return Math.max(1, Profile.data.gcheck || 1); }
 function refreshMenu() {
   const lp = $('levelPick'), cp = Profile.data.checkpoint || 1, sl = startLevel();
   lp.classList.toggle('hidden', cp < 2);
   lp.innerHTML = sl > 1 ? `▶ Bölüm ${ablative(sl)} başla <small>(değiştir)</small>` : `▶ Baştan başla <small>(değiştir)</small>`;
   $('menuBest').textContent = `⚪ ${Profile.data.wallet} inci` + (Profile.data.best > 0 ? `   🏆 ${Profile.data.best}` : '');
   $('missionBadge').classList.toggle('hidden', !Missions.claimable());
-  if (TEST.on && OktoCampaign.mode === 'grup') { lp.classList.remove('hidden'); const L = levelInfo(startLevel()); lp.innerHTML = `▶ Bölüm ${startLevel()} · ${L.name} <small>(eski kayıt: klasik ${clamp(Profile.data.startLevel || 1, 1, Profile.data.checkpoint || 1)})</small>`; }
+  if (OktoCampaign.mode === 'grup') { lp.classList.toggle('hidden', gUnlocked() < 2); lp.innerHTML = `▶ Bölüm ${sl} · ${levelInfo(sl).name} <small>(değiştir)</small>`; } // yeni bölüm numaraları
   show($('skillBtn'), !!SK); show($('mapBtn'), OktoCampaign.mode === 'grup' && !!window.OktoMap);
   if (SK) { const P = skProf(); $('skillBadge').classList.toggle('hidden', SK.unlockedIds(P.xp).length <= (P.seen || 1)); }
 }
@@ -394,7 +405,7 @@ function layoutMenuButtons() { // mağaza ve görev düğmeleri oyna düğmesini
   }
   const mb = $('mapBtn'); if (mb) { mb.style.left = (W / 2 + dx - 30) + 'px'; mb.style.top = (y - 30 - 96 * u) + 'px'; } // harita: görevlerin üstünde
   const sb = $('skillBtn'); if (sb) { sb.style.left = (W / 2 - dx - 30) + 'px'; sb.style.top = (y - 30 - 96 * u) + 'px'; } // beceriler: mağazanın üstünde
-  const lp = $('levelPick'); if (lp) lp.style.top = (y - 32 * u - 50) + 'px';
+  const lp = $('levelPick'); if (lp) lp.style.top = (y - 30 - 96 * u - 46) + 'px'; // s44: beceri/harita sırasının üstünde (eskiden onların altında kalıyordu)
 }
 function hitPlay(x, y) { const r = window.OktoTitle && OktoTitle.playRect; return r && x >= r.x - 10 && x <= r.x + r.w + 10 && y >= r.y - 10 && y <= r.y + r.h + 16; }
 
@@ -403,7 +414,7 @@ $('diffBtn').onclick = () => { const k = ['kolay', 'normal', 'zor'], i = k.index
 $('helpClose').onclick = () => show(ui.help, false);
 // ---------- Kayıt kodu: inci, kostüm, bölüm ve beceri ilerlemesini başka kuruluma taşımak için ----------
 // (iPhone ana ekrandan silinen uygulamanın kaydını da silebilir; silmeden önce kod kopyalanır, yeni kurulumda yapıştırılır)
-const SAVE_KEYS = ['wallet', 'best', 'owned', 'palette', 'accessory', 'checkpoint', 'startLevel', 'difficulty', 'skills', 'trophies'];
+const SAVE_KEYS = ['wallet', 'best', 'owned', 'palette', 'accessory', 'checkpoint', 'startLevel', 'difficulty', 'skills', 'trophies', 'gcheck', 'gstart', 'gmigrated'];
 function saveCode() {
   const D = Profile.data, o = {}; for (const k of SAVE_KEYS) if (D[k] !== undefined) o[k] = D[k];
   return 'OKTO-' + btoa(unescape(encodeURIComponent(JSON.stringify(o))));
@@ -413,6 +424,7 @@ function loadCode(code) {
     const t = String(code).trim().replace(/^OKTO-/, ''), o = JSON.parse(decodeURIComponent(escape(atob(t))));
     if (!o || typeof o !== 'object' || typeof o.wallet !== 'number') return false;
     const D = Profile.data; for (const k of SAVE_KEYS) if (o[k] !== undefined) D[k] = o[k];
+    if (!o.gmigrated) { delete D.gcheck; delete D.gstart; D.gmigrated = false; gMigrate(D); } // eski (s43 ve öncesi) kod: yeni düzene taşı
     Profile.save(); if (SK) SK.load(skProf()); return true;
   } catch { return false; }
 }
@@ -429,7 +441,12 @@ $('saveLoad').onclick = () => {
 };
 $('againBtn').onclick = () => startGame(levelN);
 $('clearNext').onclick = () => (OktoCampaign.mode === 'grup' && window.OktoMap ? openMap('progress') : startTransition());
-$('levelPick').onclick = () => { const D = Profile.data, cp = D.checkpoint || 1; D.startLevel = startLevel() >= cp ? 1 : startLevel() + 1; Profile.save(); refreshMenu(); };
+$('levelPick').onclick = () => {
+  const D = Profile.data;
+  if (OktoCampaign.mode === 'grup') { const u = gUnlocked(); D.gstart = startLevel() >= u ? 1 : startLevel() + 1; }
+  else { const cp = D.checkpoint || 1; D.startLevel = startLevel() >= cp ? 1 : startLevel() + 1; }
+  Profile.save(); refreshMenu();
+};
 $('homeBtn').onclick = () => toMenu();
 $('quitBtn').onclick = () => { bankRun(); toMenu(); };
 $('resumeBtn').onclick = () => togglePause();
@@ -1155,7 +1172,7 @@ let mapV = null;
 function openMap(mode, group) {
   const prog = mode === 'progress', groups = OktoCampaign.GROUPS.length;
   const cur = prog ? levelN + 1 : startLevel(), g = group != null ? group : OktoMap.groupOf(prog ? levelN : cur);
-  mapV = { mode, group: g % groups, current: cur, unlocked: Math.max(gUnlocked(), cur), swim: prog ? { from: levelN, to: levelN + 1, t: 0 } : null };
+  mapV = { mode, group: g, current: cur, unlocked: Math.max(gUnlocked(), cur), swim: prog ? { from: levelN, to: levelN + 1, t: 0 } : null };
   state = 'map'; drag.active = false; window.OktoMusic && prog && OktoMusic.stop(0.6);
   for (const el of [ui.clear, ui.menu, ui.ink, ui.pauseBtn, ui.mute]) show(el, false);
   show($('mapUi'), true); show($('mapGo'), false); show($('mapClose'), !prog); show($('mapPrev'), !prog); show($('mapNext'), !prog);
@@ -1172,8 +1189,9 @@ function mapTap(x, y) {
 }
 $('mapGo').onclick = () => mapGo();
 $('mapClose').onclick = () => { closeMap(); toMenu(); };
-$('mapPrev').onclick = () => { if (mapV) mapV.group = (mapV.group + OktoCampaign.GROUPS.length - 1) % OktoCampaign.GROUPS.length; };
-$('mapNext').onclick = () => { if (mapV) mapV.group = (mapV.group + 1) % OktoCampaign.GROUPS.length; };
+// gruplar tekrar turlarıyla sürer: önceki/sonraki, açık son grubun bir ötesine kadar (kilitli önizleme)
+$('mapPrev').onclick = () => { if (mapV) mapV.group = Math.max(0, mapV.group - 1); };
+$('mapNext').onclick = () => { if (mapV) mapV.group = Math.min(OktoMap.groupOf(mapV.unlocked) + 1, mapV.group + 1); };
 $('mapBtn').onclick = () => { if (OktoCampaign.mode === 'grup' && window.OktoMap) openMap('menu'); };
 
 // ---------- Bölüm sonu: özet kartı ve girdap geçişi ----------
@@ -1764,7 +1782,7 @@ function updateEdge() { // şerit rengi sahnenin zemin renginden hesaplanır (an
   edgeDue = false;
   const open = id => !$(id).classList.contains('hidden');
   if (open('shop') || open('missions') || open('skills') || open('help')) return setEdgeColor('#06223f'); // panellerin alt rengi
-  if (state === 'map' && mapV && window.OktoMap) return setEdgeColor(OktoMap.THEMES[mapV.group % OktoMap.THEMES.length].bot); // haritanın alt rengi
+  if (state === 'map' && mapV && window.OktoMap) return setEdgeColor(OktoMap.THEMES[(mapV.group % OktoCampaign.GROUPS.length) % OktoMap.THEMES.length].bot); // haritanın alt rengi
   let c;
   if (state === 'menu') c = [173, 139, 86]; // açılış sahnesinin kararmış kum rengi (ölçülmüş)
   else {

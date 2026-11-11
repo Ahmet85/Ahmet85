@@ -30,12 +30,13 @@ function serve() {
   fs.mkdirSync(OUT, { recursive: true });
   const srv = await serve(), base = `http://localhost:${srv.address().port}/`;
   const browser = await chromium.launch();
-  async function open(q = '', manual = true) {
+  async function open(q = '', manual = true, profile = null) {
     const ctx = await browser.newContext({ ...devices['iPhone 13'] });
-    await ctx.addInitScript(m => {
+    await ctx.addInitScript(([m, prof]) => {
       let seed = 777; Math.random = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
       if (m) window.requestAnimationFrame = () => 0; // döngüyü test elle sürer (kararlı sonuç)
-    }, manual);
+      if (prof && !sessionStorage.getItem('okto_test_seeded')) { localStorage.setItem('okto_profile', JSON.stringify(prof)); sessionStorage.setItem('okto_test_seeded', '1'); } // eski kayıtlı oyuncu (yalnızca ilk açılışta)
+    }, [manual, profile]);
     const page = await ctx.newPage(), errors = [];
     page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
     page.on('pageerror', e => errors.push(e.message));
@@ -74,21 +75,21 @@ function serve() {
   }
 
   // 2) klasik bölüm tablosu
-  console.log('2. Klasik bölüm düzeni (s21)');
+  console.log('2. Klasik bölüm düzeni (s21, ?plan=klasik)');
   {
-    const { page, close } = await open();
+    const { page, close } = await open('?plan=klasik');
     const L = await page.evaluate(() => [1, 2, 3, 4, 5, 6, 7].map(n => { const l = window.__okto.levelInfo(n); return [l.name, l.start, l.end, l.tier, l.boss].join('/'); }));
     const want = ['Güneşli Sular/0/150/1/puffer', 'Alacakaranlık Bölgesi/150/400/2/jelly', 'Karanlık Derinlikler/400/700/3/squid',
       'Sonsuz Derinlik 1/700/1000/3/puffer', 'Sonsuz Derinlik 2/1000/1300/3/jelly', 'Sonsuz Derinlik 3/1300/1600/3/squid', 'Sonsuz Derinlik 4/1600/1900/3/puffer'];
     ok(JSON.stringify(L) === JSON.stringify(want), 'bölüm adları, derinlikler ve canavarlar aynı');
-    ok(await page.evaluate(() => OktoCampaign.mode) === 'klasik', 'varsayılan düzen klasik');
+    ok(await page.evaluate(() => OktoCampaign.mode) === 'klasik', 'test adresi ?plan=klasik: klasik düzen');
     await close();
   }
 
   // 3) üç canavar baştan sona
   console.log('3. Mevcut canavarlar');
   for (const [lv, kind, hp] of [[1, 'puffer', 3], [2, 'jelly', 4], [3, 'squid', 5]]) {
-    const { page, errors, close } = await open();
+    const { page, errors, close } = await open('?plan=klasik');
     await page.evaluate(lv => window.__okto.startGame(lv), lv);
     await run(page, 300, 0, 'play'); // bölümün sonuna kadar dal
     const s1 = await page.evaluate(() => { const O = window.__okto; for (let i = 0; i < 60 * 300 && !O.boss; i++) { O.lives = 3; O.invuln = 5; O.step(1 / 60); } return O.boss && { kind: O.boss.kind, hp: O.boss.maxHp, big: O.boss.big }; });
@@ -106,7 +107,7 @@ function serve() {
   // 4) resif kuralı
   console.log('4. Resif kuralı');
   {
-    const { page, close } = await open();
+    const { page, close } = await open('?plan=klasik');
     await page.evaluate(() => window.__okto.startGame(2));
     const r = await page.evaluate(() => { const O = window.__okto; let maxR = 0, minGap = 1e9; for (let i = 0; i < 60 * 90 && O.state === 'play'; i++) { O.lives = 3; O.invuln = 5; O.step(1 / 60); if (i % 20 === 0) { maxR = Math.max(maxR, O.rockStats().onScreen); minGap = Math.min(minGap, O.corridorNow()); } } return { maxR, minGap, d: O.player.r * 2 }; });
     ok(r.maxR <= 3, `ekranda en fazla ${r.maxR} kaya`);
@@ -332,19 +333,25 @@ function serve() {
     ok(await page.evaluate(() => !window.__okto.SK) && !(await page.isVisible('#skillBtn')), 'test adresi ?murekkep: eski mürekkep düğmesi');
     await close();
   }
+  {
+    const { page, close } = await open('?plan=klasik&murekkep', false);
+    ok(await page.evaluate(() => !window.__okto.SK && OktoCampaign.mode === 'klasik' && window.__okto.levelInfo(1).boss === 'puffer'), 'test adresi ?plan=klasik&murekkep: eski s21 oyunu (klasik düzen + mürekkep düğmesi)');
+    await close();
+  }
 
   // 8) bölüm haritası (grup düzeni, test adresi)
   console.log('8. Bölüm haritası (?plan=grup)');
   {
     const { page, errors, close } = await open('?plan=grup&bolum=1');
     // üç grubun haritası kendi renginde, yazılar ekrandan taşmıyor
-    const r0 = await page.evaluate(() => { const out = []; for (let g = 0; g < 3; g++) { const cv = document.createElement('canvas'); cv.width = 390; cv.height = 844;
+    const r0 = await page.evaluate(() => { const out = []; for (let g = 0; g < 6; g++) { /* 3 grup + güçlenmiş tekrar turu */ const cv = document.createElement('canvas'); cv.width = 390; cv.height = 844;
         OktoMap.draw(cv.getContext('2d'), { W: 390, H: 844, FONT: 'Fredoka', time: 1, top: 47, group: g, unlocked: 2, current: 2 });
         const px = cv.getContext('2d').getImageData(195, 830, 1, 1).data; out.push({ col: px.slice(0, 3).join(), over: OktoMap.layout.texts.filter(t => t.x0 < 0 || t.x1 > 390 || t.y1 > 844).map(t => t.text), islands: OktoMap.layout.islands.length, texts: OktoMap.layout.texts.map(t => t.text) }); }
       return out; });
     ok(new Set(r0.map(x => x.col)).size === 3, 'üç grubun haritası farklı renkte');
     ok(r0.every(x => x.over.length === 0), 'harita yazıları iPhone 13 ekranından taşmıyor');
     ok(r0.every(x => x.islands === 4), 'her haritada 3 ortam adası + büyük canavar adası');
+    ok(r0[3].texts.includes('Güneşli Sular +1') && r0[2].texts.includes('Güneşli Sular +1') && r0[5].texts.includes('Karanlık Derinlikler +1') && r0[3].col === r0[0].col, 'tekrar turu haritası: "Güneşli Sular +1" başlığı, aynı renk, taşma yok');
     ok(r0[0].texts.includes('Güneşli Sular') && r0[0].texts.includes('0–150 m') && r0[0].texts.includes('Resif Adacıkları') && r0[0].texts.includes('Dev Balon Balığı') && r0[0].texts.includes('150 m') && r0[0].texts.includes('Alacakaranlık'), 'Güneşli Sular haritası: başlık, derinlik, adalar, büyük canavar ve sonraki grup');
     // bölüm sonu → harita → Okto yüzer → Dal! → girdap → sonraki bölüm
     await page.evaluate(() => { const O = window.__okto; O.startGame(); O.depth = O.levelInfo(1).end - 1;
@@ -386,13 +393,82 @@ function serve() {
     ok(bad.length === 0, 'iPhone 13 ekranında (çentikli) 3 haritanın yazıları taşmıyor ve düğmelerle çakışmıyor' + (bad.length ? ': ' + bad.join(', ') : ''));
     await close();
   }
-  { // normal (klasik) oyunda harita yok, bölüm sonu doğrudan girdaba gider
-    const { page, close } = await open('');
-    ok(!(await page.isVisible('#mapBtn')), 'normal oyunda Harita düğmesi yok');
+  { // klasik düzende (?plan=klasik) harita yok, bölüm sonu doğrudan girdaba gider
+    const { page, close } = await open('?plan=klasik');
+    ok(!(await page.isVisible('#mapBtn')), 'klasik düzende Harita düğmesi yok');
     await page.evaluate(() => { const O = window.__okto; O.startGame(1); O.depth = 148;
       for (let i = 0; i < 60 * 40 && O.state === 'play'; i++) { O.lives = 3; O.invuln = 5; O.step(1 / 60); if (O.boss && O.boss.phase === 'fight') { O.boss.hp = 1; O.damageBoss(1); } } for (let i = 0; i < 300 && O.state !== 'clear'; i++) O.step(1 / 60); });
     await page.waitForTimeout(500); await page.evaluate(() => document.getElementById('clearNext').click());
-    ok(await page.evaluate(() => window.__okto.state) === 'transition', 'normal oyunda bölüm sonu kartından doğrudan girdaba');
+    ok(await page.evaluate(() => window.__okto.state) === 'transition', 'klasik düzende bölüm sonu kartından doğrudan girdaba');
+    await close();
+  }
+
+  // 9) s44: normal oyun (parametresiz) grup düzeniyle
+  console.log('9. Normal oyun yeni düzende (parametresiz)');
+  {
+    const { page, errors, close } = await open('', false);
+    const r = await page.evaluate(() => ({ mode: OktoCampaign.mode, ver: document.getElementById('ver').textContent, test: window.__okto.TEST.on, L: [1, 5, 9, 13].map(n => { const l = window.__okto.levelInfo(n); return [l.groupName, l.boss].join('/'); }) }));
+    ok(r.mode === 'grup', 'parametresiz oyun grup düzeninde');
+    ok(!r.test && !/TEST/.test(r.ver), `sağ altta TEST yazmıyor (${r.ver.trim()})`);
+    ok(r.L.join() === 'Güneşli Sular/kestane,Alacakaranlık/baca-yengeci,Karanlık Derinlikler/murekkepci,Güneşli Sular +1/kestane', 'üç grup sırayla, sonra güçlenerek tekrar (Güneşli Sular +1)');
+    ok(await page.evaluate(() => window.__okto.levelInfo(13).power > window.__okto.levelInfo(1).power && window.__okto.levelInfo(16).boss === 'puffer-big'), 'tekrar turunda canavarlar daha güçlü, büyük canavar yine geliyor');
+    ok(await page.isVisible('#mapBtn'), 'menüde Harita düğmesi');
+    const help = await page.evaluate(() => document.querySelector('#help .card').textContent);
+    ok(/bölüm gruplarından/.test(help) && /harita/i.test(help) && /mini canavar/.test(help) && /büyük canavar/.test(help), 'Nasıl oynanır metni grupları, haritayı, mini ve büyük canavarları anlatıyor');
+    // yardım paneli iPhone 13'te taşmıyor (panel içinde kayar), menü yazıları ekran içinde
+    await page.evaluate(() => document.getElementById('helpBtn').click()); await page.waitForTimeout(300);
+    const hv = await page.evaluate(() => { const h = document.getElementById('help'), b = h.getBoundingClientRect(), ov = [...h.querySelectorAll('*')].filter(e => { const r = e.getBoundingClientRect(); return r.width && (r.right > innerWidth + 1 || r.left < -1); }).length; return { ov, w: b.width <= innerWidth + 1, sw: document.documentElement.scrollWidth <= innerWidth }; });
+    await page.screenshot({ path: path.join(OUT, '9-yardim.png') });
+    ok(hv.ov === 0 && hv.w && hv.sw, 'yardım paneli iPhone 13 ekranında yana taşmıyor');
+    await page.evaluate(() => document.getElementById('helpClose').click());
+    // bölüm sonu → harita (parametresiz) ve kayıt noktası yeni numaralarla
+    await page.evaluate(() => { const O = window.__okto; window.requestAnimationFrame = () => 0; O.startGame(1); O.depth = O.levelInfo(1).end - 1;
+      for (let i = 0; i < 60 * 40 && O.state === 'play'; i++) { O.lives = 3; O.invuln = 5; O.step(1 / 60); if (O.boss && O.boss.phase === 'fight') { O.boss.hp = 1; O.damageBoss(1); } } for (let i = 0; i < 300 && O.state !== 'clear'; i++) O.step(1 / 60); });
+    await page.waitForTimeout(500); await page.evaluate(() => document.getElementById('clearNext').click());
+    ok(await page.evaluate(() => window.__okto.state === 'map' && window.__okto.mapV.mode === 'progress'), 'parametresiz oyunda bölüm sonu kartından sonra harita açıldı');
+    const D = await page.evaluate(() => { const D = window.__okto.Profile.data; return { gcheck: D.gcheck, gstart: D.gstart, ls: JSON.parse(localStorage.getItem('okto_profile')).gstart }; });
+    ok(D.gcheck === 2 && D.gstart === 2 && D.ls === 2, 'kayıt noktası yeni bölüm numarasıyla kaydedildi (bölüm 2)');
+    await page.evaluate(() => { const O = window.__okto; for (let i = 0; i < 120; i++) O.step(1 / 60); document.getElementById('mapGo').click(); for (let i = 0; i < 60 * 4 && O.state !== 'play'; i++) O.step(1 / 60); document.getElementById('pauseBtn').click(); document.getElementById('quitBtn').click(); });
+    const lp = await page.evaluate(() => { const b = document.getElementById('levelPick'); const t1 = b.textContent; b.click(); const t2 = b.textContent; b.click(); return [t1, t2, b.textContent]; });
+    ok(/Bölüm 2 · Mercan Kanyonu/.test(lp[0]) && /Bölüm 1 · Resif Adacıkları/.test(lp[1]) && /Bölüm 2/.test(lp[2]), `menüdeki bölüm seçimi yeni numaralarla (${lp[0].trim()} → ${lp[1].trim()})`);
+    // menü yazıları iPhone 13 ekranında taşmıyor
+    const mo = await page.evaluate(() => [...document.querySelectorAll('#menu *')].filter(e => { const r = e.getBoundingClientRect(); return r.width && e.offsetParent && (r.right > innerWidth + 1 || r.left < -1); }).map(e => e.id || e.className));
+    await page.screenshot({ path: path.join(OUT, '9-menu.png') });
+    ok(mo.length === 0, 'menü öğeleri iPhone 13 ekranından taşmıyor' + (mo.length ? ': ' + mo.join(', ') : ''));
+    const ov = await page.evaluate(() => { const R = id => { const e = document.getElementById(id); return e && !e.classList.contains('hidden') ? e.getBoundingClientRect() : null; };
+      const lp = R('levelPick'), P = OktoTitle.playRect, out = [];
+      for (const id of ['skillBtn', 'mapBtn', 'shopBtn', 'missionBtn', 'diffBtn', 'helpBtn']) { const r = R(id); if (r && lp && lp.left < r.right && lp.right > r.left && lp.top < r.bottom + 22 && lp.bottom > r.top) out.push(id); } // +22: düğme yazısı
+      if (P && lp && lp.top < P.y + P.h && lp.bottom > P.y) out.push('oyna');
+      return out; });
+    ok(ov.length === 0, 'bölüm seçimi düğmesi diğer menü düğmeleriyle çakışmıyor' + (ov.length ? ': ' + ov.join(', ') : ''));
+    ok(errors.length === 0, 'hata yok' + (errors.length ? ': ' + errors.join(' / ') : ''));
+    await close();
+  }
+  { // eski (klasik) kayıt bir kez taşınıyor; inci, kostüm, beceri ve Kaşif Puanı korunuyor
+    const old = { wallet: 777, best: 900, checkpoint: 3, startLevel: 2, palette: 'galaxy', accessory: 'crown', owned: { colors: ['pink', 'galaxy'], accessories: ['goggles', 'none', 'crown'] }, skills: { xp: 1600, equipped: ['inkFan', 'pearlShot', 'tentacleSlam'], seen: 4 } };
+    for (const [cp, sl, wantC, wantS] of [[1, 1, 1, 1], [2, 2, 5, 5], [3, 2, 9, 5], [3, 3, 9, 9], [4, 4, 13, 13], [7, 1, 13, 1]]) {
+      const { page, close } = await open('', true, Object.assign({}, old, { checkpoint: cp, startLevel: sl }));
+      const r = await page.evaluate(() => { const D = window.__okto.Profile.data; return [D.gcheck, D.gstart, D.gmigrated, window.__okto.levelN || 0]; });
+      ok(r[0] === wantC && r[1] === wantS && r[2] === true, `eski kayıt: klasik bölüm ${cp} (başlangıç ${sl}) → yeni açık ${r[0]}, başlangıç ${r[1]}`);
+      await close();
+    }
+    const { page, errors, close } = await open('', true, old);
+    const a = await page.evaluate(() => { const O = window.__okto, D = O.Profile.data; return { D: JSON.parse(JSON.stringify(D)), start: O.startLevel ? O.startLevel() : null, menu: document.getElementById('levelPick').textContent, xp: O.SK.state ? null : null }; });
+    ok(a.D.wallet === 777 && a.D.palette === 'galaxy' && a.D.accessory === 'crown' && a.D.owned.colors.includes('galaxy') && a.D.skills.xp === 1600 && a.D.skills.equipped.join() === 'inkFan,pearlShot,tentacleSlam' && a.D.best === 900, 'inci, kostüm, beceri ve Kaşif Puanı korundu');
+    ok(a.D.checkpoint === 3 && a.D.startLevel === 2, 'klasik kayıt alanlarına dokunulmadı');
+    ok(/Bölüm 5 · Sıcak Bacalar/.test(a.menu), `menü taşınan bölümden başlatıyor (${a.menu.trim()})`);
+    // yalnızca bir kez: oyuncu yeni düzende ilerledikten sonra yeniden açılınca taşıma tekrar yapılmaz
+    await page.evaluate(() => { const D = window.__okto.Profile.data; D.gcheck = 6; D.gstart = 6; window.__okto.Profile.save(); });
+    await page.reload(); await page.waitForTimeout(400);
+    const b = await page.evaluate(() => { const D = window.__okto.Profile.data; return [D.gcheck, D.gstart]; });
+    ok(b.join() === '6,6', 'taşıma yalnızca bir kez yapıldı (yeniden açılınca yeni ilerleme korunuyor)');
+    // kayıt kodu: eski (s43) kodu yüklenince taşınıyor; yeni kod yeni ilerlemeyi taşıyor
+    const oldCode = 'OKTO-' + Buffer.from(JSON.stringify({ wallet: 55, best: 10, checkpoint: 2, startLevel: 2, palette: 'galaxy', skills: { xp: 400, equipped: ['inkFan'], seen: 2 } })).toString('base64');
+    const c = await page.evaluate(code => { document.getElementById('helpBtn').click(); document.getElementById('saveLoad').click(); const b = document.getElementById('saveBox'); b.value = code; document.getElementById('saveLoad').click(); const D = window.__okto.Profile.data; return [D.wallet, D.gcheck, D.gstart, D.gmigrated, D.skills.xp].join(); }, oldCode);
+    ok(c === '55,5,5,true,400', `eski kayıt kodu yüklenince yeni düzene taşındı (${c})`);
+    const c2 = await page.evaluate(() => { const D = window.__okto.Profile.data; D.gcheck = 10; D.gstart = 9; document.getElementById('saveCopy').click(); const code = document.getElementById('saveBox').value; D.gcheck = 1; D.gstart = 1; const b = document.getElementById('saveBox'); b.value = code; document.getElementById('saveLoad').click(); return [D.gcheck, D.gstart].join(); });
+    ok(c2 === '10,9', 'yeni kayıt kodu yeni düzendeki ilerlemeyi taşıyor (tekrar taşınmıyor)');
+    ok(errors.length === 0, 'hata yok' + (errors.length ? ': ' + errors.join(' / ') : ''));
     await close();
   }
 

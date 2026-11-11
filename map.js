@@ -84,7 +84,7 @@ function pathPt(a, b, k) { const mx = (a.x + b.x) / 2 + (a === b ? 0 : (b.y - a.
 
 function draw(c, G) {
   const { W, H, FONT, time: t } = G, S = Math.min(W / 390, H / 844), top = G.top || 0;
-  const groups = OktoCampaign.GROUPS, gi = clamp(G.group | 0, 0, groups.length - 1), GR = groups[gi], th = THEMES[gi % THEMES.length];
+  const groups = OktoCampaign.GROUPS, gi = Math.max(0, G.group | 0), gb = gi % groups.length, th = THEMES[gb % THEMES.length]; // gi: mutlak grup (3 gruptan sonra güçlenerek tekrar)
   const first = gi * OktoCampaign.PER_GROUP + 1; // grubun ilk bölüm numarası
   layout.texts = []; layout.islands = [];
   // arka plan
@@ -95,7 +95,7 @@ function draw(c, G) {
   for (const sx of [0, 1]) { c.beginPath(); const x0 = sx ? W : 0, d = sx ? -1 : 1; c.moveTo(x0, 0); for (let k = 0; k <= 12; k++) { const y = k / 12 * H; c.lineTo(x0 + d * (W * 0.07 + Math.sin(k * 1.7 + sx) * W * 0.04 + (k % 3 === 0 ? W * 0.05 : 0)), y); } c.lineTo(x0, H); c.closePath(); c.fill(); }
   c.fillStyle = 'rgba(255,255,255,.35)'; for (let i = 0; i < 26; i++) { const x = (i * 97 % 100) / 100 * W, y = H - ((t * 18 + i * 61) % (H + 20)); c.beginPath(); c.arc(x, y, (1.2 + (i % 3)) * S, 0, TAU); c.fill(); } // kabarcıklar
   // başlık
-  const L1 = OktoCampaign.level(first), L4 = OktoCampaign.level(first + 3);
+  const L1 = OktoCampaign.level(first), L4 = OktoCampaign.level(first + 3), GR = { name: L1.groupName }; // tekrar turunda "+1" eki
   c.font = `700 ${40 * S}px ${FONT}`; let tw = c.measureText(GR.name).width, ts = 40 * S; if (tw > W - 120) { ts *= (W - 120) / tw; /* kapat düğmesine değmesin */ c.font = `700 ${ts}px ${FONT}`; tw = c.measureText(GR.name).width; }
   const ty = top + 48 * S;
   c.lineJoin = 'round'; c.lineWidth = ts * 0.22; c.strokeStyle = 'rgba(8,40,80,.85)'; c.textAlign = 'left'; c.textBaseline = 'middle'; c.strokeText(GR.name, W / 2 - tw / 2, ty); c.fillStyle = th.title; c.fillText(GR.name, W / 2 - tw / 2, ty);
@@ -116,7 +116,7 @@ function draw(c, G) {
     const s = S * (big ? 1.15 : 1);
     c.save(); if (locked) c.globalAlpha = 0.45;
     if (cur) { const g = c.createRadialGradient(nd.x, nd.y, nd.w * 0.1, nd.x, nd.y, nd.w * 0.7); g.addColorStop(0, `rgba(255,120,200,${0.45 + 0.15 * Math.sin(t * 3)})`); g.addColorStop(1, 'rgba(255,120,200,0)'); c.fillStyle = g; c.beginPath(); c.ellipse(nd.x, nd.y - nd.w * 0.08, nd.w * 0.7, nd.w * 0.45, 0, 0, TAU); c.fill(); }
-    island(c, kind, nd.x, nd.y, nd.w, s, t, gi >= 2);
+    island(c, kind, nd.x, nd.y, nd.w, s, t, gb >= 2);
     // canavar
     const def = OktoBossAI.get(L.boss), br = (big ? 34 : 26) * S;
     if (def && window.OktoBosses) {
@@ -142,7 +142,7 @@ function draw(c, G) {
   }
   for (const f of labels) f();
   // sonraki grup
-  const ng = groups[gi + 1] || groups[0], ny = H - 56 * S;
+  const ng = { name: OktoCampaign.level(first + OktoCampaign.PER_GROUP).groupName }, ny = H - 56 * S;
   pill(c, W / 2, ny, ng.name, 22 * S, 'rgba(0,0,0,0)', null, '#ffffff', FONT, W - 250); // köşelerdeki düğmelere değmesin
   c.strokeStyle = '#ffffff'; c.lineWidth = 4 * S; c.lineCap = 'round'; c.beginPath(); c.moveTo(W / 2 - 12 * S, ny + 20 * S); c.lineTo(W / 2, ny + 31 * S); c.lineTo(W / 2 + 12 * S, ny + 20 * S); c.stroke();
   // Okto: şu anki adada; yüzerken iki ada arasında

@@ -18,7 +18,7 @@ Tasarım brifi: `docs/BRIF.md` ("OKTO – UNDERWATER DESCENT", kullanıcının 1
 - Dal: `claude/octopus-mobile-game-0is63u` → GitHub Pages: https://ahmet85.github.io/Ahmet85/
 - Aynı dalda başka bir oturumun `ritim/` klasörü var; **ona dokunma**, push öncesi `git fetch` + `git rebase` yap.
 - **Her yayında sürümü artır:** `index.html` içindeki tüm `?v=` ekleri, menüdeki `s<sürüm>` etiketi ve `sw.js` içindeki
-  `okto-v<sürüm>` birlikte. Kullanıcı sağ alttaki `s<sürüm>` ile güncellemenin geldiğini kontrol ediyor. Son sürüm: **s43**.
+  `okto-v<sürüm>` birlikte. Kullanıcı sağ alttaki `s<sürüm>` ile güncellemenin geldiğini kontrol ediyor. Son sürüm: **s44**.
 - Telefonda güncelleme: uygulamayı kapat-aç (gerekirse iki kez). Açılış görseli/simge değişirse sil-yeniden kur gerekir.
 - **Açılış görseli (s27):** Okto'suz sahne (oyuncunun rengi bilinemediği için); Okto oyunda oyuncunun renginle kumdan yükselir
   (`title.js` opts.intro). Görseller `preview/splash-gen.html` ile üretilir. Silip yeniden kurmada kayıt silinebilir:
@@ -39,7 +39,8 @@ Tasarım brifi: `docs/BRIF.md` ("OKTO – UNDERWATER DESCENT", kullanıcının 1
 ## Canavar ve bölüm grubu altyapısı (s22)
 - Kullanıcı kararı: sonsuz tekrar yerine **bölüm grupları**: her bölümde farklı ortam + mini canavar; 3 mini canavardan sonra
   sinematik girişli **büyük canavar**; büyük zafer kutlaması; sonraki grupta yeni ortamlar ve canavarlar.
-- **Kullanıcı onay vermeden varsayılan düzen (klasik) ve mevcut 3 canavar değiştirilmez.** Grup düzeni yalnızca test adresinde.
+- ~~Kullanıcı onay vermeden varsayılan düzen değiştirilmez~~ → **s44: kullanıcı onayladı, normal oyun grup düzeninde.**
+  Eski klasik düzen (s21) yalnızca test adresinde: `?plan=klasik` (eski s21 birebir karşılaştırması: `?plan=klasik&murekkep`).
 - Görseller ve bölüm planı tasarım yapay zekâsından gelecek; teslim biçimi ve tanım alanları: `docs/BOSS-SISTEMI.md`.
 - Test adresleri (hiçbir şey kaydetmez, sağ altta TEST yazar): `?boss=kimlik`, `?bolum=N`, `?plan=grup`; liste: `preview/boss-test.html`.
 - s22 yeniden düzenlemesinde mevcut canavarlar eski s21 koduyla aynı rastgele sayılarla yan yana oynatıldı: 4 bölümde birebir aynı.
@@ -69,7 +70,13 @@ Tasarım brifi: `docs/BRIF.md` ("OKTO – UNDERWATER DESCENT", kullanıcının 1
   Grup düzeni kendi kaydını tutar (`D.gcheck`, `D.gstart`; eskiden klasik `checkpoint`'i bozuyordu). s42 düzeltme: `campaign.js`'te
   s31'den beri bir yorum satırı `zones/env/intro`'yu yutuyordu (grup bölümlerinin ortamı, su rengi, sinematik yazısı); düzeldi + test.
   s43: tik/kilit işareti etiketin hemen sağında (uzun adlara binmiyor); iPhone 13 çentikli ekranda yazı taşma/düğme çakışma testi.
-  Kullanıcı pilotu onaylarsa ilk grup asıl oyuna alınacak; diğer gruplar pilotun ardından.
+  **s44: yeni düzen asıl oyunda** (kullanıcı onayı): parametresiz oyun `grup`; üç gruptan sonra "+1" ekiyle güçlenerek tekrar
+  (harita da tekrar turlarını gösterir, önceki/sonraki açık son grubun bir ötesine kadar). Eski kayıt **bir kez** taşınır
+  (`gMigrate`, bayrak `D.gmigrated`): klasik `checkpoint` 1→1, 2→5, 3→9, 4+→13 (`gcheck`), `startLevel` aynı şekilde (`gstart`);
+  klasik alanlar ve inci/kostüm/beceri/Kaşif Puanı dokunulmadan kalır. Kayıt kodu `gcheck/gstart/gmigrated` taşır; bunları
+  içermeyen eski kod yüklenince taşıma yeniden yapılır. Menüdeki bölüm seçimi grup numaralarıyla (`gstart` açık bölümler arasında
+  döner); bölüm seçimi düğmesi artık beceri/harita sırasının üstünde (eskiden altında kalıp yazısı kesiliyordu). Yardım metni
+  grupları, haritayı, mini ve büyük canavarları anlatır. Regress bölüm 9 (parametresiz oyun, taşıma, kayıt kodu, çakışma).
 
 ## Beceri halkası (s24 deneme → **s27'den beri normal oyunda**, kullanıcı onayladı)
 - Kullanıcı isteği: 12 beceri, oyuncu 3'ünü kuşanır; menüden ve bölüm geçişinde ("Becerileri Değiştir") değiştirilir; seçim kayıtlı kalır.
@@ -118,7 +125,7 @@ Tasarım brifi: `docs/BRIF.md` ("OKTO – UNDERWATER DESCENT", kullanıcının 1
 | `enemies.js` | Düşman ve toplanabilir çizimleri |
 | `bosses.js` | Canavar çizimleri (`DRAWERS`; çizimi olmayan canavar için geçici çizim) ve saldırı çizimleri |
 | `boss-ai.js` | Canavar sistemi: tanımlar (`OktoBossAI.register`), ortak saldırı kütüphanesi, can eşiğiyle aşamalar, büyük/mini |
-| `campaign.js` | Bölüm düzeni: `klasik` (varsayılan, s21) ve `grup` (3 bölüm + mini canavar, sonra büyük canavar; TASLAK) |
+| `campaign.js` | Bölüm düzeni: `grup` (s44'ten beri varsayılan: 3 bölüm + mini canavar, sonra büyük canavar) ve `klasik` (s21, `?plan=klasik`) |
 | `cinema.js` | Büyük canavar sinematik girişi ve büyük zafer kutlaması |
 | `map.js` | Bölüm haritası (grup düzeni): adalar, ilerleme, Okto'nun yüzmesi, dokunma |
 | `skills.js` | Beceri halkası: 12 beceri (mantık, efektler, simgeler), halka girdisi, açılma (Kaşif Puanı), düğme ve halka çizimi |

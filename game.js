@@ -367,13 +367,17 @@ function menuMusic() {
 }
 document.addEventListener('pointerdown', e => { if (state === 'menu' && !Sound.muted && e.target.id !== 'musicBtn') menuMusic(); }, true);
 document.addEventListener('keydown', () => { if (state === 'menu' && !Sound.muted) menuMusic(); }, true);
-function startLevel() { if (TEST.level) return TEST.level; const D = Profile.data; return clamp(D.startLevel || 1, 1, D.checkpoint || 1); }
+function startLevel() {
+  if (TEST.level) return TEST.level; const D = Profile.data, n = clamp(D.startLevel || 1, 1, D.checkpoint || 1);
+  return OktoCampaign.mode === 'grup' ? OktoCampaign.migrate(n) : n; // grup düzeninde eski (klasik) kayıt noktası yeni düzene taşınır
+}
 function refreshMenu() {
   const lp = $('levelPick'), cp = Profile.data.checkpoint || 1, sl = startLevel();
   lp.classList.toggle('hidden', cp < 2);
   lp.innerHTML = sl > 1 ? `▶ Bölüm ${ablative(sl)} başla <small>(değiştir)</small>` : `▶ Baştan başla <small>(değiştir)</small>`;
   $('menuBest').textContent = `⚪ ${Profile.data.wallet} inci` + (Profile.data.best > 0 ? `   🏆 ${Profile.data.best}` : '');
   $('missionBadge').classList.toggle('hidden', !Missions.claimable());
+  if (TEST.on && OktoCampaign.mode === 'grup') { lp.classList.remove('hidden'); const L = levelInfo(startLevel()); lp.innerHTML = `▶ Bölüm ${startLevel()} · ${L.name} <small>(eski kayıt: klasik ${clamp(Profile.data.startLevel || 1, 1, Profile.data.checkpoint || 1)})</small>`; }
   show($('skillBtn'), !!SK);
   if (SK) { const P = skProf(); $('skillBadge').classList.toggle('hidden', SK.unlockedIds(P.xp).length <= (P.seen || 1)); }
 }
@@ -447,6 +451,7 @@ if (SK) {
 function skEnv() {
   return { W, H, S, time, now: performance.now(), player, entities, boss, enemies: ENEMIES, damageBoss, burst, floater: addFloater, sound: Sound,
     addScore: n => { score += n; }, vibrate, track: (id, n) => Missions.track(id, n), shake: n => { shake = Math.max(shake, n); },
+    onFire: id => { TLOG.uses[id] = (TLOG.uses[id] || 0) + 1; },
     inkShot: () => { if (boss && boss.phase === 'fight') shots.push({ x: player.x, y: player.y, vx: 0, vy: 260 * S, life: 3 }); } };
 }
 
@@ -480,10 +485,29 @@ function togglePause() {
   else if (state === 'pause') { state = 'play'; show(ui.pause, false); last = performance.now(); gameMusic(); }
 }
 let xpBase = 0, lastUnlocks = [];
+// ---------- Test kaydı (yalnızca test adresinde): denge testi için karşılaşma süreleri, beceri kullanımı, açılma derinliği ----------
+const TLOG = { t: 0, enc: [], uses: {}, unlocks: [] };
+function tlogText() {
+  const f = x => (Math.round(x * 10) / 10).toFixed(1).replace('.', ',');
+  const L = ['OKTO test kaydı · ' + (OktoCampaign.mode === 'grup' ? 'grup düzeni' : 'klasik') + ' · zorluk ' + diff().name, 'Toplam süre: ' + f(TLOG.t) + ' sn'];
+  L.push('Karşılaşmalar:'); for (const e of TLOG.enc) L.push(`  ${e.name} (${e.big ? 'büyük' : 'mini'}, bölüm ${e.level}): ${e.dur != null ? f(e.dur) + ' sn' : 'bitmedi'}, ${e.hits} isabet, Okto ${e.hurt} hasar`);
+  L.push('Beceri kullanımı:'); const u = Object.entries(TLOG.uses); if (!u.length) L.push('  (yok)'); for (const [id, n] of u) L.push(`  ${SK ? SK.byId(id).name : id}: ${n} kez`);
+  L.push('Açılan beceriler:'); if (!TLOG.unlocks.length) L.push('  (yok)'); for (const x of TLOG.unlocks) L.push(`  ${x.name}: ${x.depth} m, Kaşif Puanı ${x.xp}`);
+  return L.join('\n');
+}
+function showTlog(where) {
+  if (!TEST.on) return;
+  let box = $('tlog_' + where);
+  if (!box) { box = document.createElement('div'); box.id = 'tlog_' + where; box.className = 'tlog'; box.innerHTML = '<pre></pre><button class="tab">Test kaydını kopyala</button>'; $(where).append(box);
+    box.querySelector('button').onclick = async () => { const t = box.querySelector('pre').textContent; try { await navigator.clipboard.writeText(t); box.querySelector('button').textContent = 'Kopyalandı'; } catch { const r = document.createRange(); r.selectNodeContents(box.querySelector('pre')); getSelection().removeAllRanges(); getSelection().addRange(r); } }; }
+  box.querySelector('pre').textContent = tlogText(); box.querySelector('button').textContent = 'Test kaydını kopyala';
+}
 function awardXp() { // bu dalışta kazanılan puanlar Kaşif Puanı'na eklenir (yalnızca beceri denemesinde)
   if (!SK) return [];
   const n = Math.max(0, score - xpBase); xpBase = score;
-  const fresh = SK.addXp(skProf(), n); Profile.save(); return fresh;
+  const fresh = SK.addXp(skProf(), n); Profile.save();
+  for (const d of fresh) TLOG.unlocks.push({ name: d.name, depth: Math.round(depth), xp: skProf().xp });
+  return fresh;
 }
 const unlockText = list => list.length ? `Yeni beceri açıldı: ${list.map(d => d.name + (d.ready ? '' : ' (yakında)')).join(', ')}!` : '';
 function bankRun() { // dalıştan kazanılan incileri cüzdana bir kez ekle
@@ -500,6 +524,7 @@ function gameOver() {
   const D = Profile.data, isBest = score > D.best;
   const earned = bankRun();
   $('oUnlock').textContent = unlockText(lastUnlocks); show($('oUnlock'), lastUnlocks.length > 0);
+  showTlog('over');
   $('againBtn').textContent = levelN > 1 ? `Bölüm ${ablative(levelN)} devam` : 'Tekrar Dal';
   $('oLevel').textContent = `Bölüm ${levelN} · ${levelInfo(levelN).name}`;
   $('oScore').textContent = score; $('oDepth').textContent = Math.floor(depth); $('oPearls').textContent = pearls;
@@ -669,6 +694,7 @@ function hurt() {
   if (invuln > 0 || player.bigT > 0) return; // dev Okto'ya hiçbir şey işlemez
   if (shieldTime > 0) { shieldTime = 0; invuln = 1; burst(player.x, player.y, '#9ee8ff', 22, 200); Sound.tone(500, 0.2, 'triangle', 0.12, -300); addFloater(player.x, player.y - 40 * S, 'Kalkan!', '#9ee8ff'); return; }
   lives--; levelHits++; invuln = diff().invuln; shake = 14; combo = 0;
+  if (boss) { const e = TLOG.enc[TLOG.enc.length - 1]; if (e && e.dur == null) e.hurt++; }
   Sound.hit(); vibrate(120);
   burst(player.x, player.y, '#ff7eb6', 18, 180);
   if (lives <= 0) gameOver();
@@ -720,6 +746,10 @@ function makePlan(L) { // bölüm: açık su ile başlar, özel bölgeler arası
   add('open', 18);
   // bölüme göre açılan bölgeler; her bölümde karışık sırayla, aynısı arka arkaya gelmez
   if (L.zones && !L.zones.length) { segs.push({ type: 'open', a: d, b: L.end + 1000 }); return segs; } // arena: sakin açık su
+  if (L.zones && L.zones.length === 1) { // grup düzeni: bölümün ortamı baştan sona sürer (kısa giriş ve canavar öncesi nefes)
+    add('open', 5); const b2 = L.end - 8; if (b2 > d) { segs.push({ type: L.zones[0], a: d, b: b2 }); d = b2; }
+    segs.push({ type: 'open', a: d, b: L.end + 1000 }); return segs;
+  }
   const pool = L.zones ? L.zones : L.n === 1 ? ['reefs', 'canyon', 'akinti', 'yosun']
     : L.n === 2 ? ['reefs', 'canyon', 'akinti', 'yosun', 'baca', 'gemi', 'mayin']
     : ['reefs', 'canyon', 'akinti', 'yosun', 'baca', 'gemi', 'mayin', 'magara', 'kacis'];
@@ -905,6 +935,7 @@ function startBoss(kind) {
   const def = bossDef(kind); kind = def.id;
   const lv = levelInfo(levelN).power || levelN, extra = Math.max(0, lv - 3);
   const hp = Math.max(2, def.hp + extra + diff().bossHp);
+  TLOG.enc.push({ name: def.name, big: def.size === 'big', level: levelN, start: TLOG.t, dur: null, hits: 0, hurt: 0 });
   boss = { kind, def, big: def.size === 'big', x: W / 2, y: H + 170 * S, hp, maxHp: hp, lv, t: 0, phase: 'enter', attackT: 2.0, stun: 0, flashT: 0, r: def.r * S, puff: 0, dash: null, puffT: 0, act: null, ph: null };
   const hint = SK ? 'Mürekkep ve İnci Atışı ona vurur' : 'Mürekkep düğmesi ona mürekkep topu atar';
   if (def.size === 'big') toast(hint); // adı sinematikte zaten göründü
@@ -914,12 +945,15 @@ function startBoss(kind) {
 }
 function damageBoss(n) {
   if (!boss || boss.phase !== 'fight') return;
-  boss.hp -= n; boss.flashT = 0.3; boss.stun = 1.2; boss.dash = null; boss.puffT = 0; boss.act = null; shake = 9;
+  const te = TLOG.enc[TLOG.enc.length - 1]; if (te && te.dur == null) te.hits++;
+  if (boss.openT > 0) { n += 1; addFloater(boss.x, boss.y - boss.r * 1.6, 'Çift vuruş!', '#7dffb0'); } // vatoz açık verdi
+  boss.hp -= n; boss.flashT = 0.3; boss.stun = 1.2; boss.dash = null; boss.puffT = 0; boss.act = null; boss.glowT = 0; boss.clawT = 0; boss.foldT = 0; boss.current = null; shake = 9;
   Sound.bossHit(); vibrate(60);
   burst(boss.x, boss.y - boss.r * 0.6, boss.def.color, 20, 220);
   addFloater(boss.x, boss.y - boss.r * 1.3, `-${n}`, '#ff8a8a');
   if (boss.hp <= 0) {
     boss.phase = 'dying'; boss.t = 0; slams.length = 0;
+    { const e = TLOG.enc[TLOG.enc.length - 1]; if (e && e.dur == null) e.dur = TLOG.t - e.start; }
     for (const e of entities) if (ENEMIES.has(e.type)) e.dead = true;
     score += 300 * boss.lv * (boss.big ? 3 : 1); bossesBeaten++;
     if (boss.big) bigVictory();
@@ -951,13 +985,22 @@ function updateBoss(dt) {
   if (b.stun > 0) { b.stun -= dt; b.y = lerp(b.y, restY, dt * 3); return; }
   const interval = Math.max(1.3, 2.8 - b.lv * 0.2) * rand(0.85, 1.15);
   // canavara özel hareket ve saldırılar boss-ai.js'te
-  OktoBossAI.tick(b, { W, H, S, player, entities, slams, sound: Sound, rand, clamp, lerp, interval, restY }, dt);
+  OktoBossAI.tick(b, { W, H, S, player, entities, slams, sound: Sound, rand, clamp, lerp, interval, restY,
+    push: (dx, dy) => pushTarget(dx, dy), floater: addFloater }, dt);
 }
 function updateSlams(dt) {
   for (const s of slams) {
     s.t += dt;
     if (s.cancel && s.t < s.warn) s.done = true;
     const up = s.t - s.warn;
+    if (s.kind === 'claw') { // yengeç kıskacı: yatay şerit; önce uyarı, sonra kıskaç kenardan kenara süpürür
+      if (s.warnOnly) { if (s.t >= s.warn) s.done = true; continue; }
+      s.reach = Math.min(1, s.t / 0.55); if (s.t > 0.8) s.done = true;
+      const front = s.side > 0 ? s.reach * W : W - s.reach * W;
+      const inX = s.side > 0 ? player.x < front + player.r : player.x > front - player.r;
+      if (!s.cancel && inX && Math.abs(player.y - s.y) < s.h + player.r * 0.6) hurt();
+      continue;
+    }
     if (s.kind === 'zap') { s.reach = up >= 0 && up < 0.55 ? 1 : 0; if (up >= 0 && !s.zapped) { s.zapped = true; Sound.noise(0.4, 0.2, 4000); Sound.tone(80, 0.4, 'sawtooth', 0.1); } if (up > 0.55) s.done = true; }
     else { s.reach = up < 0 ? 0 : up < 0.3 ? up / 0.3 : up < 0.9 ? 1 : Math.max(0, 1 - (up - 0.9) / 0.3); if (up > 1.2) s.done = true; }
     if (s.reach > 0.3 && !s.cancel) {
@@ -1035,6 +1078,7 @@ function levelClear() {
   if (SK) SK.cancel();
   const fresh = awardXp(); // bölüm sonunda Kaşif Puanı ve açılan beceriler
   $('clUnlock').textContent = unlockText(fresh); show($('clUnlock'), fresh.length > 0); show($('clSkills'), !!SK);
+  showTlog('clear');
   state = 'clear'; drag.active = false; window.OktoMusic && OktoMusic.stop(1.0);
   const n = levelN, goal = pearlGoal(n);
   const stars = 1 + (levelHits <= 1 ? 1 : 0) + (levelPearls >= goal ? 1 : 0);
@@ -1113,7 +1157,7 @@ function drawTransition() {
 
 // ---------- Güncelleme ----------
 function update(dt) {
-  time += dt;
+  time += dt; TLOG.t += dt;
   let scroll = (70 + Math.min(depth, 900) * 0.18) * S * diff().scroll; // piksel/sn
   if (boss) scroll *= 0.35;
   if (window.OktoZones) scroll *= OktoZones.speed();
@@ -1667,8 +1711,8 @@ requestAnimationFrame(frame);
 // Test/hata ayıklama için
 window.__okto = {
   get state() { return state; }, get score() { return score; }, get depth() { return depth; }, set depth(v) { depth = v; },
-  step: dt => stepFrame(0, dt), SK, draw: () => drawFrame(), levelInfo: n => levelInfo(n), get cine() { return cine; }, get victory() { return victory; }, TEST,
-  get lives() { return lives; }, diff: () => diff(), get safeTop() { return safeTop; }, get rocks() { return rocks; }, get zoneName() { return zone; }, setZone: z => { plan = [{ type: 'open', a: 0, b: depth + 1 }, { type: z, a: depth + 1, b: depth + 200 }, { type: 'open', a: depth + 200, b: 1e6 }]; }, rockStats: () => ({ onScreen: rocks.filter(onScreen).length, all: rocks.length }), corridorNow: () => { let worst = 1e9; for (let y = 0; y < H; y += 4) worst = Math.min(worst, widestGap(blockedAt(y, rocks))); return worst; }, get plan() { return plan; }, get zone() { return zone; }, get shake() { return shake; }, set lives(v) { lives = v; }, set invuln(v) { invuln = v; }, get boss() { return boss; }, get tier() { return tier; }, get levelN() { return levelN; }, get phase() { return phase; }, damageBoss, startTransition,
+  TLOG, tlogText, step: dt => stepFrame(0, dt), SK, draw: () => drawFrame(), levelInfo: n => levelInfo(n), get cine() { return cine; }, get victory() { return victory; }, TEST,
+  get lives() { return lives; }, diff: () => diff(), get safeTop() { return safeTop; }, get rocks() { return rocks; }, get zoneName() { return zone; }, setZone: z => { plan = [{ type: 'open', a: 0, b: depth + 1 }, { type: z, a: depth + 1, b: depth + 200 }, { type: 'open', a: depth + 200, b: 1e6 }]; }, rockStats: () => ({ onScreen: rocks.filter(onScreen).length, all: rocks.length }), corridorNow: () => { let worst = 1e9; for (let y = 0; y < H; y += 4) worst = Math.min(worst, widestGap(blockedAt(y, rocks))); return worst; }, get plan() { return plan; }, get zone() { return zone; }, get shake() { return shake; }, set lives(v) { lives = v; }, set invuln(v) { invuln = v; }, get boss() { return boss; }, get slams() { return slams; }, get tier() { return tier; }, get levelN() { return levelN; }, get phase() { return phase; }, damageBoss, startTransition,
   Sound, TIERS, startGame, useInk, lightBomb: () => lightBomb(player.x, player.y), get entities() { return entities; }, get player() { return player; }, get target() { return target; },
   Profile, Missions, spawnGift: () => entities.push({ type: 'gift', x: player.x, y: player.y + 70 * S, r: 14 * S, t: 0, hue: 330 }), spawnGlow: () => entities.push({ type: 'glow', x: player.x, y: player.y + 80 * S, r: 15 * S, t: 0 }),
 };

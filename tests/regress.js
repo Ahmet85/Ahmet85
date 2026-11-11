@@ -119,14 +119,22 @@ function serve() {
   {
     const { page, errors, close } = await open('?plan=grup');
     const G = await page.evaluate(() => [1, 2, 3, 4, 5].map(n => { const l = window.__okto.levelInfo(n); return { n, boss: l.boss, arena: l.arena, group: l.group, start: l.start, end: l.end }; }));
-    ok(G[3].arena && G[3].boss === 'ornek-buyuk' && G[4].group === 2 && G[4].start === G[3].end, 'grup: 3 bölüm + arena, sonra 2. grup');
+    ok(G.slice(0, 4).map(g => g.boss).join() === 'kestane,yengec,vatoz,puffer-big' && G[3].arena && G[3].end === 150 && G[4].group === 2 && G[4].start === 150, 'Güneşli Sular: Kestane, Yengeç, Vatoz, Dev Balon Balığı (0–150 m), sonra 2. grup');
+    ok(await page.evaluate(() => [1, 2, 3, 4, 7].map(n => OktoCampaign.migrate(n)).join()) === '1,5,9,13,13', 'eski kayıt noktası taşınıyor (1→1, 2→5, 3→9, 4+→13)');
     ok(await page.textContent('#ver').then(v => v.includes('TEST')), 'test etiketi görünüyor');
-    // mini canavar aşaması
-    await page.evaluate(() => window.__okto.startGame(3));
-    await page.evaluate(() => { const O = window.__okto; O.depth = O.levelInfo(3).end - 1; });
-    let seen = await run(page, 60, 2.2, 'clear');
-    ok(seen.phases.includes('Hızlandı!'), 'mini canavar canı yarıya inince aşama değiştirdi');
-    ok(await page.evaluate(() => window.__okto.state) === 'clear', 'mini canavar yenildi');
+    // üç mini canavar sırayla: her biri saldırısını yapıyor ve yeniliyor
+    await page.evaluate(() => window.__okto.startGame(1));
+    let seen;
+    for (const [n, kind, atk] of [[1, 'kestane', "O.entities.filter(e => e.type === 'spike').length > 8"], [2, 'yengec', "O.slams.some(s => s.kind === 'claw' && !s.warnOnly)"], [3, 'vatoz', 'O.boss.current']]) {
+      await page.evaluate(n => { const O = window.__okto; O.depth = O.levelInfo(n).end - 1; }, n);
+      const r = await page.evaluate(([atk]) => { const O = window.__okto, C = new Function('O', 'return ' + atk); let saw = false;
+        for (let i = 0; i < 60 * 60 && O.state === 'play'; i++) { O.lives = 3; O.invuln = 5; O.step(1 / 60); if (O.boss && O.boss.phase === 'fight' && C(O)) { saw = true; break; } }
+        return { saw, kind: O.boss && O.boss.kind }; }, [atk]);
+      ok(r.saw && r.kind === kind, `${kind}: çıktı ve saldırısını yaptı`);
+      seen = await run(page, 90, 2.2, 'clear');
+      ok(await page.evaluate(() => window.__okto.state) === 'clear', `${kind}: yenildi`);
+      if (n < 3) { await page.evaluate(() => window.__okto.startTransition()); await run(page, 4, 0); }
+    }
     // arena → sinematik → büyük canavar
     await page.evaluate(() => window.__okto.startTransition()); await run(page, 4, 0);
     ok(await page.evaluate(() => window.__okto.levelN) === 4, 'arena bölümüne geçildi');
@@ -139,15 +147,15 @@ function serve() {
     }
     await run(page, 3, 0);
     const bb = await page.evaluate(() => { const B = window.__okto.boss; return B && { kind: B.kind, big: B.big, hp: B.maxHp }; });
-    ok(bb && bb.big && bb.kind === 'ornek-buyuk', `büyük canavar savaşı başladı (can ${bb && bb.hp})`);
+    ok(bb && bb.big && bb.kind === 'puffer-big', `büyük Dev Balon Balığı savaşı başladı (can ${bb && bb.hp})`);
     await page.evaluate(() => window.__okto.draw()); await page.screenshot({ path: path.join(OUT, '5-buyuk-canavar.png') });
     seen = await run(page, 120, 2.2, 'clear');
-    ok(seen.phases.includes('Öfkelendi!') && seen.phases.includes('Son güç!'), 'büyük canavar 3 aşamadan geçti');
     ok(await page.evaluate(() => window.__okto.state) === 'clear', 'büyük canavar yenildi');
     ok((await page.textContent('#clTitle')).includes('Tamamlandı') && (await page.textContent('#clName')).includes('Kupa'), 'grup sonu kartı: kupa');
     await page.evaluate(() => window.__okto.startTransition()); await run(page, 4, 0);
     ok(await page.evaluate(() => [window.__okto.levelN, window.__okto.levelInfo(5).group].join()) === '5,2', '2. gruba geçildi');
     ok(await page.evaluate(() => localStorage.getItem('okto_profile')) === null, 'test adresinde hiçbir şey kaydedilmedi');
+    ok(await page.evaluate(() => { const t = window.__okto.tlogText(); return t.includes('DİKENLİ KESTANE') && t.includes('DEV BALON BALIĞI') && !t.includes('bitmedi'); }), 'test kaydı dört karşılaşmayı tuttu');
     ok(errors.length === 0, 'hata yok' + (errors.length ? ': ' + errors.join(' / ') : ''));
     await close();
   }

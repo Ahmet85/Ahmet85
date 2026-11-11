@@ -123,8 +123,78 @@ function drawGenericBoss(b, R, hit, stunned) {
   bossEyes(R, -R * 0.2, R * 0.4, R * 0.26, line, L.iris || '#ffe14d', stunned, true);
   ctx.strokeStyle = line; ctx.lineWidth = 3.5 * S; ctx.beginPath(); ctx.moveTo(-R * 0.25, R * 0.3); ctx.quadraticCurveTo(0, R * 0.18, R * 0.25, R * 0.3); ctx.stroke();
 }
+// ---------- Güneşli Sular mini canavarları (tasarım PNG'leri model alınarak kodla çizilir) ----------
+function drawKestane(b, R, hit, stunned) { // mor dikenli yuvarlak gövde, parlayan turuncu noktalar
+  const glow = b.glowT > 0 ? 0.5 + 0.5 * Math.sin(time * 14) : 0, line = '#2e0f4a';
+  ctx.save(); ctx.rotate(Math.sin(time * 0.8) * 0.08);
+  ctx.fillStyle = hit ? '#fff' : '#5b2a8a'; ctx.strokeStyle = line; ctx.lineWidth = 2.5 * S; ctx.lineJoin = 'round';
+  const n = 18;
+  for (let i = 0; i < n; i++) { // dikenler
+    const a = i * TAU / n + time * 0.15, l = R * (1.45 + (i % 2) * 0.12 + (b.glowT > 0 ? 0.08 : 0));
+    ctx.beginPath(); ctx.moveTo(Math.cos(a - 0.13) * R * 0.85, Math.sin(a - 0.13) * R * 0.85); ctx.lineTo(Math.cos(a) * l, Math.sin(a) * l); ctx.lineTo(Math.cos(a + 0.13) * R * 0.85, Math.sin(a + 0.13) * R * 0.85); ctx.closePath(); ctx.fill(); ctx.stroke();
+  }
+  ctx.restore();
+  const g = ctx.createRadialGradient(-R * 0.3, -R * 0.35, R * 0.1, 0, 0, R * 1.05);
+  g.addColorStop(0, hit ? '#fff' : '#c79bff'); g.addColorStop(0.6, hit ? '#fff' : '#8a4fd0'); g.addColorStop(1, '#4a1f78');
+  ctx.fillStyle = g; ctx.strokeStyle = line; ctx.lineWidth = 3 * S; ctx.beginPath(); ctx.arc(0, 0, R, 0, TAU); ctx.fill(); ctx.stroke();
+  for (const [x, y] of [[-0.62, 0.15], [0.62, 0.15], [-0.4, 0.62], [0.4, 0.62], [0, 0.78], [-0.72, -0.35], [0.72, -0.35]]) { // turuncu noktalar
+    if (glow > 0) { ctx.fillStyle = `rgba(255,170,60,${0.35 * glow})`; ctx.beginPath(); ctx.arc(x * R, y * R, R * 0.2, 0, TAU); ctx.fill(); }
+    ctx.fillStyle = glow > 0 ? `rgb(255,${190 + 50 * glow | 0},90)` : '#ff9a3d'; ctx.beginPath(); ctx.arc(x * R, y * R, R * 0.09, 0, TAU); ctx.fill();
+  }
+  bossEyes(R, -R * 0.12, R * 0.34, R * 0.24, line, '#ffb000', stunned, true);
+  ctx.strokeStyle = line; ctx.lineWidth = 3 * S; ctx.beginPath(); ctx.arc(0, R * 0.32, R * 0.16, Math.PI * 1.15, Math.PI * 1.85); ctx.stroke();
+}
+function drawYengec(b, R, hit, stunned) { // iri kırmızı kıskaçlı, geniş silüet; yan duvardan içeri bakar
+  const line = '#5a0f08', body = hit ? '#fff' : '#e8452f', light = hit ? '#fff' : '#ff8a6a', inward = -(b.side || 1);
+  ctx.lineCap = 'round'; ctx.strokeStyle = line;
+  for (const sx of [-1, 1]) for (let i = 0; i < 3; i++) { // bacaklar
+    const a = 0.35 + i * 0.32, k = Math.sin(time * 6 + i) * 0.08;
+    ctx.lineWidth = 6 * S; ctx.strokeStyle = line; ctx.beginPath(); ctx.moveTo(sx * R * 0.7, R * 0.15); ctx.lineTo(sx * R * (1.25 + k), R * (0.25 + a * 0.6)); ctx.lineTo(sx * R * 1.45, R * (0.65 + a * 0.5)); ctx.stroke();
+    ctx.lineWidth = 3.5 * S; ctx.strokeStyle = body; ctx.stroke();
+  }
+  for (const sx of [-1, 1]) { // kıskaçlar: içeri bakan kıskaç uyarıda kalkar
+    const raised = sx === inward && b.clawT > 0, lift = raised ? -0.9 - Math.sin(time * 18) * 0.06 : -0.15 + Math.sin(time * 2 + sx) * 0.08;
+    ctx.save(); ctx.translate(sx * R * 0.85, -R * 0.2); ctx.rotate(sx * lift);
+    ctx.lineWidth = 9 * S; ctx.strokeStyle = line; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(sx * R * 0.35, -R * 0.35); ctx.stroke();
+    ctx.lineWidth = 6 * S; ctx.strokeStyle = body; ctx.stroke();
+    ctx.translate(sx * R * 0.45, -R * 0.5);
+    ctx.fillStyle = body; ctx.lineWidth = 3 * S; ctx.strokeStyle = line;
+    ctx.beginPath(); ctx.ellipse(0, 0, R * 0.42, R * 0.3, sx * 0.4, 0, TAU); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = light; ctx.beginPath(); ctx.moveTo(sx * R * 0.1, -R * 0.12); ctx.lineTo(sx * R * 0.62, -R * (raised ? 0.42 : 0.28)); ctx.lineTo(sx * R * 0.3, R * 0.02); ctx.closePath(); ctx.fill(); ctx.stroke(); // açık kıskaç ucu
+    ctx.restore();
+  }
+  const g = ctx.createRadialGradient(-R * 0.3, -R * 0.3, R * 0.1, 0, 0, R * 1.2);
+  g.addColorStop(0, light); g.addColorStop(1, hit ? '#fff' : '#b8301e');
+  ctx.fillStyle = g; ctx.lineWidth = 3 * S; ctx.strokeStyle = line; ctx.beginPath(); ctx.ellipse(0, 0, R * 1.05, R * 0.7, 0, 0, TAU); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,.25)'; for (const [x, y, r] of [[-0.45, -0.25, 0.1], [0.4, -0.3, 0.08], [0.1, 0.25, 0.09]]) { ctx.beginPath(); ctx.arc(x * R, y * R, r * R, 0, TAU); ctx.fill(); }
+  for (const sx of [-1, 1]) { // sap üstünde gözler
+    ctx.lineWidth = 5 * S; ctx.strokeStyle = line; ctx.beginPath(); ctx.moveTo(sx * R * 0.25, -R * 0.55); ctx.lineTo(sx * R * 0.3, -R * 0.95); ctx.stroke();
+  }
+  ctx.save(); ctx.translate(0, -R * 1.0); bossEyes(R, 0, R * 0.3, R * 0.2, line, '#ffe14d', stunned, true); ctx.restore();
+  ctx.strokeStyle = line; ctx.lineWidth = 3 * S; ctx.beginPath(); ctx.arc(0, R * 0.15, R * 0.18, Math.PI * 1.15, Math.PI * 1.85); ctx.stroke();
+}
+function drawVatoz(b, R, hit, stunned) { // açık çizgili turkuaz vatoz; kanat toplar, akıntı yollar, açık verir
+  const line = '#0b4a50', fold = b.foldT > 0 ? 1 - b.foldT / 0.8 : 0, flap = Math.sin(time * 3) * 0.12;
+  const span = R * (1.75 - 0.75 * fold), body = hit ? '#fff' : '#3cc9bd', light = hit ? '#fff' : '#a6f0e6';
+  ctx.lineWidth = 4 * S; ctx.strokeStyle = line; ctx.lineCap = 'round'; // kuyruk
+  ctx.beginPath(); ctx.moveTo(0, R * 0.5); ctx.quadraticCurveTo(Math.sin(time * 2.5) * R * 0.4, R * 1.3, Math.sin(time * 2.5 + 1) * R * 0.2, R * 1.9); ctx.stroke();
+  ctx.fillStyle = '#ffe14d'; ctx.beginPath(); ctx.arc(Math.sin(time * 2.5 + 1) * R * 0.2, R * 1.9, R * 0.07, 0, TAU); ctx.fill();
+  const g = ctx.createLinearGradient(0, -R, 0, R * 0.6); g.addColorStop(0, light); g.addColorStop(1, body);
+  ctx.fillStyle = g; ctx.lineWidth = 3 * S; ctx.lineJoin = 'round';
+  ctx.beginPath(); ctx.moveTo(0, -R * 0.75);
+  ctx.quadraticCurveTo(span * 0.6, -R * (0.55 + flap), span, R * (0.05 - flap));
+  ctx.quadraticCurveTo(span * 0.5, R * 0.35, 0, R * 0.6);
+  ctx.quadraticCurveTo(-span * 0.5, R * 0.35, -span, R * (0.05 - flap));
+  ctx.quadraticCurveTo(-span * 0.6, -R * (0.55 + flap), 0, -R * 0.75); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = hit ? '#fff' : 'rgba(225,255,250,.75)'; ctx.lineWidth = 3 * S; // açık çizgiler
+  for (const k of [0.35, 0.6, 0.82]) for (const sx of [-1, 1]) { ctx.beginPath(); ctx.moveTo(sx * span * k * 0.55, -R * 0.35 + k * R * 0.1); ctx.quadraticCurveTo(sx * span * k * 0.8, R * 0.05, sx * span * k * 0.6, R * 0.3); ctx.stroke(); }
+  if (b.openT > 0) { ctx.fillStyle = `rgba(125,255,176,${0.25 + 0.15 * Math.sin(time * 6)})`; ctx.beginPath(); ctx.arc(0, 0, R * 0.55, 0, TAU); ctx.fill(); } // açık: hedef parlıyor
+  bossEyes(R, -R * 0.2, R * 0.3, R * 0.2, line, '#ffe14d', stunned || b.openT > 0, !(b.openT > 0));
+  ctx.strokeStyle = line; ctx.lineWidth = 3 * S; ctx.beginPath(); ctx.arc(0, R * 0.15, R * 0.14, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke();
+}
 // Canavar çizimleri kimliğe göre; yeni canavarın çizimi buraya eklenir: DRAWERS['kimlik'] = (b, R, hit, stunned) => {...}
-const DRAWERS = { puffer: drawPufferBoss, jelly: drawJellyBoss, squid: drawSquidBoss };
+const DRAWERS = { puffer: drawPufferBoss, jelly: drawJellyBoss, squid: drawSquidBoss, 'puffer-big': drawPufferBoss, 'jelly-big': drawJellyBoss, 'squid-big': drawSquidBoss,
+  kestane: drawKestane, yengec: drawYengec, vatoz: drawVatoz };
 function drawBoss() {
   const b = boss;
   ctx.save(); ctx.translate(b.x, b.y);
@@ -132,8 +202,43 @@ function drawBoss() {
   (DRAWERS[b.kind] || drawGenericBoss)(b, b.r, hit, stunned);
   ctx.restore();
 }
+function drawClaw(s) { // yengeç kıskacı: önce yatay uyarı şeridi, sonra kenardan kenara süpüren kıskaç
+  const y = s.y, h = s.h;
+  if (s.warnOnly) {
+    const a = 0.38 + 0.12 * Math.sin(s.t * 14); // belirgin uyarı: kırmızı şerit, kenar çizgileri, kıskacın geleceği yönü gösteren oklar
+    ctx.fillStyle = `rgba(255,70,50,${a})`; ctx.fillRect(0, y - h, W, h * 2);
+    ctx.strokeStyle = `rgba(255,255,255,${0.55 + 0.25 * Math.sin(s.t * 14)})`; ctx.lineWidth = 2 * S; ctx.setLineDash([10 * S, 8 * S]);
+    ctx.beginPath(); ctx.moveTo(0, y - h); ctx.lineTo(W, y - h); ctx.moveTo(0, y + h); ctx.lineTo(W, y + h); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = 'rgba(255,255,255,.9)';
+    for (let i = 0; i < 4; i++) { const x = s.side > 0 ? (0.15 + i * 0.22) * W : (0.85 - i * 0.22) * W, k = 9 * S; ctx.beginPath(); ctx.moveTo(x + s.side * k, y); ctx.lineTo(x - s.side * k * 0.6, y - k); ctx.lineTo(x - s.side * k * 0.6, y + k); ctx.closePath(); ctx.fill(); }
+    return;
+  }
+  const front = s.side > 0 ? s.reach * W : W - s.reach * W, x0 = s.side > 0 ? -20 : W + 20;
+  ctx.fillStyle = 'rgba(255,120,90,.18)'; ctx.fillRect(Math.min(x0, front), y - h, Math.abs(front - x0), h * 2);
+  ctx.lineCap = 'round'; ctx.strokeStyle = '#5a0f08'; ctx.lineWidth = 14 * S; ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(front - s.side * 30 * S, y); ctx.stroke();
+  ctx.strokeStyle = '#e8452f'; ctx.lineWidth = 9 * S; ctx.stroke();
+  ctx.save(); ctx.translate(front, y); ctx.scale(s.side, 1);
+  ctx.fillStyle = '#e8452f'; ctx.strokeStyle = '#5a0f08'; ctx.lineWidth = 3 * S;
+  ctx.beginPath(); ctx.ellipse(-12 * S, 0, 28 * S, 20 * S, 0, 0, TAU); ctx.fill(); ctx.stroke();
+  const open = 0.35 + 0.25 * Math.sin(s.t * 20);
+  ctx.fillStyle = '#ff8a6a'; ctx.beginPath(); ctx.moveTo(8 * S, -4 * S); ctx.lineTo(34 * S, -22 * S * open - 6 * S); ctx.lineTo(16 * S, -14 * S); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(8 * S, 4 * S); ctx.lineTo(34 * S, 22 * S * open + 6 * S); ctx.lineTo(16 * S, 14 * S); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.restore();
+}
+function drawCurrent() { // akıntı vatozunun yan akıntısı: Okto'yu sürükleyen yatay çizgiler
+  const c = boss && boss.current; if (!c) return;
+  const a = Math.min(1, c.t / 0.3, (c.dur - c.t) / 0.2 + 0.3);
+  ctx.save(); ctx.strokeStyle = `rgba(200,250,255,${0.45 * a})`; ctx.lineWidth = 2.5 * S; ctx.lineCap = 'round';
+  for (let i = 0; i < 22; i++) {
+    const y = ((i * 97) % 1000) / 1000 * H, sp = 0.7 + (i % 5) * 0.12, x = ((time * 520 * sp * S * c.dir + i * 173) % (W + 160) + W + 160) % (W + 160) - 80;
+    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - c.dir * (40 + (i % 4) * 14) * S, y); ctx.stroke();
+  }
+  ctx.restore();
+}
 function drawSlams() {
+  drawCurrent();
   for (const s of slams) {
+    if (s.kind === 'claw') { drawClaw(s); continue; }
     if (s.t < s.warn) { // uyarı sütunu
       const a = 0.18 + 0.14 * Math.sin(s.t * 25);
       ctx.fillStyle = s.kind === 'zap' ? `rgba(255,240,90,${a})` : `rgba(255,60,80,${a})`; ctx.fillRect(s.x - s.w, 0, s.w * 2, H);

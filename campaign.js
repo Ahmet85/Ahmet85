@@ -29,27 +29,37 @@ function classic(n) {
 
 // ---------- Grup düzeni (TASLAK, yer tutucu veriler) ----------
 // Her grup: 3 bölüm (mini canavarlı) + 1 arena (büyük canavar). len: bölüm uzunluğu (m).
-const Z1 = ['reefs', 'canyon', 'akinti', 'yosun'], Z2 = Z1.concat(['baca', 'gemi', 'mayin']), Z3 = Z2.concat(['magara', 'kacis']);
+// Kullanıcının bölüm planı (s30 pilot). Her bölümde tek bir ortam (özel bölge) baştan sona sürer.
 const GROUPS = [
   {
-    name: 'Örnek Grup 1',
+    name: 'Güneşli Sular',
     stages: [
-      { name: 'Güneşli Sular', len: 150, tier: 1, boss: 'puffer', zones: Z1, news: 'Mini canavar: Dev Balon Balığı' },
-      { name: 'Mercan Bahçesi', len: 170, tier: 1, boss: 'jelly', zones: Z1, env: { water: ['#46d6d0', '#0d6f8a'] }, news: 'Mini canavar: Elektrikli Denizanası' },
-      { name: 'Alacakaranlık', len: 190, tier: 2, boss: 'ornek-mini', zones: Z2, news: 'Mini canavar: Örnek Mini Canavar' },
+      { name: 'Resif Adacıkları', len: 40, tier: 1, boss: 'kestane', zones: ['reefs'], news: 'Mini canavar: Dikenli Kestane' },
+      { name: 'Mercan Kanyonu', len: 40, tier: 1, boss: 'yengec', zones: ['canyon'], news: 'Mini canavar: Resif Yengeci' },
+      { name: 'Güçlü Akıntı', len: 40, tier: 1, boss: 'vatoz', zones: ['akinti'], news: 'Mini canavar: Akıntı Vatozu' },
     ],
-    arena: { name: 'Taht Mağarası', len: 60, tier: 2, boss: 'ornek-buyuk', env: { water: ['#2a3f8f', '#0a0f33'] }, news: 'Büyük canavar yaklaşıyor!',
-      intro: { title: 'ÖRNEK BÜYÜK CANAVAR', sub: 'Derinlerin hükümdarı uyandı', color: '#ffd36b' } },
+    arena: { name: 'Balon Balığı Yuvası', len: 30, tier: 1, boss: 'puffer-big', news: 'Büyük canavar yaklaşıyor!',
+      intro: { title: 'DEV BALON BALIĞI', sub: 'Güneşli Suların bekçisi uyandı', color: '#ffd36b' } },
   },
   {
-    name: 'Örnek Grup 2',
+    name: 'Alacakaranlık',
     stages: [
-      { name: 'Batık Şehir', len: 200, tier: 2, boss: 'squid', zones: Z2, env: { water: ['#3a6f9a', '#0b2240'] }, news: 'Mini canavar: Dev Kalamar' },
-      { name: 'Sıcak Bacalar Vadisi', len: 220, tier: 3, boss: 'puffer', zones: Z3, env: { water: ['#5a3a6a', '#1a0a20'] }, news: 'Mini canavar: Dev Balon Balığı' },
-      { name: 'Işıksız Uçurum', len: 240, tier: 3, boss: 'jelly', zones: Z3, news: 'Mini canavar: Elektrikli Denizanası' },
+      { name: 'Sıcak Bacalar', len: 75, tier: 2, boss: 'baca-yengeci', zones: ['baca'], env: { water: ['#3f6f9a', '#14304f'] }, news: 'Mini canavar: Baca Yengeci' },
+      { name: 'Batık Gemi', len: 75, tier: 2, boss: 'zirhli-balon', zones: ['gemi'], env: { water: ['#2f5f86', '#0f2740'] }, news: 'Mini canavar: Zırhlı Balon Balığı' },
+      { name: 'Mayın Tarlası', len: 75, tier: 2, boss: 'mayin-yengeci', zones: ['mayin'], env: { water: ['#2a5070', '#0c2036'] }, news: 'Mini canavar: Mayın Yengeci' },
     ],
-    arena: { name: 'Kraliyet Çukuru', len: 60, tier: 3, boss: 'ornek-buyuk', env: { water: ['#3a0f3f', '#050010'] }, news: 'Büyük canavar yaklaşıyor!',
-      intro: { title: 'ÖRNEK BÜYÜK CANAVAR', sub: 'Bu kez daha güçlü', color: '#ff9ad0' } },
+    arena: { name: 'Fırtına Çukuru', len: 25, tier: 2, boss: 'jelly-big', env: { water: ['#253f6a', '#0a1630'] }, news: 'Büyük canavar yaklaşıyor!',
+      intro: { title: 'ELEKTRİKLİ DENİZANASI', sub: 'Alacakaranlığın şimşeği', color: '#c7a8ff' } },
+  },
+  {
+    name: 'Karanlık Derinlikler',
+    stages: [
+      { name: 'Karanlık Mağara', len: 90, tier: 3, boss: 'murekkepci', zones: ['magara'], news: 'Mini canavar: Mağara Mürekkepçisi' },
+      { name: 'Yosun Geçidi', len: 90, tier: 3, boss: 'hayalet-denizanasi', zones: ['yosun'], news: 'Mini canavar: Hayalet Denizanası' },
+      { name: 'Fener Balığı Kaçışı', len: 90, tier: 3, boss: 'iri-fener', zones: ['kacis'], news: 'Mini canavar: İri Fener Balığı' },
+    ],
+    arena: { name: 'Kalamar İni', len: 30, tier: 3, boss: 'squid-big', news: 'Büyük canavar yaklaşıyor!',
+      intro: { title: 'DEV KALAMAR', sub: 'Derinlerin hükümdarı', color: '#ff9ab0' } },
   },
 ];
 const PER_GROUP = 4; // 3 bölüm + 1 arena
@@ -62,13 +72,16 @@ function grouped(n) {
   return {
     n, name: st.name, start, end: start + st.len, tier: st.tier, boss: st.boss, news: st.news || '',
     group: gi + 1, groupName: G.name + (loop ? ` +${loop}` : ''), slot, arena: slot === 3,
-    power: 1 + gi * 2 + slot + loop * 2, zones: slot < 3 ? st.zones : [], env: st.env || null, intro: st.intro || null,
+    power: 1 + gi + loop * 2, // canavar gücü: grup başına bir kademe zones: slot < 3 ? st.zones : [], env: st.env || null, intro: st.intro || null,
   };
 }
 
+// Eski (klasik) kayıt noktasını grup düzenine taşı: aynı derinlikten devam edilir
+// klasik 1 (0 m) → grup bölümü 1 · klasik 2 (150 m) → 5 · klasik 3 (400 m) → 9 · klasik 4+ (700 m+) → 13
+function migrate(classicLevel) { const n = Math.max(1, classicLevel | 0); return n <= 1 ? 1 : n === 2 ? 5 : n === 3 ? 9 : 13; }
 let mode = 'klasik';
 window.OktoCampaign = {
-  CLASSIC, GROUPS, PER_GROUP,
+  CLASSIC, GROUPS, PER_GROUP, migrate,
   get mode() { return mode; },
   setMode(m) { mode = m === 'grup' ? 'grup' : 'klasik'; },
   level: n => (mode === 'grup' ? grouped(n) : classic(n)),

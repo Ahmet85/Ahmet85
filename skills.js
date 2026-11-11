@@ -132,6 +132,7 @@ function activate(E) {
   if (!d || !d.ready || (st.cd[id] || 0) > 0 || st.lock > 0) { E.sound.tone(200, 0.08, 'square', 0.04); return false; }
   if (d.needBig && !(E.player.bigT > 0)) { E.sound.tone(200, 0.08, 'square', 0.04); E.floater(E.player.x, E.player.y - 50 * E.S, 'Önce Dev Okto ol!', '#ffd23f'); return false; }
   st.cd[id] = d.cd; st.lock = 0.35; E.vibrate(25);
+  E.onFire && E.onFire(id); // test kaydı
   const P = E.player, S = E.S;
   if (id === 'inkFan') {
     E.sound.ink && E.sound.ink();

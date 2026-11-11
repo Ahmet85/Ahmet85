@@ -3,6 +3,24 @@
 Bu belge, yeni canavarları tasarlayan yapay zekâ ve oyun geliştirme için ortak başvuru.
 Durum: **altyapı hazır, varsayılan oyun değişmedi.** Yeni düzen yalnızca test adresinde açılır.
 
+## 0. Kullanıcının bölüm planı (s31) ve pilot durumu
+| Grup | Ortam → mini canavar | Büyük canavar | Durum |
+|---|---|---|---|
+| Güneşli Sular · 0–150 m | Resif Adacıkları → Dikenli Kestane · Mercan Kanyonu → Resif Yengeci · Güçlü Akıntı → Akıntı Vatozu | Dev Balon Balığı | **Pilot hazır** (test adresi), kodla çizim; PNG'ler gelince çizimler onlara göre düzeltilecek |
+| Alacakaranlık · 150–400 m | Sıcak Bacalar → Baca Yengeci · Batık Gemi → Zırhlı Balon Balığı · Mayın Tarlası → Mayın Yengeci | Elektrikli Denizanası | Plan işlendi, mini canavarlar geçici çizimli |
+| Karanlık Derinlikler · 400–700 m | Karanlık Mağara → Mağara Mürekkepçisi · Yosun Geçidi → Hayalet Denizanası · Fener Balığı Kaçışı → İri Fener Balığı | Dev Kalamar | Plan işlendi, mini canavarlar geçici çizimli |
+
+Bölüm uzunlukları: 1. grup 40+40+40 m + 30 m arena; 2. grup 75×3 + 25; 3. grup 90×3 + 30. Her bölümde tek ortam baştan sona sürer.
+
+Pilot mini canavarlar:
+- **Dikenli Kestane** (`kestane`): sağa sola salınır; turuncu noktaları 0,9 sn parlar → 12+ dikenli halka.
+- **Resif Yengeci** (`yengec`): yan duvarda, Okto'nun hizasına kayar; kıskacını kaldırır ve koridorda 1 sn yatay uyarı şeridi (oklarla) → kıskaç kenardan kenara süpürür; bazen karşı duvara geçer.
+- **Akıntı Vatozu** (`vatoz`): kanatlarını 0,8 sn toplar → 1,6 sn yan akıntı Okto'yu sürükler → 1,8 sn **açık**: her vuruş +1 hasar ("Çift vuruş!"); arada nişanlı mürekkep lekeleri.
+- **Dev Balon Balığı** büyük canavar olarak (`puffer-big`): aynı saldırılar, can 7, daha büyük, sinematik girişli.
+
+Eski kayıt taşıma (`OktoCampaign.migrate`): klasik bölüm 1 → grup 1, 2 (150 m) → 5, 3 (400 m) → 9, 4+ (700 m+) → 13.
+Test kaydı: test adresinde bölüm kartı ve oyun sonunda kopyalanabilir özet (karşılaşma süreleri, isabet, hasar, beceri kullanımı, açılma derinliği).
+
 ## 1. Bölüm düzeni (`campaign.js`)
 - `klasik` (varsayılan, s21 ile aynı): 3 bölüm + her 300 m'de tekrar eden sonsuz bölüm.
 - `grup` (taslak): her grupta **3 bölüm** (her birinin sonunda mini canavar) + **1 arena** (kısa sakin dalış →

@@ -152,6 +152,79 @@ register({
   },
 });
 
+// ---------- Güneşli Sular mini canavarları (pilot; kullanıcının bölüm planı) ----------
+// Görseller kodla çizilir (bosses.js); tasarım PNG'leri model alınır.
+register({ // Dikenli Kestane: turuncu noktaları parlar, sonra halka biçiminde diken atar
+  id: 'kestane', name: 'DİKENLİ KESTANE', hp: 3, r: 46, restY: 140, color: '#c58bff', contactY: 0,
+  tick(b, E, dt) {
+    b.x = E.W / 2 + Math.sin(b.t * 0.5) * E.W * 0.22; b.y = E.restY + Math.sin(b.t * 1.8) * 8 * E.S;
+    if (b.glowT > 0) { // uyarı: noktalar parlıyor
+      b.glowT -= dt;
+      if (b.glowT <= 0) {
+        const n = 12 + Math.min(4, b.lv), sp = (170 + b.lv * 10) * E.S, off = Math.random() * Math.PI;
+        for (let i = 0; i < n; i++) { const a = off + i * Math.PI * 2 / n; E.entities.push({ type: 'spike', fixed: true, x: b.x + Math.cos(a) * b.r, y: b.y + Math.sin(a) * b.r, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, r: 7 * E.S, t: 0 }); }
+        E.sound.tone(700, 0.18, 'square', 0.07, -400); E.sound.noise(0.2, 0.15, 2500);
+      }
+      return;
+    }
+    b.attackT -= dt;
+    if (b.attackT <= 0) { b.attackT = E.interval * 1.1; b.glowT = 0.9; E.sound.tone(520, 0.8, 'sine', 0.07, 260); }
+  },
+});
+register({ // Resif Yengeci: yan duvardan çıkar, kıskacını kaldırıp haber verir, koridoru yatay keser
+  id: 'yengec', name: 'RESİF YENGECİ', hp: 4, r: 50, restY: 190, color: '#ff8a6a', contactY: 0.1,
+  tick(b, E, dt) {
+    if (b.side == null) b.side = Math.random() < 0.5 ? -1 : 1;
+    const wallX = b.side < 0 ? b.r * 0.9 : E.W - b.r * 0.9;
+    b.x = E.lerp(b.x, wallX, dt * 2);
+    const ty = E.clamp(E.player.y + 40 * E.S, E.H * 0.42, E.H - 120 * E.S);
+    if (!(b.clawT > 0)) b.y = E.lerp(b.y, ty, dt * 0.8);
+    if (b.clawT > 0) { // kıskaç kalkık: uyarı süresi
+      b.clawT -= dt;
+      if (b.clawT <= 0) { E.slams.push({ kind: 'claw', y: b.y - b.r * 0.2, h: 26 * E.S, side: -b.side, t: 0, warn: 0, w: 0, x: 0 }); E.sound.noise(0.35, 0.16, 900); b.swapT = 1.4; }
+      return;
+    }
+    if (b.swapT > 0) { b.swapT -= dt; if (b.swapT <= 0 && Math.random() < 0.5) b.side = -b.side; return; } // bazen karşı duvara geçer
+    b.attackT -= dt;
+    if (b.attackT <= 0) {
+      b.attackT = E.interval * 1.15;
+      E.slams.push({ kind: 'claw', y: b.y - b.r * 0.2, h: 26 * E.S, side: -b.side, t: 0, warn: 1.0, w: 0, x: 0, warnOnly: true }); // koridorda uyarı şeridi
+      b.clawT = 1.0; E.sound.tone(300, 0.15, 'square', 0.06, 0, 0, true); E.sound.tone(300, 0.15, 'square', 0.06, 0, 0.3, true);
+    }
+  },
+});
+register({ // Akıntı Vatozu: kanatlarını toplar, yan akıntı gönderir, sonra kısa süre açık verir (çift hasar)
+  id: 'vatoz', name: 'AKINTI VATOZU', hp: 4, r: 56, restY: 150, color: '#7fe3d8', contactY: 0.05,
+  tick(b, E, dt) {
+    if (b.openT > 0) { b.openT -= dt; b.y = E.lerp(b.y, E.restY + 20 * E.S, dt * 2); return; } // açık: yavaş, savunmasız
+    if (b.current) { // yan akıntı Okto'yu sürükler
+      b.current.t -= dt; E.push(b.current.dir * 230 * E.S * dt, 0);
+      if (b.current.t <= 0) { b.current = null; b.openT = 1.8; E.floater(b.x, b.y - b.r * 1.3, 'Şimdi!', '#7dffb0'); }
+      return;
+    }
+    b.x = E.W / 2 + Math.sin(b.t * 0.65) * E.W * 0.25; b.y = E.restY + Math.sin(b.t * 2.4) * 10 * E.S;
+    if (b.foldT > 0) { b.foldT -= dt; if (b.foldT <= 0) { b.current = { dir: E.player.x < E.W / 2 ? 1 : -1, t: 1.6, dur: 1.6 }; E.sound.noise(1.4, 0.14, 500); } return; }
+    b.attackT -= dt;
+    if (b.attackT <= 0) {
+      b.attackT = E.interval * 1.2;
+      if (Math.random() < 0.6) { b.foldT = 0.8; E.sound.tone(240, 0.7, 'sine', 0.08, -120); }
+      else ATTACKS.aimed.start(b, E, { count: 3, shot: 'blob', speed: (140 + b.lv * 10) });
+    }
+  },
+});
+// büyük canavar olarak Dev Balon Balığı (grup sonu): aynı davranış, daha büyük ve dayanıklı, sinematik girişli
+register(Object.assign({}, DEFS.puffer, { id: 'puffer-big', size: 'big', hp: 7, r: 66, restY: 150 }));
+register(Object.assign({}, DEFS.jelly, { id: 'jelly-big', size: 'big', hp: 8, r: 72, restY: 170 }));
+register(Object.assign({}, DEFS.squid, { id: 'squid-big', size: 'big', hp: 9, r: 76, restY: 160 }));
+// 2. ve 3. grubun mini canavarları: görseller gelene kadar geçici çizimli, veriyle tanımlı
+const mini = (id, name, body, line, attacks, move) => register({ id, name, hp: 4, r: 50, restY: 140, color: body, placeholder: true, look: { body, line, iris: '#ffe14d', shape: 'blob' }, move: move || { type: 'sway', amp: 0.24, speed: 0.6, bob: 8 }, attacks, phases: [{ below: 0.5, name: 'Öfkelendi!', rate: 0.8 }] });
+mini('baca-yengeci', 'BACA YENGECİ', '#ff7a4a', '#5a1a08', [{ id: 'tentacle', w: 1 }, { id: 'aimed', w: 1, count: 3 }]);
+mini('zirhli-balon', 'ZIRHLI BALON BALIĞI', '#c9b25a', '#4a3a08', [{ id: 'spikeFan', w: 1 }, { id: 'dash', w: 1 }], { type: 'follow', speed: 0.8, bob: 6 });
+mini('mayin-yengeci', 'MAYIN YENGECİ', '#8a6a7a', '#2a1020', [{ id: 'aimed', w: 1, count: 4 }, { id: 'tentacle', w: 1 }]);
+mini('murekkepci', 'MAĞARA MÜREKKEPÇİSİ', '#5a4a8a', '#140a30', [{ id: 'aimed', w: 2, count: 3 }, { id: 'minions', w: 1, hue: 260 }]);
+mini('hayalet-denizanasi', 'HAYALET DENİZANASI', '#cfe8ff', '#30506a', [{ id: 'zap', w: 1, count: 2 }, { id: 'minions', w: 1, hue: 200 }]);
+mini('iri-fener', 'İRİ FENER BALIĞI', '#3a4a5a', '#0a1018', [{ id: 'dash', w: 1 }, { id: 'aimed', w: 1, count: 3 }], { type: 'follow', speed: 0.7, bob: 6 });
+
 // ---------- Örnek (yer tutucu) canavarlar: yalnızca test düzeninde (?plan=grup) görünür ----------
 // Kullanıcının görselleri ve bölüm planı gelince bunların yerini gerçek canavarlar alacak.
 register({

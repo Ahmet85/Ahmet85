@@ -18,7 +18,7 @@ Tasarım brifi: `docs/BRIF.md` ("OKTO – UNDERWATER DESCENT", kullanıcının 1
 - Dal: `claude/octopus-mobile-game-0is63u` → GitHub Pages: https://ahmet85.github.io/Ahmet85/
 - Aynı dalda başka bir oturumun `ritim/` klasörü var; **ona dokunma**, push öncesi `git fetch` + `git rebase` yap.
 - **Her yayında sürümü artır:** `index.html` içindeki tüm `?v=` ekleri, menüdeki `s<sürüm>` etiketi ve `sw.js` içindeki
-  `okto-v<sürüm>` birlikte. Kullanıcı sağ alttaki `s<sürüm>` ile güncellemenin geldiğini kontrol ediyor. Son sürüm: **s35**.
+  `okto-v<sürüm>` birlikte. Kullanıcı sağ alttaki `s<sürüm>` ile güncellemenin geldiğini kontrol ediyor. Son sürüm: **s36**.
 - Telefonda güncelleme: uygulamayı kapat-aç (gerekirse iki kez). Açılış görseli/simge değişirse sil-yeniden kur gerekir.
 - **Açılış görseli (s27):** Okto'suz sahne (oyuncunun rengi bilinemediği için); Okto oyunda oyuncunun renginle kumdan yükselir
   (`title.js` opts.intro). Görseller `preview/splash-gen.html` ile üretilir. Silip yeniden kurmada kayıt silinebilir:
@@ -52,6 +52,11 @@ Tasarım brifi: `docs/BRIF.md` ("OKTO – UNDERWATER DESCENT", kullanıcının 1
   aynı saldırı tekrarlanmasın): Kestane diken halkası · Yengeç yatay kıskaç · Vatoz yan akıntı + çift vuruş · Baca Yengeci lav
   sütunları + sekme · Zırhlı Balon zırh (vurulmaz) + seken yuvarlanma · Mayın Yengeci süzülüp patlayan mayınlar · Mürekkepçi
   ekran karartma + karanlıkta mürekkep · Hayalet kaybolup belirme (vurulmaz) + genişleyen halka · İri Fener feneriyle çekme + atılma. Eski kayıt taşıma `OktoCampaign.migrate`. Test adresinde test kaydı (TLOG).
+  **s36: büyük canavarların (grup sonu) kendi saldırıları** (`boss-ai.js` bigTick; klasik puffer/jelly/squid değişmedi):
+  Dev Balon Balığı: diken yağmuru (tepede işaret) · kovalayan dikenli kabarcıklar (önce saydam) · tek boşluklu diken duvarı (yeşil boşluk) ·
+  Elektrikli Denizanası: yatay şimşek şeritleri · dolanıp dağılan elektrik küreleri · dolan şok halkaları ·
+  Dev Kalamar: sırayla yükselen dokunaç dalgası · işaretli yerde patlayan mürekkep bombası · tepeden inen yakalayıcı dokunaç.
+  Saldırı adı canavarın üstünde yazar, canavar etrafında altın halka yanar (hazırlanıyor). Canın yarısında 2. aşama: sıklaşır, güçlenir.
   Kullanıcı pilotu onaylarsa ilk grup asıl oyuna alınacak; diğer gruplar pilotun ardından.
 
 ## Beceri halkası (s24 deneme → **s27'den beri normal oyunda**, kullanıcı onayladı)

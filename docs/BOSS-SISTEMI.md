@@ -26,6 +26,11 @@ s34 saldırıları (her biri farklı):
 - **Hayalet Denizanası:** kaybolur (vurulmaz), Okto'nun altında belirir, genişleyen hayalet halka yayar.
 - **İri Fener Balığı:** feneri parlar ve Okto'yu 1,4 sn kendine çeker → ileri atılır.
 
+s36 büyük canavarlar (her biri 3 yeni saldırı + canın yarısında 2. aşama; saldırı adı ve altın uyarı halkası):
+- **Dev Balon Balığı:** diken yağmuru (tepede kırmızı işaretler) · kovalayan dikenli kabarcıklar · tek boşluklu diken duvarı.
+- **Elektrikli Denizanası:** yatay şimşek şeritleri · dolanıp dağılan elektrik küreleri · dolan şok halkaları.
+- **Dev Kalamar:** dokunaç dalgası · mürekkep bombası (patlayacağı yer kesik çizgili) · tepeden inen yakalayıcı dokunaç.
+
 Eski kayıt taşıma (`OktoCampaign.migrate`): klasik bölüm 1 → grup 1, 2 (150 m) → 5, 3 (400 m) → 9, 4+ (700 m+) → 13.
 Test kaydı: test adresinde bölüm kartı ve oyun sonunda kopyalanabilir özet (karşılaşma süreleri, isabet, hasar, beceri kullanımı, açılma derinliği).
 

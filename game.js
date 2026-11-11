@@ -994,6 +994,62 @@ function updateSlams(dt) {
     s.t += dt;
     if (s.cancel && s.t < s.warn) s.done = true;
     const up = s.t - s.warn;
+    // ---- büyük canavar saldırıları ----
+    if (s.kind === 'drop') { // diken yağmuru: uyarı bitince tepeden diken düşer
+      if (s.cancel && s.t < s.warn) { s.done = true; continue; }
+      if (s.t >= s.warn) { entities.push({ type: 'spike', fixed: true, x: s.x, y: -10 * S, vx: 0, vy: s.sp, r: 7 * S, t: 0 }); s.done = true; }
+      continue;
+    }
+    if (s.kind === 'hbub') { // kovalayan dikenli kabarcık: önce saydam ve zararsız, sonra Okto'ya doğru süzülür
+      if (s.cancel || s.t > s.life) { s.done = true; burst(s.x, s.y, '#bff3ff', 8, 90); continue; }
+      const dx = player.x - s.x, dy = player.y - s.y, d = Math.hypot(dx, dy) || 1;
+      s.x += dx / d * s.sp * dt; s.y += (dy / d * s.sp - (s.t < s.arm ? 40 * S : 0)) * dt;
+      if (s.t >= s.arm && d < s.r + player.r * 0.6) { hurt(); s.done = true; burst(s.x, s.y, '#bff3ff', 10, 120); }
+      continue;
+    }
+    if (s.kind === 'wall') { // diken duvarı: yalnızca boşluktan geçilir
+      if (s.t < 0) continue;
+      if (s.cancel && s.t < s.warn) { s.done = true; continue; }
+      if (s.t >= s.warn) { s.y -= s.sp * dt; if (s.y < -30 * S) s.done = true;
+        if (Math.abs(player.y - s.y) < 12 * S + player.r * 0.5 && Math.abs(player.x - s.gx) > s.gw / 2 - player.r * 0.4) hurt(); }
+      continue;
+    }
+    if (s.kind === 'hzap') { // yatay şimşek
+      if (s.cancel && s.t < s.warn) { s.done = true; continue; }
+      const up2 = s.t - s.warn; if (up2 >= 0 && !s.zapped) { s.zapped = true; Sound.noise(0.4, 0.2, 4000); Sound.tone(80, 0.4, 'sawtooth', 0.1); }
+      if (up2 >= 0 && up2 < 0.5 && Math.abs(player.y - s.y) < s.w + player.r * 0.6) hurt();
+      if (up2 > 0.5) s.done = true;
+      continue;
+    }
+    if (s.kind === 'orb') { // elektrik küresi: önce canavarın çevresinde yüklenir, sonra döne döne dağılır
+      if (s.cancel || s.t > s.warn + s.life) { s.done = true; continue; }
+      const a = s.a0 + s.t * s.spin * 2.5;
+      if (s.t < s.warn) { s.x = s.bx + Math.cos(a) * 60 * S; s.y = s.by + Math.sin(a) * 60 * S; }
+      else { const k = (s.t - s.warn) * s.sp + 60 * S; s.x = s.bx + Math.cos(a) * k; s.y = s.by + Math.sin(a) * k;
+        if (Math.hypot(player.x - s.x, player.y - s.y) < s.r + player.r * 0.6) { hurt(); s.done = true; } }
+      continue;
+    }
+    if (s.kind === 'zone') { // şok halkası: dolunca içi çarpar
+      if (s.cancel && s.t < s.warn) { s.done = true; continue; }
+      const up2 = s.t - s.warn; if (up2 >= 0 && !s.zapped) { s.zapped = true; Sound.noise(0.3, 0.15, 3500); }
+      if (up2 >= 0 && up2 < 0.35 && Math.hypot(player.x - s.x, player.y - s.y) < s.r + player.r * 0.3) hurt();
+      if (up2 > 0.4) s.done = true;
+      continue;
+    }
+    if (s.kind === 'inkbomb') { // mürekkep bombası: yay çizerek işaretli yere gider, orada patlar
+      if (s.cancel) { s.done = true; continue; }
+      const k = Math.min(1, s.t / s.dur); s.x = s.x0 + (s.tx - s.x0) * k; s.y = s.y0 + (s.ty - s.y0) * k - Math.sin(k * Math.PI) * 120 * S;
+      if (k >= 1) { s.done = true; Sound.noise(0.3, 0.15, 900); burst(s.tx, s.ty, '#2a1047', 14, 140);
+        for (let i = 0; i < s.n; i++) { const a = i * TAU / s.n; entities.push({ type: 'blob', fixed: true, x: s.tx, y: s.ty, vx: Math.cos(a) * s.sp, vy: Math.sin(a) * s.sp, r: 10 * S, t: Math.random() * 9 }); } }
+      continue;
+    }
+    if (s.kind === 'toptent') { // tepeden inen yakalayıcı dokunaç
+      if (s.cancel && s.t < s.warn) { s.done = true; continue; }
+      const up2 = s.t - s.warn; s.reach = up2 < 0 ? 0 : up2 < 0.3 ? up2 / 0.3 : up2 < 0.9 ? 1 : Math.max(0, 1 - (up2 - 0.9) / 0.3);
+      if (up2 > 1.2) s.done = true;
+      if (s.reach > 0.3 && Math.abs(player.x - s.x) < s.w + player.r * 0.6 && player.y < s.reach * H * 0.62) hurt();
+      continue;
+    }
     if (s.kind === 'mine') { // mayın yengecinin mayını: yukarı süzülür, sonunda patlar
       if (s.cancel) { s.done = true; burst(s.x, s.y, '#ff8a8a', 10, 120); continue; }
       s.x += s.vx * dt; s.y += s.vy * dt; s.vy *= Math.pow(0.5, dt); s.vx *= Math.pow(0.5, dt);
@@ -1333,7 +1389,7 @@ function drawBackground() {
 }
 
 // Varlık çizimleri ayrı dosyalarda: enemies.js (düşmanlar, toplanabilirler), bosses.js (canavarlar ve saldırıları)
-const gfx = () => ({ ctx, S, W, H, time, FONT, boss, player, slams, shots });
+const gfx = () => ({ ctx, S, W, H, time, FONT, boss, player, slams, shots, safeTop });
 function drawEntity(e) { OktoEnemies.draw(gfx(), e); }
 function drawBoss() { OktoBosses.draw(gfx()); }
 function drawSlams() { OktoBosses.drawAttacks(gfx()); }

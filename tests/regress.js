@@ -170,6 +170,19 @@ function serve() {
     ok(r.saw && r.state === 'clear' && errors.length === 0, `${id}: kendine özgü saldırı ve yenilme`);
     await close();
   }
+  // 5c) büyük canavarlar: her biri 3 yeni saldırı (uyarılı) ve canın yarısında 2. aşama
+  for (const [lv, id, kinds] of [[4, 'puffer-big', ['drop', 'hbub', 'wall']], [8, 'jelly-big', ['hzap', 'orb', 'zone']], [12, 'squid-big', ['tentacle', 'inkbomb', 'toptent']]]) {
+    const { page, errors, close } = await open(`?plan=grup&bolum=${lv}`);
+    const r = await page.evaluate((kinds) => { const O = window.__okto; O.startGame(); const seen = new Set(), warned = new Set(); let ph = null, t = 0, nx = 0;
+      for (let i = 0; i < 60 * 240 && O.state !== 'clear'; i++) { O.lives = 3; O.invuln = 5; O.step(1 / 60); t += 1 / 60;
+        for (const s of O.slams) { seen.add(s.kind); if (s.t < (s.warn || 0) || s.kind === 'hbub' || s.kind === 'inkbomb') warned.add(s.kind); }
+        if (O.boss && O.boss.ph) ph = O.boss.ph.name;
+        if (seen.size >= 3 && O.boss && O.boss.phase === 'fight' && t > nx) { O.damageBoss(1); nx = t + 3; } }
+      return { kinds: kinds.filter(k => seen.has(k)), warned: kinds.filter(k => warned.has(k)), ph, state: O.state }; }, kinds);
+    ok(r.kinds.length === 3 && r.warned.length === 3, `${id}: 3 yeni saldırı, hepsi uyarılı (${r.kinds.join(', ')})`);
+    ok(!!r.ph && r.state === 'clear' && errors.length === 0, `${id}: 2. aşamaya geçti ve yenildi`);
+    await close();
+  }
   // 5b) büyük zafer ekranı ve dokunarak sinematiği geçme (gerçek döngüyle)
   {
     const { page, errors, close } = await open('?plan=grup&bolum=4&boss=ornek-buyuk', false);

@@ -213,9 +213,77 @@ register({ // Akıntı Vatozu: kanatlarını toplar, yan akıntı gönderir, son
   },
 });
 // büyük canavar olarak Dev Balon Balığı (grup sonu): aynı davranış, daha büyük ve dayanıklı, sinematik girişli
-register(Object.assign({}, DEFS.puffer, { id: 'puffer-big', size: 'big', hp: 7, r: 66, restY: 150 }));
-register(Object.assign({}, DEFS.jelly, { id: 'jelly-big', size: 'big', hp: 8, r: 72, restY: 170 }));
-register(Object.assign({}, DEFS.squid, { id: 'squid-big', size: 'big', hp: 9, r: 76, restY: 160 }));
+// ---------- Büyük canavarlar (grup sonu): her birinin 3 yeni saldırısı ve canın yarısında 2. aşaması var ----------
+// Akış: uyarı süresi (canavar hazırlanır + ekranda işaret) → saldırı. Saldırılar sırayla döner, hepsi görülür.
+// 2. aşamada (b.ph) saldırılar sıklaşır ve güçlenir. Klasik düzendeki puffer/jelly/squid değişmedi.
+function bigTick(list, moveFn) {
+  return function (b, E, dt) {
+    const p2 = !!b.ph;
+    if (b.tele > 0) { b.tele -= dt; b.puff = Math.min(1, (b.puff || 0) + dt * 1.5); if (b.tele <= 0) { b.puff = 0; list[b.next].fire(b, E, p2); } return; }
+    moveFn(b, E, dt, p2);
+    b.attackT -= dt;
+    if (b.attackT <= 0) {
+      b.attackT = E.interval * (p2 ? 0.8 : 1.05) + 0.6;
+      b.next = (b.seq = ((b.seq == null ? -1 : b.seq) + 1)) % list.length;
+      const A = list[b.next]; b.tele = A.tele; b.teleName = A.name; A.warn && A.warn(b, E, p2);
+      E.floater(b.x, b.y - b.r * 1.5, A.name, '#ffe28a');
+    }
+  };
+}
+const PUFFER_BIG = [
+  { name: 'Diken yağmuru', tele: 0.7, fire(b, E, p2) { // ekranın tepesinden düşen dikenler; düşecekleri yerler önceden işaretlenir
+    const n = p2 ? 9 : 6, xs = [E.clamp(E.player.x, 20 * E.S, E.W - 20 * E.S)];
+    while (xs.length < n) xs.push(E.rand(20 * E.S, E.W - 20 * E.S));
+    xs.forEach((x, i) => E.slams.push({ kind: 'drop', x, t: 0, warn: 0.85 + i * (p2 ? 0.1 : 0.14), w: 14 * E.S, sp: (p2 ? 420 : 340) * E.S }));
+    E.sound.tone(700, 0.3, 'triangle', 0.06, 300); } },
+  { name: 'Dikenli kabarcıklar', tele: 0.8, fire(b, E, p2) { // Okto'yu yavaşça kovalayan kabarcıklar (önce saydam ve zararsız belirir)
+    const n = p2 ? 4 : 3;
+    for (let i = 0; i < n; i++) E.slams.push({ kind: 'hbub', x: b.x + (i - (n - 1) / 2) * 50 * E.S, y: b.y - b.r, t: 0, warn: 0, arm: 0.8, life: p2 ? 5 : 4.2, sp: (p2 ? 95 : 72) * E.S, r: 18 * E.S });
+    E.sound.tone(300, 0.4, 'sine', 0.08, 500); } },
+  { name: 'Diken duvarı', tele: 0.5, fire(b, E, p2) { // alttan yükselen diken sırası; yalnızca yeşil boşluktan geçilir
+    const mk = (delay) => { const g = 120 * E.S, gx = E.rand(g * 0.7, E.W - g * 0.7); E.slams.push({ kind: 'wall', y: E.H + 20 * E.S, gx, gw: g, t: -delay, warn: 1.0, sp: (p2 ? 200 : 150) * E.S }); };
+    mk(0); if (p2) mk(1.8);
+    E.sound.tone(200, 0.5, 'sawtooth', 0.06, 100); } },
+];
+const JELLY_BIG = [
+  { name: 'Şimşek şeritleri', tele: 0.6, fire(b, E, p2) { // yatay şimşekler: önce sarı kesik çizgili şerit, sonra çakar
+    const n = p2 ? 3 : 2, ys = [E.clamp(E.player.y, E.H * 0.22, E.H * 0.8)];
+    for (let k = 0; ys.length < n && k < 30; k++) { const y = E.rand(E.H * 0.22, E.H * 0.8); if (ys.every(o => Math.abs(o - y) > 90 * E.S)) ys.push(y); }
+    for (const y of ys) E.slams.push({ kind: 'hzap', y, t: 0, warn: 1.0, w: 18 * E.S });
+    E.sound.tone(900, 0.12, 'square', 0.05, 0, 0, true); } },
+  { name: 'Elektrik küreleri', tele: 0.4, fire(b, E, p2) { // küreler canavarın çevresinde dolanıp yüklenir, sonra döne döne dağılır
+    const n = p2 ? 6 : 4;
+    for (let i = 0; i < n; i++) E.slams.push({ kind: 'orb', bx: b.x, by: b.y - b.r * 0.3, a0: i * Math.PI * 2 / n, t: 0, warn: 1.0, spin: p2 ? 1.6 : 1.1, sp: (p2 ? 170 : 130) * E.S, r: 12 * E.S, life: 3.2 });
+    E.sound.tone(500, 0.9, 'sine', 0.06, 600); } },
+  { name: 'Şok halkaları', tele: 0.5, fire(b, E, p2) { // zeminde halkalar dolar; dolunca içi elektrik çarpar
+    const n = p2 ? 4 : 3, pts = [[E.player.x, E.player.y]];
+    for (let k = 0; pts.length < n && k < 30; k++) { const x = E.rand(50 * E.S, E.W - 50 * E.S), y = E.rand(E.H * 0.25, E.H * 0.75); if (pts.every(([a, c]) => Math.hypot(a - x, c - y) > 120 * E.S)) pts.push([x, y]); }
+    for (const [x, y] of pts) E.slams.push({ kind: 'zone', x, y, r: 62 * E.S, t: 0, warn: p2 ? 0.95 : 1.15 });
+    E.sound.tone(400, 0.3, 'triangle', 0.05, 200); } },
+];
+const SQUID_BIG = [
+  { name: 'Dokunaç dalgası', tele: 0.5, fire(b, E, p2) { // dokunaçlar soldan sağa (ya da tersi) sırayla yükselir
+    const n = p2 ? 6 : 4, dir = Math.random() < 0.5 ? 1 : -1;
+    for (let i = 0; i < n; i++) { const k = (i + 0.5) / n, x = dir > 0 ? k * E.W : E.W - k * E.W; E.slams.push({ kind: 'tentacle', x, t: 0, warn: 0.9 + i * (p2 ? 0.16 : 0.24), w: 28 * E.S }); }
+    E.sound.tone(300, 0.15, 'square', 0.06, 0, 0, true); } },
+  { name: 'Mürekkep bombası', tele: 0.6, fire(b, E, p2) { // havaya atılan bomba, işaretli yerde patlayıp mürekkep saçar
+    const n = p2 ? 3 : 2;
+    for (let i = 0; i < n; i++) { const tx = E.clamp(E.player.x + (i - (n - 1) / 2) * 110 * E.S, 40 * E.S, E.W - 40 * E.S), ty = E.clamp(E.player.y - 20 * E.S, E.H * 0.2, E.H * 0.7);
+      E.slams.push({ kind: 'inkbomb', x0: b.x, y0: b.y - b.r, tx, ty, t: 0, warn: 0, dur: 1.1, n: p2 ? 10 : 8, sp: (p2 ? 170 : 140) * E.S }); }
+    E.sound.tone(180, 0.4, 'sine', 0.1, 120); } },
+  { name: 'Yakalayıcı dokunaç', tele: 0.4, fire(b, E, p2) { // ekranın tepesinden Okto'nun üstüne inen dokunaç
+    const xs = [E.clamp(E.player.x, 30 * E.S, E.W - 30 * E.S)]; if (p2) xs.push(E.clamp(xs[0] + (xs[0] < E.W / 2 ? 1 : -1) * 140 * E.S, 30 * E.S, E.W - 30 * E.S));
+    for (const x of xs) E.slams.push({ kind: 'toptent', x, t: 0, warn: 1.0, w: 30 * E.S });
+    E.sound.tone(260, 0.15, 'square', 0.06, 0, 0, true); E.sound.tone(260, 0.15, 'square', 0.06, 0, 0.25, true); } },
+];
+const P2 = [{ below: 0.5, name: 'Öfkelendi! Saldırılar hızlandı' }];
+register({ id: 'puffer-big', name: 'DEV BALON BALIĞI', size: 'big', hp: 7, r: 66, restY: 150, color: '#ffe28a', contactY: 0, phases: P2,
+  contactR: b => 0.9 + (b.puff || 0) * 0.3,
+  tick: bigTick(PUFFER_BIG, (b, E, dt, p2) => { b.x = E.lerp(b.x, E.clamp(E.player.x, b.r, E.W - b.r), dt * (p2 ? 1.0 : 0.6)); b.y = E.restY + Math.sin(b.t * 2) * 8 * E.S; }) });
+register({ id: 'jelly-big', name: 'ELEKTRİKLİ DENİZANASI', size: 'big', hp: 8, r: 72, restY: 170, color: '#c7a8ff', contactY: 0.3, phases: P2,
+  tick: bigTick(JELLY_BIG, (b, E, dt, p2) => { b.x = E.W / 2 + Math.sin(b.t * (p2 ? 0.8 : 0.5)) * E.W * 0.25; b.y = E.restY + Math.sin(b.t * 2.2) * 10 * E.S; }) });
+register({ id: 'squid-big', name: 'DEV KALAMAR', size: 'big', hp: 9, r: 76, restY: 160, color: '#ff9ab0', contactY: 0.2, phases: P2,
+  tick: bigTick(SQUID_BIG, (b, E, dt, p2) => { b.x = E.W / 2 + Math.sin(b.t * (p2 ? 0.9 : 0.6)) * E.W * 0.27; b.y = E.restY + Math.sin(b.t * 1.7) * 8 * E.S; }) });
 // 2. ve 3. grubun mini canavarları: görseller gelene kadar geçici çizimli, veriyle tanımlı
 // Her mini canavarın kendine özgü saldırısı var (aynı saldırıyı iki canavar paylaşmaz).
 const sway = (b, E, amp, sp, bob) => { b.x = E.W / 2 + Math.sin(b.t * sp) * E.W * amp; b.y = E.restY + Math.sin(b.t * 2) * bob * E.S; };

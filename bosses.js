@@ -6,7 +6,7 @@ const TAU = Math.PI * 2;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const rand = (a, b) => a + Math.random() * (b - a);
 let ctx, S, W, H, time, FONT, boss, player, slams, shots;
-function use(G) { ctx = G.ctx; S = G.S; W = G.W; H = G.H; time = G.time; FONT = G.FONT; boss = G.boss; player = G.player; slams = G.slams; shots = G.shots; }
+function use(G) { ctx = G.ctx; S = G.S; W = G.W; H = G.H; time = G.time; FONT = G.FONT; boss = G.boss; player = G.player; slams = G.slams; shots = G.shots; safeTopV = G.safeTop || 0; }
 
 // ---------- Canavar çizimleri ----------
 function bossTentacle(x0, y0, ang, len, w, t, ph, col, line) {
@@ -450,6 +450,7 @@ function drawBoss() {
   const b = boss;
   ctx.save(); ctx.translate(b.x, b.y);
   const hit = b.flashT > 0, stunned = b.stun > 0;
+  if (b.tele > 0) { ctx.strokeStyle = `rgba(255,226,138,${0.45 + 0.35 * Math.sin(time * 16)})`; ctx.lineWidth = 5 * S; ctx.beginPath(); ctx.arc(0, 0, b.r * 1.55, 0, TAU); ctx.stroke(); } // büyük canavar saldırıya hazırlanıyor
   (DRAWERS[b.kind] || drawGenericBoss)(b, b.r, hit, stunned);
   ctx.restore();
 }
@@ -511,9 +512,76 @@ function drawRing(s) { // hayalet halka: genişleyen lila halka
   ctx.strokeStyle = `rgba(255,255,255,${0.6 * a + 0.2})`; ctx.lineWidth = 3 * S; ctx.beginPath(); ctx.arc(s.x, s.y, r, 0, TAU); ctx.stroke();
   ctx.restore();
 }
+// ---------- Büyük canavar saldırıları ----------
+const warnA = t => 0.35 + 0.25 * Math.sin(t * 14);
+function drawBig(s) {
+  if (s.kind === 'drop') { // tepede kırmızı işaret ve düşeceği hat
+    const a = warnA(s.t), g = ctx.createLinearGradient(0, 0, 0, H * 0.5); g.addColorStop(0, `rgba(255,90,60,${a * 0.6})`); g.addColorStop(1, 'rgba(255,90,60,0)');
+    ctx.fillStyle = g; ctx.fillRect(s.x - s.w, 0, s.w * 2, H * 0.5);
+    ctx.fillStyle = `rgba(255,255,255,${0.6 + 0.3 * Math.sin(s.t * 14)})`; ctx.beginPath(); ctx.moveTo(s.x, 30 * S + safeTopG()); ctx.lineTo(s.x - 9 * S, 14 * S + safeTopG()); ctx.lineTo(s.x + 9 * S, 14 * S + safeTopG()); ctx.closePath(); ctx.fill();
+    return true;
+  }
+  if (s.kind === 'hbub') { // dikenli kabarcık
+    const armed = s.t >= s.arm; ctx.save(); ctx.translate(s.x, s.y); ctx.globalAlpha = armed ? 1 : 0.35 + 0.3 * Math.sin(s.t * 16);
+    ctx.fillStyle = '#ffcf3a'; ctx.strokeStyle = '#7a4a00'; ctx.lineWidth = 2 * S;
+    for (let i = 0; i < 8; i++) { const a = i * TAU / 8 + s.t; ctx.beginPath(); ctx.moveTo(Math.cos(a - 0.2) * s.r, Math.sin(a - 0.2) * s.r); ctx.lineTo(Math.cos(a) * s.r * 1.45, Math.sin(a) * s.r * 1.45); ctx.lineTo(Math.cos(a + 0.2) * s.r, Math.sin(a + 0.2) * s.r); ctx.fill(); ctx.stroke(); }
+    ctx.fillStyle = 'rgba(190,240,255,.55)'; ctx.strokeStyle = '#e8fbff'; ctx.beginPath(); ctx.arc(0, 0, s.r, 0, TAU); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(-s.r * 0.35, -s.r * 0.35, s.r * 0.2, 0, TAU); ctx.fill(); ctx.restore();
+    return true;
+  }
+  if (s.kind === 'wall') { // diken duvarı: uyarıda kesik çizgi ve yeşil boşluk
+    if (s.t < 0) return true;
+    const y = s.t < s.warn ? H * 0.82 : s.y, warn = s.t < s.warn;
+    if (warn) { ctx.strokeStyle = `rgba(255,90,60,${warnA(s.t) + 0.2})`; ctx.lineWidth = 4 * S; ctx.setLineDash([12 * S, 8 * S]); ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(s.gx - s.gw / 2, y); ctx.moveTo(s.gx + s.gw / 2, y); ctx.lineTo(W, y); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = 'rgba(125,255,176,.35)'; ctx.fillRect(s.gx - s.gw / 2, y - 14 * S, s.gw, 28 * S); ctx.strokeStyle = '#7dffb0'; ctx.lineWidth = 2 * S; ctx.strokeRect(s.gx - s.gw / 2, y - 14 * S, s.gw, 28 * S); return true; }
+    ctx.fillStyle = '#ffcc22'; ctx.strokeStyle = '#7a4a00'; ctx.lineWidth = 2 * S;
+    for (let x = 6 * S; x < W; x += 22 * S) { if (Math.abs(x - s.gx) < s.gw / 2) continue; ctx.beginPath(); ctx.moveTo(x - 9 * S, y + 10 * S); ctx.lineTo(x, y - 14 * S); ctx.lineTo(x + 9 * S, y + 10 * S); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+    ctx.fillStyle = '#e8a400'; ctx.fillRect(0, y + 8 * S, s.gx - s.gw / 2, 6 * S); ctx.fillRect(s.gx + s.gw / 2, y + 8 * S, W - s.gx - s.gw / 2, 6 * S);
+    return true;
+  }
+  if (s.kind === 'hzap') { // yatay şimşek
+    if (s.t < s.warn) { ctx.fillStyle = `rgba(255,240,90,${warnA(s.t) * 0.6})`; ctx.fillRect(0, s.y - s.w, W, s.w * 2); ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = 2 * S; ctx.setLineDash([8 * S, 8 * S]); ctx.beginPath(); ctx.moveTo(0, s.y); ctx.lineTo(W, s.y); ctx.stroke(); ctx.setLineDash([]); return true; }
+    const step = Math.floor((s.t - s.warn) * 8); if (s.zStep !== step) { s.zStep = step; s.path = []; for (let x = -20; x < W + 26 * S; x += 26 * S) s.path.push([x, s.y + rand(-s.w, s.w) * 0.8]); }
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    for (const [lw, col] of [[9 * S, 'rgba(200,170,255,.45)'], [3.5 * S, 'rgba(255,251,224,.85)']]) { ctx.strokeStyle = col; ctx.lineWidth = lw; ctx.lineJoin = 'round'; ctx.beginPath(); s.path.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.stroke(); }
+    ctx.restore(); return true;
+  }
+  if (s.kind === 'orb') { // elektrik küresi
+    const charging = s.t < s.warn; ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    const g = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, s.r * 2.2); g.addColorStop(0, 'rgba(255,250,200,.9)'); g.addColorStop(0.4, 'rgba(200,160,255,.6)'); g.addColorStop(1, 'rgba(200,160,255,0)');
+    ctx.globalAlpha = charging ? 0.5 + 0.3 * Math.sin(s.t * 16) : 1; ctx.fillStyle = g; ctx.beginPath(); ctx.arc(s.x, s.y, s.r * 2.2, 0, TAU); ctx.fill(); ctx.restore();
+    ctx.fillStyle = charging ? 'rgba(255,250,210,.6)' : '#fffbe0'; ctx.strokeStyle = '#9a6af0'; ctx.lineWidth = 2.5 * S; ctx.beginPath(); ctx.arc(s.x, s.y, s.r * 0.8, 0, TAU); ctx.fill(); ctx.stroke(); // parlak çekirdek
+    return true;
+  }
+  if (s.kind === 'zone') { // şok halkası: dolar, sonra çakar
+    const k = Math.min(1, s.t / s.warn);
+    if (s.t < s.warn) { ctx.strokeStyle = 'rgba(255,240,90,.85)'; ctx.lineWidth = 3 * S; ctx.setLineDash([8 * S, 6 * S]); ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = 'rgba(255,240,90,.22)'; ctx.beginPath(); ctx.arc(s.x, s.y, s.r * k, 0, TAU); ctx.fill(); return true; }
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = 'rgba(220,200,255,.45)'; ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, TAU); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,251,224,.9)'; ctx.lineWidth = 3 * S; for (let i = 0; i < 6; i++) { const a = i * TAU / 6 + s.t * 8; ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(s.x + Math.cos(a) * s.r * 0.5, s.y + Math.sin(a) * s.r * 0.5 + 6 * S); ctx.lineTo(s.x + Math.cos(a) * s.r, s.y + Math.sin(a) * s.r); ctx.stroke(); }
+    ctx.restore(); return true;
+  }
+  if (s.kind === 'inkbomb') { // mürekkep bombası ve patlayacağı yer
+    ctx.strokeStyle = `rgba(160,90,220,${warnA(s.t) + 0.2})`; ctx.lineWidth = 3 * S; ctx.setLineDash([7 * S, 6 * S]); ctx.beginPath(); ctx.arc(s.tx, s.ty, 34 * S, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = '#3b2160'; ctx.strokeStyle = '#140a28'; ctx.lineWidth = 2.5 * S; ctx.beginPath(); ctx.arc(s.x, s.y, 13 * S, 0, TAU); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,.5)'; ctx.beginPath(); ctx.arc(s.x - 4 * S, s.y - 4 * S, 3.5 * S, 0, TAU); ctx.fill();
+    return true;
+  }
+  if (s.kind === 'toptent') { // tepeden inen dokunaç
+    if (s.t < s.warn) { ctx.fillStyle = `rgba(255,60,80,${warnA(s.t) * 0.55})`; ctx.fillRect(s.x - s.w, 0, s.w * 2, H * 0.62); ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.font = `700 ${26 * S}px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('!', s.x, H * 0.3); return true; }
+    const tipY = s.reach * H * 0.62, w = s.w;
+    ctx.fillStyle = '#d23b52'; ctx.strokeStyle = '#4a0a18'; ctx.lineWidth = 3 * S;
+    ctx.beginPath(); ctx.moveTo(s.x - w, -10); ctx.quadraticCurveTo(s.x - w * 0.8, tipY - w, s.x, tipY); ctx.quadraticCurveTo(s.x + w * 0.8, tipY - w, s.x + w, -10); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#ffd1dc'; for (let y = tipY - w * 1.5; y > 0; y -= w * 1.1) { ctx.beginPath(); ctx.arc(s.x + w * 0.35, y, w * 0.22, 0, TAU); ctx.fill(); }
+    return true;
+  }
+  return false;
+}
+let safeTopV = 0; const safeTopG = () => safeTopV;
 function drawSlams() {
   drawCurrent();
   for (const s of slams) {
+    if (drawBig(s)) continue;
     if (s.kind === 'claw') { drawClaw(s); continue; }
     if (s.kind === 'mine') { drawMine(s); continue; }
     if (s.kind === 'dark') { drawDark(s); continue; }

@@ -1,6 +1,6 @@
 // Çevrimdışı oynanabilmesi için önbellek. Önce ağ (her seferinde sunucuya 'değişti mi?' diye sorulur),
 // ağ yoksa önbellek. Böylece güncellemeler hemen gelir, internet yokken de oyun açılır.
-const CACHE = 'okto-v35';
+const CACHE = 'okto-v36';
 const FILES = ['./', './index.html', './game.js', './manifest.json', './icon.svg', './apple-touch-icon.png', './okto.js', './reef.js', './zones.js', './enemies.js', './bosses.js', './campaign.js', './boss-ai.js', './cinema.js', './skills.js', './title.js', './music.js', './fonts/fredoka-700-latin.woff2', './fonts/fredoka-700-latin-ext.woff2'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES.map(f => new Request(f, { cache: 'reload' }))))); self.skipWaiting(); });
 self.addEventListener('activate', e => {

@@ -429,6 +429,82 @@ register({ // Kılıç Balığı: zikzak yolunu kesik çizgiyle gösterir, sonra
   },
 });
 
+// ---------- s46: 4. grup Buzul Denizi (Claude'un tasarımı, kullanıcı onayladı; önizleme preview/grup4.html) ----------
+register({ // Mors: dişleriyle buza vurur, buz diskleri yayılır; diskler duvarlardan seker ve yavaşça durulur
+  id: 'mors', name: 'MORS', hp: 4, r: 54, restY: 145, color: '#c9936a', contactY: 0,
+  tick(b, E, dt) {
+    if (b.tuskT > 0) { b.tuskT -= dt; b.y = E.restY - Math.sin((1 - b.tuskT / 0.8) * Math.PI) * 18 * E.S;
+      if (b.tuskT <= 0) { const n = 2 + Math.min(2, Math.floor(b.lv / 2));
+        for (let i = 0; i < n; i++) { const a = -Math.PI / 2 + (i - (n - 1) / 2) * 0.75 + E.rand(-0.12, 0.12), sp = (230 + b.lv * 12) * E.S;
+          E.slams.push({ kind: 'disk', x: b.x, y: b.y - b.r * 0.4, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, t: 0, warn: 0, life: 5.5, r: 20 * E.S, rot: 0 }); }
+        E.sound.noise(0.3, 0.14, 2600); E.sound.tone(180, 0.3, 'square', 0.06, -60); } return; }
+    sway(b, E, 0.25, 0.5, 6);
+    b.attackT -= dt;
+    if (b.attackT <= 0) { b.attackT = E.interval * 1.3; b.tuskT = 0.8; E.floater(b.x, b.y - b.r * 1.6, 'Buz Diskleri!', '#bfeaff'); E.sound.tone(120, 0.6, 'sawtooth', 0.06, 40); }
+  },
+});
+register({ // Penguen Filosu: lider penguen ve iki kanat; V düzeninde Okto'nun hizasından kızakla geçerler (yandaki oklar önceden uyarır);
+  // canı yarıya inince filo beş penguene çıkar
+  id: 'penguen', name: 'PENGUEN FİLOSU', hp: 4, r: 44, restY: 150, color: '#7ad8ff', contactY: 0,
+  tick(b, E, dt) {
+    if (b.away > 0) b.away -= dt;
+    sway(b, E, 0.28, 0.6, 8);
+    b.attackT -= dt;
+    if (b.attackT <= 0) {
+      b.attackT = E.interval * 1.25;
+      const S = E.S, n = b.hp <= b.maxHp / 2 ? 5 : 3, dir = E.player.x < E.W / 2 ? 1 : -1, cy = E.clamp(E.player.y, E.H * 0.22, E.H * 0.62), sp = (330 + b.lv * 15) * S;
+      const F = [[0, 0], [-1, -1], [-1, 1], [-2, -2], [-2, 2]];
+      for (let i = 0; i < n; i++) { const [fx, fy] = F[i], ox = -fx * 64 * S; // lider önde
+        E.slams.push({ kind: 'peng', x: dir > 0 ? -60 * S - ox : E.W + 60 * S + ox, y: cy + fy * 52 * S, vx: dir * sp, t: 0, warn: 0.9, r: 20 * S, dir }); }
+      b.away = 2.6; E.floater(b.x, b.y - b.r * 1.6, 'Kızak Hücumu!', '#7ad8ff'); E.sound.tone(900, 0.12, 'square', 0.04, 0, 0, true); E.sound.tone(900, 0.12, 'square', 0.04, 0, 0.2, true);
+    }
+  },
+});
+register({ // Beyaz Balina: şarkı söyler, yukarı doğru genişleyen ses dalgası yayılır; değen Okto 2,5 sn buz tutup yavaşlar,
+  // ardından balina kuyruğuyla buz kıymıkları fırlatır (donmuşken kaçmak zor)
+  id: 'beluga', name: 'BEYAZ BALİNA', hp: 4, r: 52, restY: 150, color: '#d8ecf8', contactY: 0,
+  tick(b, E, dt) {
+    if (b.singT > 0) { b.singT -= dt; b.y = E.restY + Math.sin(b.t * 9) * 2 * E.S;
+      if (b.singT <= 0) { E.slams.push({ kind: 'song', x: b.x, y: b.y - b.r * 0.4, t: 0, warn: 0, rad: b.r, speed: 200 * E.S, maxR: E.H * 0.95, span: 1.15, w: 16 * E.S });
+        b.shardsT = 1.3; E.sound.tone(520, 0.9, 'sine', 0.07, 260); } return; }
+    if (b.shardsT > 0) { b.shardsT -= dt; if (b.shardsT <= 0) { ATTACKS.aimed.start(b, E, { count: 3 + Math.min(2, Math.floor(b.lv / 2)), shot: 'spike', spread: 0.22, speed: 210 }); } }
+    sway(b, E, 0.24, 0.5, 9);
+    b.attackT -= dt;
+    if (b.attackT <= 0) { b.attackT = E.interval * 1.35; b.singT = 0.9; E.floater(b.x, b.y - b.r * 1.6, 'Donduran Şarkı!', '#bfeaff'); E.sound.tone(660, 0.8, 'sine', 0.05, 220); }
+  },
+});
+register({ // Kristal Denizanası: kar tanesi gibi altı buz kolunu açar ve döndürür; kollar arasındaki boşlukta kalınır
+  id: 'kristal', name: 'KRİSTAL DENİZANASI', hp: 4, r: 46, restY: 165, color: '#bfeaff', contactY: 0.2,
+  tick(b, E, dt) {
+    b.rot = (b.rot || 0) + dt * (b.armT > 0 ? 0 : 0.4);
+    if (b.armT > 0) { b.armT -= dt; b.x = E.lerp(b.x, E.W / 2, dt * 1.5); b.y = E.lerp(b.y, E.restY, dt * 2); return; } // kollar açıkken ortada sabit
+    sway(b, E, 0.22, 0.45, 10);
+    b.attackT -= dt;
+    if (b.attackT <= 0) {
+      b.attackT = E.interval * 1.4;
+      const dur = 3.2 + Math.min(1, b.lv * 0.2), w = (b.hp <= b.maxHp / 2 ? 0.95 : 0.7) * (Math.random() < 0.5 ? 1 : -1);
+      E.slams.push({ kind: 'arms', t: 0, warn: 1.0, dur, w, rot0: E.rand(0, Math.PI / 3), L: E.H * 0.62, aw: 11 * E.S });
+      b.armT = 1.0 + dur; E.floater(b.x, b.y - b.r * 1.7, 'Kar Tanesi!', '#bfeaff'); E.sound.tone(1200, 0.8, 'sine', 0.04, -600);
+    }
+  },
+});
+const NARVAL_BIG = [
+  { name: 'Boynuz hücumu', tele: 0.6, fire(b, E, p2) { // işaretli yatay hatta boynuz ekranı boydan boya yarar
+    const ys = [E.clamp(E.player.y, E.H * 0.18, E.H * 0.7)]; if (p2) ys.push(E.clamp(ys[0] + (ys[0] < E.H * 0.45 ? 1 : -1) * 110 * E.S, E.H * 0.18, E.H * 0.7));
+    ys.forEach((y, i) => { const dir = (i % 2 ? -1 : 1) * (Math.random() < 0.5 ? 1 : -1); E.slams.push({ kind: 'horn', y, dir, x: dir > 0 ? -260 * E.S : E.W + 260 * E.S, t: 0, warn: 1.0 + i * 0.35, sp: (p2 ? 1100 : 900) * E.S, w: 12 * E.S }); });
+    E.sound.tone(160, 0.5, 'sawtooth', 0.07, 90); } },
+  { name: 'Buz dikitleri', tele: 0.5, fire(b, E, p2) { // alttan sırayla yükselen buz sütunları; arada geçilecek boşluk kalır
+    const n = p2 ? 7 : 5, dir = Math.random() < 0.5 ? 1 : -1, skip = 1 + Math.floor(Math.random() * (n - 2));
+    for (let i = 0; i < n; i++) { if (i === skip) continue; const k = (i + 0.5) / n, x = dir > 0 ? k * E.W : E.W - k * E.W;
+      E.slams.push({ kind: 'pike', x, t: 0, warn: 0.8 + i * (p2 ? 0.12 : 0.18), w: E.W / n * 0.42, h: E.rand(0.42, 0.62) * E.H }); }
+    E.sound.tone(700, 0.2, 'triangle', 0.05, -200); } },
+  { name: 'Tipi', tele: 0.6, fire(b, E, p2) { // yan rüzgâr Okto'yu iter, kar görüşü kısar, yandan buz kıymıkları gelir
+    E.slams.push({ kind: 'blizzard', t: 0, warn: 0, dur: p2 ? 4.2 : 3.2, dir: Math.random() < 0.5 ? 1 : -1, push: (p2 ? 150 : 115) * E.S, shardT: 0.5, every: p2 ? 0.45 : 0.65 });
+    E.sound.noise(2.5, 0.08, 700); } },
+];
+register({ id: 'narval-big', name: 'DEV NARVAL', size: 'big', hp: 9, r: 74, restY: 165, color: '#bfeaff', contactY: 0, phases: P2,
+  tick: bigTick(NARVAL_BIG, (b, E, dt, p2) => { b.x = E.W / 2 + Math.sin(b.t * (p2 ? 0.85 : 0.55)) * E.W * 0.24; b.y = E.restY + Math.sin(b.t * 1.6) * 9 * E.S; }) });
+
 // ---------- Örnek (yer tutucu) canavarlar: yalnızca test düzeninde (?plan=grup) görünür ----------
 // Kullanıcının görselleri ve bölüm planı gelince bunların yerini gerçek canavarlar alacak.
 register({

@@ -122,7 +122,8 @@ function serve() {
     const G = await page.evaluate(() => [1, 2, 3, 4, 5, 6].map(n => { const l = window.__okto.levelInfo(n); return { n, boss: l.boss, arena: l.arena, group: l.group, start: l.start, end: l.end }; }));
     ok(G.slice(0, 5).map(g => g.boss).join() === 'kestane,yengec,vatoz,deniz-ati,puffer-big' && G.slice(0, 4).every(g => !g.arena) && G[4].arena && G[4].end === 500 && G[5].group === 2 && G[5].start === 500, 'Güneşli Sular 5 bölüm: Kestane, Yengeç, Vatoz, Deniz Atı, 5. bölümde Dev Balon Balığı (0–500 m), sonra 2. grup');
     ok(await page.evaluate(() => { const C = OktoCampaign, out = []; for (let g = 0; g < 6; g++) for (let k = 1; k <= 5; k++) { const L = C.level(g * 5 + k), big = OktoBossAI.get(L.boss).size === 'big'; out.push(big === (k === 5)); } return out.every(Boolean); }), 'her grupta (tekrar turları dahil) 1–4. bölüm mini, 5. bölüm büyük canavar');
-    ok(await page.evaluate(() => { const ids = new Set(); for (let n = 1; n <= 15; n++) { const L = OktoCampaign.level(n); if (!L.arena) ids.add(L.boss); } return ids.size === 12; }), '12 farklı mini canavar');
+    ok(await page.evaluate(() => { const ids = new Set(); for (let n = 1; n <= 15; n++) { const L = OktoCampaign.level(n); if (!L.arena) ids.add(L.boss); } return ids.size === 12; }), '12 farklı mini canavar (ilk üç grup)');
+    ok(await page.evaluate(() => { const ids = new Set(), big = new Set(); for (let n = 1; n <= 20; n++) { const L = OktoCampaign.level(n); (L.arena ? big : ids).add(L.boss); } return ids.size === 16 && big.size === 4 && OktoCampaign.level(16).groupName === 'Buzul Denizi' && OktoCampaign.level(20).boss === 'narval-big' && OktoCampaign.level(21).groupName === 'Güneşli Sular +1'; }), 's46: 4. grup Buzul Denizi (16–20): 16 mini ve 4 büyük canavar, ardından Güneşli Sular +1');
     ok(await page.evaluate(() => [1, 2, 3, 4, 7].map(n => OktoCampaign.migrate(n)).join()) === '1,6,11,16,16', 'eski klasik kayıt noktası taşınıyor (1→1, 2→6, 3→11, 4+→16)');
     ok(await page.evaluate(() => [1, 3, 4, 5, 8, 9, 12, 13].map(n => OktoCampaign.migrate44(n)).join()) === '1,3,4,6,9,11,14,16', 's44 kaydı aynı grup ve sıraya taşınıyor');
     ok(await page.evaluate(() => { const L = n => OktoCampaign.level(n); return L(1).zones[0] === 'reefs' && L(2).zones[0] === 'canyon' && L(3).zones[0] === 'akinti' && L(4).zones[0] === 'yosun' && L(6).env && L(5).intro && L(5).intro.title === 'DEV BALON BALIĞI' && L(10).intro && L(15).intro; }), 'her bölümün bölgeleri, su rengi ve sinematik yazısı tanımlı');
@@ -133,6 +134,8 @@ function serve() {
     ok(Z.every(z => z.segs[0] === 'open' && z.segs.every((t, i) => i === 0 || t === 'open' || z.segs[i - 1] === 'open')), 'bölgelerin arasında açık su (dinlenme) var');
     ok(Z.slice(0, 5).filter(z => z.kinds.includes('yosun')).length >= 2, `Yosun Ormanı ilk grupta (Güneşli Sular) görünüyor (${Z.slice(0, 5).filter(z => z.kinds.includes('yosun')).length} bölümde)`);
     ok(['baca', 'gemi', 'mayin'].every(k => !zk(0).has(k) && zk(1).has(k)) && ['magara', 'kacis'].every(k => !zk(0).has(k) && !zk(1).has(k) && zk(2).has(k)), 'derinlere indikçe bacalar, batık gemi, mayınlar; sonra mağara ve kaçış ekleniyor');
+    const Z4 = await page.evaluate(() => { const O = window.__okto, out = []; for (let n = 16; n <= 20; n++) { O.startGame(n); out.push([...new Set(O.plan.filter(p => p.type !== 'open').map(p => p.type))]); } return out; });
+    ok(Z4.every(k => k.length >= 2 && k.length <= 3) && ['sarkit', 'buzdag', 'kaygan', 'isik'].every(k => Z4.some(z => z.includes(k)) && !zk(0).has(k) && !zk(1).has(k) && !zk(2).has(k)), 'Buzul Denizi: her bölümde 2–3 bölge; buz sarkıtı, buzdağı, kaygan buz ve kuzey ışığı yalnızca bu grupta (' + Z4.map(z => z.join('+')).join(' · ') + ')');
     ok(await page.textContent('#ver').then(v => v.includes('TEST')), 'test etiketi görünüyor');
     // üç mini canavar sırayla: her biri saldırısını yapıyor ve yeniliyor
     await page.evaluate(() => window.__okto.startGame(1));
@@ -175,7 +178,9 @@ function serve() {
   for (const [lv, id, cond] of [[6, 'baca-yengeci', "O.slams.some(s => s.kind === 'lava')"], [7, 'zirhli-balon', 'O.boss.roll'], [8, 'mayin-yengeci', "O.slams.some(s => s.kind === 'mine')"],
     [9, 'deniz-yildizi', "O.slams.some(s => s.kind === 'star' && s.st === 'go')"],
     [11, 'murekkepci', "O.slams.some(s => s.kind === 'dark')"], [12, 'hayalet-denizanasi', "O.slams.some(s => s.kind === 'ring')"], [13, 'iri-fener', 'O.boss.lureT > 0'],
-    [14, 'kilic-baligi', "O.boss.zig && O.boss.zig.tele <= 0 && O.slams.some(s => s.kind === 'zigline')"]]) {
+    [14, 'kilic-baligi', "O.boss.zig && O.boss.zig.tele <= 0 && O.slams.some(s => s.kind === 'zigline')"],
+    [16, 'mors', "O.slams.filter(s => s.kind === 'disk').length >= 2"], [17, 'penguen', "O.slams.filter(s => s.kind === 'peng' && s.t > s.warn).length >= 3"],
+    [18, 'beluga', "O.slams.some(s => s.kind === 'song')"], [19, 'kristal', "O.slams.some(s => s.kind === 'arms' && s.t > s.warn)"]]) {
     const { page, errors, close } = await open(`?plan=grup&bolum=${lv}&boss=${id}`);
     const r = await page.evaluate(([cond]) => { const O = window.__okto, C = new Function('O', 'return ' + cond); O.startGame(); let saw = false, t = 0, nx = 0;
       for (let i = 0; i < 60 * 60 && !saw; i++) { O.lives = 3; O.invuln = 5; O.step(1 / 60); if (O.boss && O.boss.phase === 'fight' && C(O)) saw = true; }
@@ -185,11 +190,11 @@ function serve() {
     await close();
   }
   // 5c) büyük canavarlar: her biri 3 yeni saldırı (uyarılı) ve canın yarısında 2. aşama
-  for (const [lv, id, kinds] of [[5, 'puffer-big', ['drop', 'hbub', 'wall']], [10, 'jelly-big', ['hzap', 'orb', 'zone']], [15, 'squid-big', ['tentacle', 'inkbomb', 'toptent']]]) {
+  for (const [lv, id, kinds] of [[5, 'puffer-big', ['drop', 'hbub', 'wall']], [10, 'jelly-big', ['hzap', 'orb', 'zone']], [15, 'squid-big', ['tentacle', 'inkbomb', 'toptent']], [20, 'narval-big', ['horn', 'pike', 'blizzard']]]) {
     const { page, errors, close } = await open(`?plan=grup&bolum=${lv}`);
     const r = await page.evaluate((kinds) => { const O = window.__okto; O.startGame(); const seen = new Set(), warned = new Set(); let ph = null, t = 0, nx = 0;
       for (let i = 0; i < 60 * 240 && O.state !== 'clear'; i++) { O.lives = 3; O.invuln = 5; O.step(1 / 60); t += 1 / 60;
-        for (const s of O.slams) { seen.add(s.kind); if (s.t < (s.warn || 0) || s.kind === 'hbub' || s.kind === 'inkbomb') warned.add(s.kind); }
+        for (const s of O.slams) { seen.add(s.kind); if (s.t < (s.warn || 0) || s.kind === 'hbub' || s.kind === 'inkbomb' || s.kind === 'blizzard') warned.add(s.kind); }
         if (O.boss && O.boss.ph) ph = O.boss.ph.name;
         if (seen.size >= 3 && O.boss && O.boss.phase === 'fight' && t > nx) { O.damageBoss(1); nx = t + 3; } }
       return { kinds: kinds.filter(k => seen.has(k)), warned: kinds.filter(k => warned.has(k)), ph, state: O.state }; }, kinds);
@@ -199,7 +204,8 @@ function serve() {
   }
   // 5d) Alacakaranlık ve Karanlık Derinlikler baştan sona: 4 mini canavar → sinematik → büyük canavar → kupa kartı; test kaydı hepsini tutar
   for (const [first, group, names] of [[6, 'Alacakaranlık', ['BACA YENGECİ', 'ZIRHLI BALON BALIĞI', 'MAYIN YENGECİ', 'DEV DENİZ YILDIZI', 'ELEKTRİKLİ DENİZANASI']],
-    [11, 'Karanlık Derinlikler', ['MAĞARA MÜREKKEPÇİSİ', 'HAYALET DENİZANASI', 'İRİ FENER BALIĞI', 'KILIÇ BALIĞI', 'DEV KALAMAR']]]) {
+    [11, 'Karanlık Derinlikler', ['MAĞARA MÜREKKEPÇİSİ', 'HAYALET DENİZANASI', 'İRİ FENER BALIĞI', 'KILIÇ BALIĞI', 'DEV KALAMAR']],
+    [16, 'Buzul Denizi', ['MORS', 'PENGUEN FİLOSU', 'BEYAZ BALİNA', 'KRİSTAL DENİZANASI', 'DEV NARVAL']]]) {
     const { page, errors, close } = await open(`?plan=grup&bolum=${first}`);
     const r = await page.evaluate(() => { const O = window.__okto; O.startGame(); const states = []; let cinema = false, t = 0, nx = 0, clears = 0;
       for (let i = 0; i < 60 * 1200 && clears < 5; i++) {
@@ -217,7 +223,7 @@ function serve() {
     await close();
   }
   // 5e) 2. aşama ölçümü: canın yarısında başlar; saldırılar sıklaşır ve kalabalıklaşır (aynı saldırı 1. ve 2. aşamada karşılaştırılır)
-  for (const [lv, id] of [[5, 'puffer-big'], [10, 'jelly-big'], [15, 'squid-big']]) {
+  for (const [lv, id] of [[5, 'puffer-big'], [10, 'jelly-big'], [15, 'squid-big'], [20, 'narval-big']]) {
     const { page, close } = await open(`?plan=grup&bolum=${lv}`);
     const r = await page.evaluate(() => {
       const O = window.__okto; O.startGame();
@@ -360,10 +366,10 @@ function serve() {
         OktoMap.draw(cv.getContext('2d'), { W: 390, H: 844, FONT: 'Fredoka', time: 1, top: 47, group: g, unlocked: 2, current: 2 });
         const px = cv.getContext('2d').getImageData(195, 830, 1, 1).data; out.push({ col: px.slice(0, 3).join(), over: OktoMap.layout.texts.filter(t => t.x0 < 0 || t.x1 > 390 || t.y1 > 844).map(t => t.text), islands: OktoMap.layout.islands.length, texts: OktoMap.layout.texts.map(t => t.text) }); }
       return out; });
-    ok(new Set(r0.map(x => x.col)).size === 3, 'üç grubun haritası farklı renkte');
+    ok(new Set(r0.map(x => x.col)).size === 4, 'dört grubun haritası farklı renkte');
     ok(r0.every(x => x.over.length === 0), 'harita yazıları iPhone 13 ekranından taşmıyor');
     ok(r0.every(x => x.islands === 5), 'her haritada 4 mini canavar adası + büyük canavar adası');
-    ok(r0[3].texts.includes('Güneşli Sular +1') && r0[2].texts.includes('Güneşli Sular +1') && r0[5].texts.includes('Karanlık Derinlikler +1') && r0[3].col === r0[0].col, 'tekrar turu haritası: "Güneşli Sular +1" başlığı, aynı renk, taşma yok');
+    ok(r0[2].texts.includes('Buzul Denizi') && r0[3].texts.includes('Buzul Denizi') && r0[3].texts.includes('Dev Narval') && r0[3].texts.includes('Güneşli Sular +1') && r0[4].texts.includes('Güneşli Sular +1') && r0[5].texts.includes('Alacakaranlık +1') && r0[4].col === r0[0].col, 'Buzul Denizi haritası (sonra Güneşli Sular +1); tekrar turu aynı renkte, taşma yok');
     ok(r0[0].texts.includes('Güneşli Sular') && r0[0].texts.includes('0–500 m') && r0[0].texts.includes('Resif Adacıkları') && r0[0].texts.includes('Yosun Ormanı') && r0[0].texts.includes('Dev Balon Balığı') && r0[0].texts.includes('500 m') && r0[0].texts.includes('Alacakaranlık'), 'Güneşli Sular haritası: başlık, derinlik, adalar, büyük canavar ve sonraki grup');
     // bölüm sonu → harita → Okto yüzer → Dal! → girdap → sonraki bölüm
     await page.evaluate(() => { const O = window.__okto; O.startGame(); O.depth = O.levelInfo(1).end - 1;
@@ -392,9 +398,10 @@ function serve() {
   { // iPhone 13 (çentik payı 47) ekranında harita yazıları ekran içinde, çentiğin altında ve düğmelerle çakışmıyor
     const { page, close } = await open('?plan=grup&bolum=2');
     await page.addStyleTag({ content: '#safeProbe{height:47px!important}' }); await page.evaluate(() => { for (let i = 0; i < 40; i++) window.__okto.step(1 / 60); });
-    await page.evaluate(() => window.__okto.openMap('menu'));
-    const bad = [];
-    for (let g = 0; g < 3; g++) {
+    await page.evaluate(() => { window.__okto.Profile.data.gcheck = 20; window.__okto.openMap('menu'); }); // dört grubun haritası açık
+    const bad = [], seenG = [];
+    for (let g = 0; g < 4; g++) {
+      seenG.push(await page.evaluate(() => window.__okto.mapV.group));
       bad.push(...await page.evaluate(() => { const O = window.__okto; O.draw(); const T = OktoMap.layout.texts, st = O.safeTop, out = [];
         const btn = ['mapClose', 'mapPrev', 'mapNext', 'mapGo'].map(id => document.getElementById(id)).filter(e => !e.classList.contains('hidden')).map(e => e.getBoundingClientRect());
         for (const t of T) { if (t.x0 < 0 || t.x1 > innerWidth || t.y1 > innerHeight || t.y0 < st) out.push('ekran dışı ' + t.text); for (const r of btn) if (t.x0 < r.right && t.x1 > r.left && t.y0 < r.bottom && t.y1 > r.top) out.push('düğmeyle çakışma ' + t.text); }
@@ -402,7 +409,8 @@ function serve() {
       await page.screenshot({ path: path.join(OUT, `8-harita-${g + 1}.png`) });
       await page.evaluate(() => document.getElementById('mapNext').click());
     }
-    ok(bad.length === 0, 'iPhone 13 ekranında (çentikli) 3 haritanın yazıları taşmıyor ve düğmelerle çakışmıyor' + (bad.length ? ': ' + bad.join(', ') : ''));
+    ok(seenG.join() === '0,1,2,3', 'dört grubun haritası sırayla açıldı (' + seenG.join() + ')');
+    ok(bad.length === 0, 'iPhone 13 ekranında (çentikli) 4 haritanın yazıları taşmıyor ve düğmelerle çakışmıyor' + (bad.length ? ': ' + bad.join(', ') : ''));
     await close();
   }
   { // klasik düzende (?plan=klasik) harita yok, bölüm sonu doğrudan girdaba gider
@@ -419,11 +427,11 @@ function serve() {
   console.log('9. Normal oyun yeni düzende (parametresiz)');
   {
     const { page, errors, close } = await open('', false);
-    const r = await page.evaluate(() => ({ mode: OktoCampaign.mode, ver: document.getElementById('ver').textContent, test: window.__okto.TEST.on, L: [1, 6, 11, 16].map(n => { const l = window.__okto.levelInfo(n); return [l.groupName, l.boss].join('/'); }) }));
+    const r = await page.evaluate(() => ({ mode: OktoCampaign.mode, ver: document.getElementById('ver').textContent, test: window.__okto.TEST.on, L: [1, 6, 11, 16, 21].map(n => { const l = window.__okto.levelInfo(n); return [l.groupName, l.boss].join('/'); }) }));
     ok(r.mode === 'grup', 'parametresiz oyun grup düzeninde');
     ok(!r.test && !/TEST/.test(r.ver), `sağ altta TEST yazmıyor (${r.ver.trim()})`);
-    ok(r.L.join() === 'Güneşli Sular/kestane,Alacakaranlık/baca-yengeci,Karanlık Derinlikler/murekkepci,Güneşli Sular +1/kestane', 'üç grup sırayla, sonra güçlenerek tekrar (Güneşli Sular +1)');
-    ok(await page.evaluate(() => window.__okto.levelInfo(13).power > window.__okto.levelInfo(1).power && window.__okto.levelInfo(20).boss === 'puffer-big'), 'tekrar turunda canavarlar daha güçlü, büyük canavar yine geliyor');
+    ok(r.L.join() === 'Güneşli Sular/kestane,Alacakaranlık/baca-yengeci,Karanlık Derinlikler/murekkepci,Buzul Denizi/mors,Güneşli Sular +1/kestane', 'dört grup sırayla, sonra güçlenerek tekrar (Güneşli Sular +1)');
+    ok(await page.evaluate(() => window.__okto.levelInfo(21).power > window.__okto.levelInfo(1).power && window.__okto.levelInfo(25).boss === 'puffer-big'), 'tekrar turunda canavarlar daha güçlü, büyük canavar yine geliyor');
     ok(await page.isVisible('#mapBtn'), 'menüde Harita düğmesi');
     const help = await page.evaluate(() => document.querySelector('#help .card').textContent);
     ok(/bölüm gruplarından/.test(help) && /harita/i.test(help) && /mini canavar/.test(help) && /büyük canavar/.test(help), 'Nasıl oynanır metni grupları, haritayı, mini ve büyük canavarları anlatıyor');

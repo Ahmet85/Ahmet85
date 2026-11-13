@@ -10,11 +10,12 @@
 const TAU = Math.PI * 2;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const ease = x => { x = clamp(x, 0, 1); return x * x * (3 - 2 * x); };
-// grup renkleri: Güneşli Sular açık mavi, Alacakaranlık lacivert-mor, Karanlık Derinlikler koyu
+// grup renkleri: Güneşli Sular açık mavi, Alacakaranlık lacivert-mor, Karanlık Derinlikler koyu, Buzul Denizi buz mavisi
 const THEMES = [
   { top: '#56cdf0', mid: '#1a83c0', bot: '#0b4a86', rock: 'rgba(10,60,110,.55)', title: '#ffffff', pill: '#0e5c8a', sun: true },
   { top: '#3a5aa8', mid: '#26307a', bot: '#140c40', rock: 'rgba(30,20,80,.6)', title: '#e8e0ff', pill: '#3a2a7a', sun: false },
   { top: '#16294a', mid: '#0b1530', bot: '#03060f', rock: 'rgba(20,30,60,.7)', title: '#bfe8ff', pill: '#1a2a4a', sun: false },
+  { top: '#bfefff', mid: '#5fb0dc', bot: '#173f70', rock: 'rgba(225,245,255,.45)', title: '#ffffff', pill: '#1d5788', sun: true, ice: true }, // s46 Buzul Denizi
 ];
 let last = null; // son çizimin adaları (dokunma için)
 const layout = { texts: [], islands: [] };
@@ -43,7 +44,7 @@ function island(c, kind, x, y, w, s, t, dark) {
     for (let i = 0; i < 4; i++) { c.lineWidth = (6 - i) * s; c.beginPath(); c.ellipse(x, y + h * 0.2, w * (0.5 - i * 0.08), h * (0.6 - i * 0.08), 0, t * 0.8 + i, t * 0.8 + i + 4.2); c.stroke(); }
     c.restore(); return;
   }
-  const sand = dark ? '#5a5a7a' : '#e9c98a', sand2 = dark ? '#3a3a58' : '#c9a061';
+  const ice = dark === 'ice', sand = ice ? '#eaf8ff' : dark ? '#5a5a7a' : '#e9c98a', sand2 = ice ? '#9fd0ea' : dark ? '#3a3a58' : '#c9a061';
   if (kind === 'gemi') { // batık gemi tahtası
     c.fillStyle = '#7a5030'; c.strokeStyle = '#3a2210'; c.lineWidth = 3 * s; c.beginPath(); c.moveTo(x - w * 0.5, y); c.lineTo(x + w * 0.5, y - h * 0.3); c.lineTo(x + w * 0.42, y + h * 0.5); c.lineTo(x - w * 0.42, y + h * 0.6); c.closePath(); c.fill(); c.stroke();
     c.strokeStyle = 'rgba(0,0,0,.3)'; for (let k = 1; k < 4; k++) { c.beginPath(); c.moveTo(x - w * 0.46, y + h * (k * 0.18)); c.lineTo(x + w * 0.46, y - h * 0.3 + h * (k * 0.2)); c.stroke(); }
@@ -68,7 +69,16 @@ function island(c, kind, x, y, w, s, t, dark) {
     c.strokeStyle = kind === 'kacis' ? '#2a4a5a' : '#3aa060'; c.lineWidth = 4 * s; c.lineCap = 'round'; c.beginPath(); c.moveTo(x + w * dx, y);
     for (let k = 1; k <= 5; k++) c.lineTo(x + w * dx + Math.sin(t * 2 + k + dx * 9) * 4 * s, y - k * 9 * s); c.stroke();
   }
-  if (kind === 'reefs' || kind === 'arena') { // mercanlar ve deniz yıldızı
+  if (kind === 'sarkit' || kind === 'isik' || (ice && kind === 'arena')) { // buz sarkıtları / kuzey ışığı / buz sarayı kuleleri
+    c.fillStyle = 'rgba(235,250,255,.95)'; c.strokeStyle = '#6ab8e0'; c.lineWidth = 2 * s;
+    for (const [dx, hh] of [[-0.36, 30], [-0.26, 20], [0.28, 24], [0.38, 34]]) { c.beginPath(); c.moveTo(x + w * dx - 8 * s, y); c.lineTo(x + w * dx, y - hh * s); c.lineTo(x + w * dx + 8 * s, y); c.closePath(); c.fill(); c.stroke(); }
+    if (kind === 'isik') { c.save(); c.globalCompositeOperation = 'lighter'; for (const [dx, col] of [[-0.2, 'rgba(120,255,200,.35)'], [0.2, 'rgba(180,140,255,.3)']]) { c.fillStyle = col; c.beginPath(); c.moveTo(x + w * dx - 6 * s, y - 70 * s); c.lineTo(x + w * dx + 6 * s, y - 70 * s); c.lineTo(x + w * dx + 16 * s, y); c.lineTo(x + w * dx - 16 * s, y); c.fill(); } c.restore(); }
+  }
+  if (kind === 'buzdag' || kind === 'kaygan') { // buz blokları / kaygan parıltılar
+    if (kind === 'buzdag') { c.fillStyle = '#f4fcff'; c.strokeStyle = '#5aa8d4'; c.lineWidth = 2 * s; for (const [dx, bw, bh] of [[-0.3, 34, 18], [0.3, 40, 22]]) { c.beginPath(); c.roundRect(x + w * dx - bw / 2 * s, y - bh * s, bw * s, bh * s, 4 * s); c.fill(); c.stroke(); } }
+    else { c.strokeStyle = 'rgba(255,255,255,.9)'; c.lineWidth = 2.5 * s; c.lineCap = 'round'; for (const [dx, dy] of [[-0.35, -4], [-0.25, 2], [0.25, -3], [0.36, 3]]) { c.beginPath(); c.moveTo(x + w * dx - 10 * s, y + dy * s); c.lineTo(x + w * dx + 10 * s, y + dy * s - 2 * s); c.stroke(); } }
+  }
+  if (kind === 'reefs' || (kind === 'arena' && !ice)) { // mercanlar ve deniz yıldızı
     coral(c, x - w * 0.36, y - h * 0.1, s * 1.1, '#ff6fa8'); coral(c, x - w * 0.27, y - h * 0.05, s * 0.9, '#ffb03a');
     coral(c, x + w * 0.3, y - h * 0.1, s * 1.1, '#a87cff'); coral(c, x + w * 0.38, y - h * 0.02, s * 0.9, '#ffd23a');
     c.fillStyle = '#ff8a5a'; c.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, r = (i % 2 ? 3 : 7) * s; c.lineTo(x + w * 0.42 + Math.cos(a) * r, y + h * 0.1 + Math.sin(a) * r); } c.fill();
@@ -117,7 +127,7 @@ function draw(c, G) {
     const s = S * (big ? 1.15 : 1);
     c.save(); if (locked) c.globalAlpha = 0.45;
     if (cur) { const g = c.createRadialGradient(nd.x, nd.y, nd.w * 0.1, nd.x, nd.y, nd.w * 0.7); g.addColorStop(0, `rgba(255,120,200,${0.45 + 0.15 * Math.sin(t * 3)})`); g.addColorStop(1, 'rgba(255,120,200,0)'); c.fillStyle = g; c.beginPath(); c.ellipse(nd.x, nd.y - nd.w * 0.08, nd.w * 0.7, nd.w * 0.45, 0, 0, TAU); c.fill(); }
-    island(c, kind, nd.x, nd.y, nd.w, s, t, gb >= 2);
+    island(c, kind, nd.x, nd.y, nd.w, s, t, th.ice ? 'ice' : gb === 2);
     // canavar
     const def = OktoBossAI.get(L.boss), br = (big ? 34 : 26) * S;
     if (def && window.OktoBosses) {

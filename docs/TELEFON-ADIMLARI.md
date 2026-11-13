@@ -57,3 +57,17 @@ kostümlerin, becerilerin, Kaşif Puanın ve kupaların aynen kalır.
 3. **Harita** düğmesine bas: her grupta 5 ada görmelisin (4 mini canavar + en altta büyük canavar).
 4. Yeni canavarları hemen görmek istersen (kayıt tutmaz, deneme): Safari'de
    https://ahmet85.github.io/Ahmet85/preview/boss-test.html sayfasındaki "(yeni)" bağlantıları.
+
+## 5. s46: 4. grup Buzul Denizi
+**Ne değişti:** Karanlık Derinlikler'den sonra yeni bir grup var: **Buzul Denizi** (Bölüm 16–20). Yeni bölgeler: tepeden düşen buz
+sarkıtları, yana kayan buzdağları, Okto'nun kaydığı kaygan buz ve kuzey ışığı çukuru. Mini canavarlar: Mors, Penguen Filosu,
+Beyaz Balina (şarkısına değersen Okto bir süre buz tutar), Kristal Denizanası; büyük canavar **Dev Narval**. Dört gruptan sonra
+gruplar "+1" ekiyle daha güçlü tekrar eder (artık 21. bölümden itibaren).
+
+**Kayıtların ne olur:** Hiçbir şey kaybolmaz. 15. bölümü geçtiysen Buzul Denizi haritada kendiliğinden açıktır.
+
+**Adımlar:**
+1. Ana ekrandaki OKTO'yu tamamen kapat (alttan yukarı kaydır, OKTO'yu yukarı fırlat), sonra aç.
+2. Sağ altta **s46** yazmalı. Yazmıyorsa 1. adımı bir kez daha yap.
+3. **Harita** → sağ alttaki ok ile gruplar arasında geç: 4. harita buz mavisi Buzul Denizi.
+4. Hemen denemek istersen (kayıt tutmaz): Safari'de https://ahmet85.github.io/Ahmet85/?bolum=16

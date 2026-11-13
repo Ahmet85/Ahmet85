@@ -991,7 +991,7 @@ function damageBoss(n) {
   if (boss.armorT > 0 || (boss.vis != null && boss.vis < 0.5)) { addFloater(boss.x, boss.y - boss.r * 1.4, boss.armorT > 0 ? 'Zırh!' : 'Görünmez!', '#9fd6ff'); return; } // zırhlı / kaybolmuş: vurulmaz
   const te = TLOG.enc[TLOG.enc.length - 1]; if (te && te.dur == null) te.hits++;
   if (boss.openT > 0) { n += 1; addFloater(boss.x, boss.y - boss.r * 1.6, 'Çift vuruş!', '#7dffb0'); } // vatoz açık verdi
-  boss.hp -= n; boss.flashT = 0.3; boss.stun = 1.2; boss.dash = null; boss.puffT = 0; boss.act = null; boss.glowT = 0; boss.clawT = 0; boss.foldT = 0; boss.current = null; boss.ventT = 0; boss.dropT = 0; boss.lureT = 0; boss.lunge = null; boss.fade = null; boss.vis = 1; boss.spinT = 0; if (boss.zig) { boss.zig = null; boss.backT = 1; } shake = 9;
+  boss.hp -= n; boss.flashT = 0.3; boss.stun = 1.2; boss.dash = null; boss.puffT = 0; boss.act = null; boss.glowT = 0; boss.clawT = 0; boss.foldT = 0; boss.current = null; boss.ventT = 0; boss.dropT = 0; boss.lureT = 0; boss.lunge = null; boss.fade = null; boss.vis = 1; boss.spinT = 0; if (boss.zig) { boss.zig = null; boss.backT = 1; } boss.tuskT = 0; boss.singT = 0; boss.shardsT = 0; shake = 9;
   Sound.bossHit(); vibrate(60);
   burst(boss.x, boss.y - boss.r * 0.6, boss.def.color, 20, 220);
   addFloater(boss.x, boss.y - boss.r * 1.3, `-${n}`, '#ff8a8a');
@@ -1030,7 +1030,13 @@ function updateBoss(dt) {
   const interval = Math.max(1.3, 2.8 - b.lv * 0.2) * rand(0.85, 1.15);
   // canavara özel hareket ve saldırılar boss-ai.js'te
   OktoBossAI.tick(b, { W, H, S, player, entities, slams, sound: Sound, rand, clamp, lerp, interval, restY,
-    push: (dx, dy) => pushTarget(dx, dy), floater: addFloater }, dt);
+    push: (dx, dy) => pushTarget(dx, dy), floater: addFloater,
+    freeze: freezePlayer }, dt);
+}
+function freezePlayer(sec) { // s46 Beyaz Balina: Okto buz tutar ve yavaşlar (Dev Okto donmaz)
+  if (player.bigT > 0) return;
+  if (!(player.frozenT > 0)) { addFloater(player.x, player.y - player.r * 1.8, 'Dondun!', '#bfeaff'); Sound.tone(1400, 0.4, 'sine', 0.05, -900); }
+  player.frozenT = Math.max(player.frozenT || 0, sec);
 }
 function updateSlams(dt) {
   for (const s of slams) {
@@ -1056,6 +1062,62 @@ function updateSlams(dt) {
       else if (s.st === 'hold') { s.ht += dt; if (s.ht >= s.hold) { const dx = s.tx - s.x, dy = s.ty - s.y, d = Math.hypot(dx, dy) || 1; s.vx = dx / d * s.go; s.vy = dy / d * s.go; s.st = 'go'; } }
       else { s.x += s.vx * dt; s.y += s.vy * dt; }
       if (Math.hypot(player.x - s.x, player.y - s.y) < s.r + player.r * 0.55) { hurt(); s.done = true; burst(s.x, s.y, '#ffb08a', 10, 120); }
+      continue;
+    }
+    // ---- s46 Buzul Denizi saldırıları ----
+    if (s.kind === 'disk') { // mors: seken buz diski, yavaşça durulur
+      if (s.cancel || s.t > s.life) { s.done = true; burst(s.x, s.y, '#e6f8ff', 8, 90); continue; }
+      const k = Math.exp(-0.12 * dt); s.vx *= k; s.vy *= k; s.x += s.vx * dt; s.y += s.vy * dt; s.rot += dt * 6;
+      if (s.x < s.r || s.x > W - s.r) { s.vx = -s.vx; s.x = clamp(s.x, s.r, W - s.r); Sound.tone(900, 0.05, 'triangle', 0.03); }
+      if (s.y < safeTop + s.r || s.y > H - s.r) { s.vy = -s.vy; s.y = clamp(s.y, safeTop + s.r, H - s.r); }
+      if (Math.hypot(player.x - s.x, player.y - s.y) < s.r + player.r * 0.55) { hurt(); s.done = true; burst(s.x, s.y, '#e6f8ff', 12, 140); }
+      continue;
+    }
+    if (s.kind === 'peng') { // kızaklı penguen: yandaki ok uyarısından sonra yatay geçer
+      if (s.cancel && s.t < s.warn) { s.done = true; continue; }
+      if (s.t < s.warn) continue;
+      s.x += s.vx * dt; if ((s.dir > 0 && s.x > W + 200 * S) || (s.dir < 0 && s.x < -200 * S)) s.done = true;
+      if (Math.hypot(player.x - s.x, player.y - s.y) < s.r + player.r * 0.55) { hurt(); s.done = true; burst(s.x, s.y, '#ffffff', 10, 120); }
+      continue;
+    }
+    if (s.kind === 'song') { // beyaz balina: yukarı açılan ses yayı; değerse Okto donar
+      if (s.cancel || s.rad > s.maxR) { s.done = true; continue; }
+      s.rad += s.speed * dt;
+      const dx = player.x - s.x, dy = player.y - s.y, d = Math.hypot(dx, dy), an = Math.atan2(dy, dx);
+      if (!s.hit && Math.abs(d - s.rad) < s.w + player.r * 0.5 && Math.abs(an + Math.PI / 2) < s.span) { s.hit = true; freezePlayer(2.5); burst(player.x, player.y, '#bfeaff', 14, 110); }
+      continue;
+    }
+    if (s.kind === 'arms') { // kristal denizanası: altı dönen buz kolu (canavarın merkezinden)
+      if (s.cancel || !boss || boss.phase !== 'fight' || s.t > s.warn + s.dur) { s.done = true; continue; }
+      s.cx = boss.x; s.cy = boss.y; s.rot = s.rot0 + s.w * Math.max(0, s.t - s.warn); s.k = s.t < s.warn ? 0.12 : Math.min(1, (s.t - s.warn) * 3);
+      if (s.t > s.warn) { const dx = player.x - s.cx, dy = player.y - s.cy, d = Math.hypot(dx, dy);
+        if (d < s.L * s.k && d > boss.r * 0.6) { let rel = (Math.atan2(dy, dx) - s.rot) % (Math.PI / 3); if (rel < 0) rel += Math.PI / 3; const off = Math.min(rel, Math.PI / 3 - rel) * d;
+          if (off < s.aw + player.r * 0.5) hurt(); } }
+      continue;
+    }
+    if (s.kind === 'horn') { // dev narval: işaretli hatta geçen boynuz
+      if (s.cancel && s.t < s.warn) { s.done = true; continue; }
+      if (s.t < s.warn) continue;
+      if (!s.went) { s.went = true; Sound.noise(0.4, 0.14, 1800); }
+      s.x += s.dir * s.sp * dt; if ((s.dir > 0 && s.x > W + 300 * S) || (s.dir < 0 && s.x < -300 * S)) s.done = true;
+      const tipX = s.x + s.dir * 130 * S, tailX = s.x - s.dir * 130 * S; // boynuz + baş: yaklaşık 260 nokta uzunluk
+      if (Math.abs(player.y - s.y) < s.w + player.r * 0.5 && player.x > Math.min(tipX, tailX) && player.x < Math.max(tipX, tailX)) hurt();
+      continue;
+    }
+    if (s.kind === 'pike') { // buz dikiti: alttan yükselir, bir süre durur, iner
+      if (s.cancel && s.t < s.warn) { s.done = true; continue; }
+      const up2 = s.t - s.warn; s.reach = up2 < 0 ? 0 : up2 < 0.25 ? up2 / 0.25 : up2 < 1.6 ? 1 : Math.max(0, 1 - (up2 - 1.6) / 0.4);
+      if (up2 >= 0 && !s.went) { s.went = true; Sound.tone(1300, 0.08, 'triangle', 0.03); }
+      if (up2 > 2.0) s.done = true;
+      if (s.reach > 0.3 && Math.abs(player.x - s.x) < s.w * 0.55 + player.r * 0.4 && player.y > H - s.reach * s.h) hurt();
+      continue;
+    }
+    if (s.kind === 'blizzard') { // tipi: yan rüzgâr ve yandan gelen buz kıymıkları
+      if (s.cancel || s.t > s.dur) { s.done = true; continue; }
+      pushTarget(s.dir * s.push * dt, 0);
+      s.shardT -= dt;
+      if (s.shardT <= 0) { s.shardT = s.every; const y = clamp(player.y + rand(-120, 120) * S, safeTop + 60 * S, H - 80 * S);
+        entities.push({ type: 'spike', fixed: true, x: s.dir > 0 ? -20 * S : W + 20 * S, y, vx: s.dir * 260 * S, vy: 0, r: 7 * S, t: 0 }); }
       continue;
     }
     if (s.kind === 'zigline') { // kılıç balığının yol işareti: atılış bitince kaybolur
@@ -1338,7 +1400,8 @@ function update(dt) {
   const kx = (keys.ArrowRight || keys.d ? 1 : 0) - (keys.ArrowLeft || keys.a ? 1 : 0);
   const ky = (keys.ArrowDown || keys.s ? 1 : 0) - (keys.ArrowUp || keys.w ? 1 : 0);
   if (kx || ky) { target.x = clamp(target.x + kx * 430 * S * dt, b.x0, b.x1); target.y = clamp(target.y + ky * 430 * S * dt, b.y0, b.y1); }
-  const ox = p.x, oy = p.y, k = 1 - Math.pow(0.0005, dt * (window.OktoZones ? OktoZones.slow() : 1) * (p.bigT > 0 ? 1.4 : 1));
+  if (p.frozenT > 0) p.frozenT = Math.max(0, p.frozenT - dt); // buz tuttu: yavaşlar
+  const ox = p.x, oy = p.y, k = 1 - Math.pow(0.0005, dt * (window.OktoZones ? OktoZones.slow() : 1) * (p.bigT > 0 ? 1.4 : 1) * (p.frozenT > 0 ? 0.22 : 1));
   p.x = clamp(lerp(p.x, target.x, k), b.x0, b.x1); p.y = clamp(lerp(p.y, target.y, k), b.y0, b.y1);
   p.vx = lerp(p.vx, (p.x - ox) / Math.max(dt, 1e-3), 0.3); p.vy = lerp(p.vy, (p.y - oy) / Math.max(dt, 1e-3), 0.3);
   const v = Math.hypot(p.vx, p.vy);
@@ -1515,6 +1578,12 @@ function drawPlayer() {
     rot: clamp(p.vx / (900 * S), -0.3, 0.3) + spin, bob: Math.sin(time * 3) * 0.6,
   }));
   drawShield();
+  if (p.frozenT > 0) { // buz kabuğu: yumuşakça kaybolur
+    const a = Math.min(1, p.frozenT / 0.5); ctx.save(); ctx.globalAlpha = a;
+    ctx.fillStyle = 'rgba(190,235,255,.42)'; ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 2.5 * S; ctx.lineJoin = 'round';
+    ctx.beginPath(); for (let i = 0; i < 8; i++) { const an = i / 8 * TAU, rr = R * (1.35 + (i % 2) * 0.18); ctx.lineTo(p.x + Math.cos(an) * rr, p.y + Math.sin(an) * rr); } ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(p.x - R * 0.7, p.y - R * 0.8); ctx.lineTo(p.x - R * 0.2, p.y - R * 0.3); ctx.stroke(); ctx.restore();
+  }
 }
 function drawShield() {
   if (shieldTime <= 0) return;

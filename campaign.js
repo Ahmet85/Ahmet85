@@ -64,6 +64,18 @@ const GROUPS = [
         intro: { title: 'DEV KALAMAR', sub: 'Derinlerin hükümdarı', color: '#ff9ab0' } },
     ],
   },
+  { // s46: kullanıcının onayladığı 4. grup (Claude'un tasarımı, önizleme: preview/grup4.html)
+    // vis: su rengi ve ışık için klasik eşdeğer derinlik (buz denizi aydınlık); dd: zorluk (klasik 700–900 m)
+    name: 'Buzul Denizi', len: 220, dd: [700, 900], vis: [40, 160],
+    stages: [
+      { name: 'Buz Sarkıtları', tier: 3, boss: 'mors', zones: ['sarkit', 'kaygan', 'canyon'], env: { water: ['#7cc9ea', '#1d5788'] }, news: 'Mini canavar: Mors' },
+      { name: 'Kayan Buzdağları', tier: 3, boss: 'penguen', zones: ['buzdag', 'sarkit', 'akinti'], env: { water: ['#72c0e4', '#1a5084'] }, news: 'Mini canavar: Penguen Filosu' },
+      { name: 'Kaygan Buz Akıntısı', tier: 3, boss: 'beluga', zones: ['kaygan', 'buzdag', 'mayin'], env: { water: ['#68b6de', '#174a7e'] }, news: 'Mini canavar: Beyaz Balina' },
+      { name: 'Kuzey Işığı Çukuru', tier: 3, boss: 'kristal', zones: ['isik', 'buzdag', 'kaygan'], env: { water: ['#4f8fc8', '#122f62'] }, news: 'Mini canavar: Kristal Denizanası' },
+      { name: 'Buz Sarayı', tier: 3, boss: 'narval-big', big: true, zones: ['sarkit', 'buzdag', 'kaygan', 'isik'], env: { water: ['#86d2f0', '#1b4f80'] }, news: 'Büyük canavar yaklaşıyor!',
+        intro: { title: 'DEV NARVAL', sub: 'Buzulların hükümdarı uyandı', color: '#bfeaff' } },
+    ],
+  },
 ];
 const PER_GROUP = 5; // 4 mini canavarlı bölüm + 1 büyük canavarlı bölüm
 const groupLen = G => G.len * PER_GROUP;
@@ -74,8 +86,9 @@ function grouped(n) {
   for (let k = 0; k < gi; k++) start += groupLen(GROUPS[k % GROUPS.length]);
   start += slot * G.len;
   const st = G.stages[slot], f0 = slot / PER_GROUP, f1 = (slot + 1) / PER_GROUP;
-  const vis = [G.dd[0] + (G.dd[1] - G.dd[0]) * f0, G.dd[0] + (G.dd[1] - G.dd[0]) * f1]; // su rengi için klasik eşdeğer derinlik
-  const dd = vis.map(v => v + loop * 300); // zorluk için: tekrar turunda daha hızlı ve kalabalık
+  const span = r => [r[0] + (r[1] - r[0]) * f0, r[0] + (r[1] - r[0]) * f1];
+  const vis = span(G.vis || G.dd); // su rengi ve ışık için klasik eşdeğer derinlik
+  const dd = span(G.dd).map(v => v + loop * 300); // zorluk için: tekrar turunda daha hızlı ve kalabalık
   return {
     n, name: st.name, start, end: start + G.len, tier: st.tier, boss: st.boss, news: st.news || '',
     group: gi + 1, groupName: G.name + (loop ? ` +${loop}` : ''), slot, arena: !!st.big,
@@ -85,7 +98,8 @@ function grouped(n) {
 }
 
 // Eski kayıtları s45 grup düzenine taşı (aynı derinlik / aynı ilerleme):
-// klasik 1 (0 m) → 1 · klasik 2 (150 m) → 6 (Alacakaranlık) · klasik 3 (400 m) → 11 (Karanlık D.) · klasik 4+ → 16 (Güneşli Sular +1)
+// klasik 1 (0 m) → 1 · klasik 2 (150 m) → 6 (Alacakaranlık) · klasik 3 (400 m) → 11 (Karanlık D.) · klasik 4+ (700 m+) → 16
+// (s45'te 16 = Güneşli Sular +1 idi; s46'dan beri 16 = Buzul Denizi'nin başı; numaralar değişmediği için yeniden taşıma gerekmez)
 function migrate(classicLevel) { const n = Math.max(1, classicLevel | 0); return n <= 1 ? 1 : n === 2 ? 6 : n === 3 ? 11 : 16; }
 // s44 (grup başına 4 bölüm: 3 mini + arena) numarası → s45: aynı grup, aynı sıra (s44 arenası → yeni 4. mini canavar bölümü)
 function migrate44(n) { n = Math.max(1, n | 0); return n + Math.floor((n - 1) / 4); }

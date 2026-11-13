@@ -18,7 +18,7 @@ Tasarım brifi: `docs/BRIF.md` ("OKTO – UNDERWATER DESCENT", kullanıcının 1
 - Dal: `claude/octopus-mobile-game-0is63u` → GitHub Pages: https://ahmet85.github.io/Ahmet85/
 - Aynı dalda başka bir oturumun `ritim/` klasörü var; **ona dokunma**, push öncesi `git fetch` + `git rebase` yap.
 - **Her yayında sürümü artır:** `index.html` içindeki tüm `?v=` ekleri, menüdeki `s<sürüm>` etiketi ve `sw.js` içindeki
-  `okto-v<sürüm>` birlikte. Kullanıcı sağ alttaki `s<sürüm>` ile güncellemenin geldiğini kontrol ediyor. Son sürüm: **s45**.
+  `okto-v<sürüm>` birlikte. Kullanıcı sağ alttaki `s<sürüm>` ile güncellemenin geldiğini kontrol ediyor. Son sürüm: **s46**.
 - Telefonda güncelleme: uygulamayı kapat-aç (gerekirse iki kez). Açılış görseli/simge değişirse sil-yeniden kur gerekir.
 - **Açılış görseli (s27):** Okto'suz sahne (oyuncunun rengi bilinemediği için); Okto oyunda oyuncunun renginle kumdan yükselir
   (`title.js` opts.intro). Görseller `preview/splash-gen.html` ile üretilir. Silip yeniden kurmada kayıt silinebilir:
@@ -29,7 +29,7 @@ Tasarım brifi: `docs/BRIF.md` ("OKTO – UNDERWATER DESCENT", kullanıcının 1
   `splash/`, ana ekran simgesi). Referans görseller sadece tasarım rehberi; oyuna resim olarak konmaz.
 - **Kayalar sabittir**: yerinde durur, sallanmaz; dünya kaydıkça yukarı kayar. Çarpınca can gider, Okto geri seker.
 - Kontrol: **göreli sürükleme** (parmak ekranın herhangi bir yerinde, hareket 1,5x). Okto dört yöne gider.
-- Bölümler (s45'ten beri asıl oyun): 3 grup × 5 bölüm (Güneşli Sular, Alacakaranlık, Karanlık Derinlikler; 4 mini + 1 büyük canavar),
+- Bölümler (s45'ten beri asıl oyun): 4 grup × 5 bölüm (Güneşli Sular, Alacakaranlık, Karanlık Derinlikler, s46'dan beri Buzul Denizi; 4 mini + 1 büyük canavar),
   sonra "+1" ile güçlenerek tekrar. Eski klasik düzen (`?plan=klasik`): 1) 0–150 m Güneşli Sular / Dev Balon Balığı,
   2) 150–400 m Alacakaranlık / Elektrikli Denizanası, 3) 400–700 m Karanlık Derinlikler / Dev Kalamar, sonra her 300 m'de sonsuz bölüm. Bölüm sonu: yıldızlı kart → girdap
   geçişi → yeni bölüm tanıtımı. Yanınca bölüm başından devam (kayıt noktası).
@@ -85,6 +85,14 @@ Tasarım brifi: `docs/BRIF.md` ("OKTO – UNDERWATER DESCENT", kullanıcının 1
   Bölüm uzunluğu 100/150/200 m; zorluk ve su rengi klasik eşdeğer derinlikle (`L.dd`, `L.vis`; `diffD()`, `visD()`). Harita 5 ada
   (zikzak). Kayıt: `D.gver = 45`; klasik 1→1, 2→6, 3→11, 4+→16; s44 numarası `migrate44` (aynı grup, aynı sıra). Ayrıntı:
   `docs/BOSS-SISTEMI.md` §0a. Test adresleri: büyük canavarlar `bolum=5/10/15`, yeni miniler `bolum=4/9/14`.
+  **s46: 4. grup Buzul Denizi** (Claude'un tasarımı; önce `preview/grup4.html` PNG önizlemesi gösterildi, kullanıcı onayladı): bölüm 16–20,
+  2250–3350 m (bölüm 220 m; zorluk `dd` 700–900, su rengi `vis` 40–160 + buz mavisi `env`). Yeni bölgeler (`zones.js`): `sarkit` tepeden
+  uyarılı düşen sarkıtlar + buz saçağı · `buzdag` yana kayıp seken buz blokları (Dev Okto kırar) · `kaygan` Okto geç döner (`slow()` 0,28) ·
+  `isik` yarı karanlık + kuzey ışığı hüzmeleri, inciler hüzmelerde. Miniler: Mors (seken buz diskleri `disk`) · Penguen Filosu (V düzeninde
+  kızak `peng`, canı yarıda 5 penguen) · Beyaz Balina (ses yayı `song` Okto'yu 2,5 sn dondurur `freezePlayer`, ardından buz kıymıkları) ·
+  Kristal Denizanası (dönen 6 buz kolu `arms`). Büyük: Dev Narval (`narval-big`: boynuz hücumu `horn`, buz dikitleri `pike`, tipi
+  `blizzard`; 2. aşama). Harita 4. tema (buz). "+1" tekrar artık 21. bölümde başlar; kayıt numaraları değişmedi (16+ artık Buzul Denizi).
+  Test adresleri: miniler `bolum=16..19`, Narval `bolum=20`.
 
 ## Beceri halkası (s24 deneme → **s27'den beri normal oyunda**, kullanıcı onayladı)
 - Kullanıcı isteği: 12 beceri, oyuncu 3'ünü kuşanır; menüden ve bölüm geçişinde ("Becerileri Değiştir") değiştirilir; seçim kayıtlı kalır.
@@ -129,11 +137,11 @@ Tasarım brifi: `docs/BRIF.md` ("OKTO – UNDERWATER DESCENT", kullanıcının 1
 | `index.html` | Ekranlar (menü, yardım, mağaza, görevler, duraklatma, bölüm kartı, oyun sonu), stiller, açılış görseli bağlantıları |
 | `game.js` | Oyun motoru: girdi, sesler (3 kademe, dalgıç nefesi), düşmanlar, bölümler, canavarlar, resif dünyası entegrasyonu, hediye/Dev Okto, mağaza ve görevler, HUD |
 | `okto.js` | Okto karakter çizimi; ifadeler; 7 renk ve 7 aksesuar (`OktoChar.CATALOG`) |
-| `zones.js` | 7 özel bölgenin mantığı ve çizimleri (akıntı, mağara karanlığı, batık gemi, bacalar, yosun, mayınlar, kovalayan fener balığı) |
+| `zones.js` | 11 özel bölgenin mantığı ve çizimleri (akıntı, mağara karanlığı, batık gemi, bacalar, yosun, mayınlar, kovalayan fener balığı; s46 buz sarkıtı, buzdağı, kaygan buz, kuzey ışığı) |
 | `enemies.js` | Düşman ve toplanabilir çizimleri |
 | `bosses.js` | Canavar çizimleri (`DRAWERS`; çizimi olmayan canavar için geçici çizim) ve saldırı çizimleri |
 | `boss-ai.js` | Canavar sistemi: tanımlar (`OktoBossAI.register`), ortak saldırı kütüphanesi, can eşiğiyle aşamalar, büyük/mini |
-| `campaign.js` | Bölüm düzeni: `grup` (s44'ten beri varsayılan: 3 bölüm + mini canavar, sonra büyük canavar) ve `klasik` (s21, `?plan=klasik`) |
+| `campaign.js` | Bölüm düzeni: `grup` (varsayılan: 4 grup × 5 bölüm, 4 mini + 1 büyük canavar) ve `klasik` (s21, `?plan=klasik`) |
 | `cinema.js` | Büyük canavar sinematik girişi ve büyük zafer kutlaması |
 | `map.js` | Bölüm haritası (grup düzeni): adalar, ilerleme, Okto'nun yüzmesi, dokunma |
 | `skills.js` | Beceri halkası: 12 beceri (mantık, efektler, simgeler), halka girdisi, açılma (Kaşif Puanı), düğme ve halka çizimi |

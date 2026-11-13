@@ -12,11 +12,16 @@ haritada yeni grup açılır ("Yeni bölge açıldı!"). Her bölümde açık su
 | Güneşli Sular · 0–500 m (bölüm 100 m) | Resif Adacıkları → Kestane · Mercan Kanyonu → Yengeç · Güçlü Akıntı → Vatoz · **Yosun Ormanı → Deniz Atı** | Balon Balığı Yuvası → Dev Balon Balığı |
 | Alacakaranlık · 500–1250 m (150 m) | Sıcak Bacalar → Baca Yengeci · Batık Gemi → Zırhlı Balon · Mayın Tarlası → Mayın Yengeci · **Yıldız Resifi → Dev Deniz Yıldızı** | Fırtına Çukuru → Elektrikli Denizanası |
 | Karanlık Derinlikler · 1250–2250 m (200 m) | Karanlık Mağara → Mürekkepçi · Yosun Geçidi → Hayalet Denizanası · Fener Balığı Kaçışı → İri Fener · **Uçurum Kenarı → Kılıç Balığı** | Kalamar İni → Dev Kalamar |
+| **Buzul Denizi · 2250–3350 m (220 m, s46)** | Buz Sarkıtları → Mors · Kayan Buzdağları → Penguen Filosu · Kaygan Buz Akıntısı → Beyaz Balina · Kuzey Işığı Çukuru → Kristal Denizanası | Buz Sarayı → Dev Narval |
 
 Yeni mini canavarlar (Claude'un tasarımı, saldırıları diğerlerinden farklı):
 - **Deniz Atı** (`deniz-ati`): kuyruğunu döndürür (0,8 sn) → iki kabarcık bumerang Okto'nun hizasına kadar ters yönlerde elips çizip geri döner.
 - **Dev Deniz Yıldızı** (`deniz-yildizi`): dönerek 5–7 yıldız saçar; yıldızlar durur, Okto'nun o anki yerine kilitlenir (kesik çizgi, 0,9 sn), sonra fırlar.
 - **Kılıç Balığı** (`kilic-baligi`): zikzak yolunu kırmızı kesik çizgi ve oklarla 1,1 sn gösterir, sonra o yol boyunca çok hızlı atılır ve yerine döner.
+
+s46 Buzul Denizi (önizleme `preview/grup4.html`): Mors seken buz diskleri · Penguen Filosu V düzeninde kızak (canın yarısında 5 penguen) ·
+Beyaz Balina donduran ses yayı (2,5 sn yavaşlatır) + buz kıymıkları · Kristal Denizanası dönen 6 buz kolu · Dev Narval boynuz hücumu,
+buz dikitleri, tipi (yan rüzgâr + kıymıklar); canın yarısında 2. aşama. Yeni bölgeler: buz sarkıtı, kayan buzdağı, kaygan buz, kuzey ışığı.
 
 Zorluk ve su rengi gerçek derinlikle değil, klasik eşdeğer derinlikle (`dd`/`vis`) ilerler: Güneşli Sular 0–150, Alacakaranlık 150–400,
 Karanlık Derinlikler 400–700; tekrar turunda zorluk +300. Kayıt taşıma: klasik 1→1, 2→6, 3→11, 4+→16; s44 numarası `n + floor((n-1)/4)`.

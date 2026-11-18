@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Ritim</title>
+  <meta name="description" content="Günlük kutucuklar ve seni tanıyan bir yaşam koçu">
+  <meta name="theme-color" content="#f4f5f7" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0f1115" media="(prefers-color-scheme: dark)">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Ritim">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="styles.css?v=1">
+</head>
+<body>
+  <header class="topbar"><div class="wrap"><h1 id="title">Bugün</h1><span id="titleSub" class="title-sub"></span></div></header>
+  <main class="wrap" id="view" aria-live="polite"></main>
+
+  <button class="fab" id="fab" type="button"><span class="fab-plus">＋</span> Görev Ekle</button>
+  <nav class="tabbar" aria-label="Ekranlar">
+    <button type="button" data-tab="today" class="active"><span class="ti">🏠</span><span>Bugün</span></button>
+    <button type="button" data-tab="week"><span class="ti">📅</span><span>Hafta</span></button>
+    <button type="button" data-tab="coach"><span class="ti">🧭</span><span>Koç</span></button>
+    <button type="button" data-tab="settings"><span class="ti">⚙️</span><span>Ayarlar</span></button>
+  </nav>
+  <div id="layer"></div>
+
+  <script src="core.js?v=1"></script>
+  <script src="data.js?v=1"></script>
+  <script src="app.js?v=1"></script>
+</body>
+</html>

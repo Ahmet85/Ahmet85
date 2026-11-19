@@ -11,16 +11,66 @@
   const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
 
   function emptyState() {
-    return { v: 1, profile: null, boxes: [], log: {}, paths: [], star: null, energy: null, favQuotes: [], lastQuote: -1, lastRoll: null, checkins: {}, settings: { scene: true, sound: true, remind: true } };
+    return { v: 1, profile: null, boxes: [], log: {}, paths: [], star: null, energy: null, ov: {}, favQuotes: [], lastQuote: -1, lastRoll: null, checkins: {}, settings: { scene: true, sound: true, remind: true } };
   }
 
-  /** O gün görünecek rutin kutular (saat sırasıyla). */
+  const PART_ORDER = { sabah: 0, gun: 1, aksam: 2, calisma: 3, gece: 4 };
+
+  /**
+   * O gün görünecek kutular (bölüm ve saat sırasıyla). Yalnızca o tarihe özel
+   * değişiklikler (state.ov) uygulanır: kutu o gün farklı görünebilir ya da
+   * o günden kaldırılmış olabilir. Asıl program bozulmaz.
+   */
   function boxesForDay(state, date) {
-    const wd = weekday(date);
-    const order = { sabah: 0, gun: 1, aksam: 2 };
+    const wd = weekday(date), ov = (state.ov && state.ov[date]) || {};
     return state.boxes
-      .filter((b) => (b.once ? b.once === date : b.days.includes(wd)) && !(b.from && date < b.from))
-      .sort((a, b) => order[a.part] - order[b.part] || (toMin(a.time) ?? 9999) - (toMin(b.time) ?? 9999));
+      .filter((b) => (b.once ? b.once === date : b.days.includes(wd)) && !(b.from && date < b.from) && !(ov[b.id] && ov[b.id].hidden))
+      .map((b) => (ov[b.id] ? Object.assign({}, b, ov[b.id], { id: b.id, dayOnly: true }) : b))
+      .sort((a, b) => (PART_ORDER[a.part] ?? 9) - (PART_ORDER[b.part] ?? 9) || (toMin(a.time) ?? 9999) - (toMin(b.time) ?? 9999));
+  }
+
+  const EDITABLE = ['em', 'name', 'part', 'time', 'kind', 'goal', 'mins', 'c', 'short'];
+  const pick = (v) => Object.fromEntries(EDITABLE.filter((k) => v[k] !== undefined).map((k) => [k, v[k]]));
+
+  /**
+   * Kutuyu değiştirir. scope: 'day' = yalnızca o tarih, 'wd' = her hafta o gün
+   * (kutu başka günlerde de varsa o gün için ayrı bir kutuya bölünür),
+   * 'all' = kutunun bütün günleri.
+   */
+  function editBox(state, boxId, values, scope, date) {
+    const box = state.boxes.find((b) => b.id === boxId);
+    if (!box) return null;
+    const v = pick(values);
+    if (scope === 'day') {
+      state.ov = state.ov || {};
+      (state.ov[date] = state.ov[date] || {})[boxId] = v;
+      return box;
+    }
+    const wd = weekday(date);
+    if (scope === 'wd' && !box.once && box.days.length > 1) {
+      box.days = box.days.filter((d) => d !== wd);
+      const copy = Object.assign({}, box, v, { id: uid(), days: [wd] });
+      state.boxes.push(copy);
+      // O güne ait geçmiş kayıtlar yeni kutuya taşınır (seri ve hafta görünümü bozulmasın)
+      for (const d of Object.keys(state.log)) if (weekday(d) === wd && state.log[d][boxId]) { state.log[d][copy.id] = state.log[d][boxId]; delete state.log[d][boxId]; }
+      for (const d of Object.keys(state.ov || {})) if (weekday(d) === wd && state.ov[d][boxId]) delete state.ov[d][boxId];
+      return copy;
+    }
+    Object.assign(box, v);
+    if (values.days) box.days = [...values.days];
+    if (values.once) box.once = values.once; else if (scope === 'all' && values.days) delete box.once;
+    if (state.ov && state.ov[date]) delete state.ov[date][boxId];
+    return box;
+  }
+
+  /** Kutuyu kaldırır: yalnızca o tarihten, her hafta o günden ya da tamamen. */
+  function removeBox(state, boxId, scope, date) {
+    const box = state.boxes.find((b) => b.id === boxId);
+    if (!box) return;
+    const wd = weekday(date);
+    if (scope === 'day' && !box.once) { state.ov = state.ov || {}; (state.ov[date] = state.ov[date] || {})[boxId] = { hidden: true }; return; }
+    if (scope === 'wd' && !box.once && box.days.length > 1) { box.days = box.days.filter((d) => d !== wd); return; }
+    state.boxes = state.boxes.filter((b) => b.id !== boxId);
   }
 
   const entry = (state, date, id) => (state.log[date] && state.log[date][id]) || null;
@@ -176,7 +226,7 @@
     return i;
   }
 
-  const api = { dstr, parse, addDays, weekday, weekStart, toMin, uid, emptyState, boxesForDay, entry, setEntry, isDone, buildPath, genericPath, activePaths, perDay, rollDay, growthForDay, completeGrowth, addPath, daySummary, anyDone, streak, boxStreak, suggestions, nextQuote };
+  const api = { dstr, parse, addDays, weekday, weekStart, toMin, uid, emptyState, boxesForDay, editBox, removeBox, entry, setEntry, isDone, buildPath, genericPath, activePaths, perDay, rollDay, growthForDay, completeGrowth, addPath, daySummary, anyDone, streak, boxStreak, suggestions, nextQuote };
   root.RK = api;
   if (typeof module !== 'undefined') module.exports = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

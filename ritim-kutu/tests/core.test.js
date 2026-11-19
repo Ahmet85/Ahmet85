@@ -131,3 +131,62 @@ test('her açılışta farklı söz', () => {
   for (let i = 0; i < 50; i++) { const q = RK.nextQuote(s, D.QUOTES.length); assert.notEqual(q, prev); prev = q; }
   assert.ok(D.QUOTES.length >= 25);
 });
+
+// ---- Gün gün ayarlama ----
+const SAT = '2026-11-21', THU = '2026-11-19';
+function weekState() {
+  const s = RK.emptyState();
+  s.boxes = D.PACKS.hafta.boxes.map((b, i) => ({ ...b, days: [...b.days], id: 'h' + i }));
+  return s;
+}
+const line = (s, d) => RK.boxesForDay(s, d).map((b) => `${b.time} ${b.name}`);
+
+test('dengeli hafta paketi tabloyla aynı (Pazartesi ve Pazar)', () => {
+  const s = weekState();
+  assert.deepEqual(line(s, MON), ['06:30 Uyanış · S N', '07:00 Güç antrenmanı', '07:45 Planlama & kahve', '08:15 Kahvaltı', '09:00 Mesai', '12:30 Yemek · Ö N', '13:30 Mesai (öğleden sonra)', '15:34 İkindi', '17:00 Mola · yürüyüş', '18:00 Serbest',
+    '19:00 Akşam yemeği · A N', '20:00 Piyano & teori', '21:00 15 dk piyano', '21:15 Arrange', '21:45 Y N · ekran kapanır', '22:00 Okuma', '23:00 Uyku']);
+  assert.deepEqual(line(s, '2026-11-22'), ['06:30 Uyanış · S N', '07:00 Dinlenme', '07:45 Planlama & kahve', '08:15 Kahvaltı', '09:00 Aile', '12:30 Aile yemeği · Ö N', '13:30 Serbest', '15:34 İkindi',
+    '19:00 Akşam yemeği · A N', '20:00 Karne & haftalık plan', '21:45 Y N · ekran kapanır', '22:00 Okuma', '23:00 Uyku']);
+  assert.ok(line(s, THU).includes('21:15 Serbest') && line(s, THU).includes('20:00 Video projeler'));
+});
+
+test('yalnızca bu gün: o tarih değişir, diğer haftalar ve asıl kutu aynı kalır', () => {
+  const s = weekState();
+  const video = RK.boxesForDay(s, THU).find((b) => b.name === 'Video projeler');
+  RK.editBox(s, video.id, { name: 'Beste', em: '🎼' }, 'day', THU);
+  assert.ok(line(s, THU).includes('20:00 Beste') && !line(s, THU).includes('20:00 Video projeler'));
+  assert.equal(RK.boxesForDay(s, THU).find((b) => b.id === video.id).dayOnly, true);
+  assert.ok(line(s, '2026-11-26').includes('20:00 Video projeler'));
+  assert.equal(s.boxes.find((b) => b.id === video.id).name, 'Video projeler');
+});
+
+test('her hafta o gün: çok günlü kutu yalnızca o gün için bölünür, geçmiş kayıt taşınır', () => {
+  const s = weekState();
+  const piano = s.boxes.find((b) => b.name === '15 dk piyano');
+  RK.setEntry(s, '2026-11-14', piano.id, { s: 'done' }); // geçen Cumartesi
+  const copy = RK.editBox(s, piano.id, { name: 'Gitar 15 dk', em: '🎸' }, 'wd', SAT);
+  assert.ok(line(s, SAT).includes('21:00 Gitar 15 dk') && !line(s, SAT).includes('21:00 15 dk piyano'));
+  assert.ok(line(s, '2026-11-28').includes('21:00 Gitar 15 dk')); // sonraki Cumartesi de
+  assert.ok(line(s, MON).includes('21:00 15 dk piyano')); // diğer günler aynı
+  assert.deepEqual(piano.days, [1, 2, 3, 4, 5]);
+  assert.equal(RK.entry(s, '2026-11-14', copy.id).s, 'done');
+});
+
+test('tüm günler ve saat değişimi sıralamayı günceller', () => {
+  const s = weekState();
+  const okuma = s.boxes.find((b) => b.name === 'Okuma');
+  RK.editBox(s, okuma.id, { time: '07:30', part: 'sabah' }, 'all', MON);
+  assert.equal(line(s, MON)[2], '07:30 Okuma');
+  assert.equal(line(s, SAT)[2], '07:30 Okuma');
+});
+
+test('kaldırma: yalnızca bu gün, her hafta o gün, tamamen', () => {
+  const s = weekState();
+  const ikindi = s.boxes.find((b) => b.name === 'İkindi');
+  RK.removeBox(s, ikindi.id, 'day', THU);
+  assert.ok(!line(s, THU).includes('15:34 İkindi') && line(s, '2026-11-20').includes('15:34 İkindi'));
+  RK.removeBox(s, ikindi.id, 'wd', SAT);
+  assert.ok(!line(s, SAT).includes('15:34 İkindi') && !line(s, '2026-11-28').includes('15:34 İkindi') && line(s, MON).includes('15:34 İkindi'));
+  RK.removeBox(s, ikindi.id, 'all', MON);
+  assert.ok(!line(s, MON).includes('15:34 İkindi'));
+});

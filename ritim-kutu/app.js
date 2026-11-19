@@ -6,13 +6,17 @@
   const $$ = (s, el = document) => [...el.querySelectorAll(s)];
   const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]);
   const layer = $('#layer');
-  const PARTS = [['sabah', 'Sabah'], ['gun', 'Gün içi'], ['aksam', 'Akşam']];
+  const PARTS = D.PARTS;
+  const LONG = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'];
   const DAYS = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
 
   // ---- Durum ----
   let state = load();
   let tab = 'today';
   let weekOffset = 0;
+  let cur = RK.dstr(new Date()); // Gün ekranında gösterilen tarih
+  let editMode = false;
+  let openWeekDay = null;
   let quoteIdx = 0;
   function load() {
     try {
@@ -27,11 +31,12 @@
   const today = () => RK.dstr(new Date());
   const nowMin = () => { const d = new Date(); return d.getHours() * 60 + d.getMinutes(); };
   const snapshot = () => { const copy = JSON.stringify(state); return () => { state = JSON.parse(copy); save(); render(); }; };
-  const E = (id) => RK.entry(state, today(), id) || {};
-  function setE(id, patch) {
-    const cur = RK.entry(state, today(), id) || {};
-    RK.setEntry(state, today(), id, patch === null ? null : Object.assign(cur, patch));
+  const E = (id, d = cur) => RK.entry(state, d, id) || {};
+  function setE(id, patch, d = cur) {
+    const old = RK.entry(state, d, id) || {};
+    RK.setEntry(state, d, id, patch === null ? null : Object.assign(old, patch));
   }
+  const dayLabel = (d) => new Intl.DateTimeFormat('tr-TR', { day: 'numeric', month: 'long' }).format(RK.parse(d));
 
   // ---- Küçük sesler (WebAudio; dosya gerekmez) ----
   let actx = null;
@@ -80,7 +85,8 @@
     layer.appendChild(p);
     beep([523, 659, 784, 1047], 0.6);
   }
-  function afterDone() {
+  function afterDone() { if (cur === today()) afterDoneToday(); }
+  function afterDoneToday() {
     const t = today();
     state.celebrated = state.celebrated || {};
     const sum = RK.daySummary(state, t), st = RK.streak(state, t);
@@ -155,7 +161,8 @@
     if (done) cls.push('done');
     if (e.s === 'skip') cls.push('skip');
     if (opts.now) cls.push('now');
-    if (!e.s && RK.toMin(b.time) !== null && RK.toMin(b.time) > nowMin()) cls.push('later');
+    if (!e.s && cur === today() && RK.toMin(b.time) !== null && RK.toMin(b.time) > nowMin()) cls.push('later');
+    if (editMode && !opts.preview) cls.push('editing');
     let sub = e.s === 'skip' ? 'yarın tekrar' : e.snooze ? `${e.snooze} · ertelendi` : b.time || (b.kind === 'tap' ? '' : '');
     let extra = '';
     let name = b.name;
@@ -172,76 +179,95 @@
     } else if (b.kind === 'timer' && !e.s) {
       sub = (sub ? sub + ' · ' : '') + `⏱ ${b.mins || 15} dk`;
     }
-    const star = !opts.preview && state.star && state.star.date === today() && state.star.id === b.id;
+    const star = !opts.preview && cur === today() && state.star && state.star.date === today() && state.star.id === b.id;
     const fire = opts.preview ? 0 : RK.boxStreak(state, b, today());
     const label = `${name}${sub ? ', ' + sub : ''}, ${done ? 'tamamlandı' : e.s === 'skip' ? 'bugün olmadı' : 'yapılacak'}`;
     return `<button type="button" class="${cls.join(' ')}" style="--c:${b.c};--i:${opts.i || 0}" ${opts.preview ? 'tabindex="-1"' : `data-id="${b.id}"`} aria-label="${esc(label)}">
-      ${extra}${star ? '<span class="star">⭐</span>' : ''}${fire >= 3 ? `<span class="fire">🔥${fire}</span>` : ''}
+      ${extra}${editMode && !opts.preview ? '<span class="edit">✎</span>' : `${star ? '<span class="star">⭐</span>' : ''}${fire >= 3 ? `<span class="fire">🔥${fire}</span>` : ''}`}${b.dayOnly && !opts.preview ? '<span class="only">yalnız bu gün</span>' : ''}
       <span class="check">✓</span><span class="ci">${b.em}</span><span class="nm">${esc(name)}</span><span class="tm">${esc(sub)}</span></button>`;
   }
 
-  function renderToday() {
+  function renderStrip() {
+    const el = $('#strip');
+    el.hidden = tab !== 'today';
+    if (tab !== 'today') return;
+    const s0 = RK.weekStart(cur), t = today();
+    el.innerHTML = `<button type="button" class="nav" data-shift="-7" aria-label="Önceki hafta">‹</button>${DAYS.map((n, i) => {
+      const d = RK.addDays(s0, i), sm = RK.daySummary(state, d);
+      return `<button type="button" class="daybtn ${d === cur ? 'on' : ''} ${d === t ? 'today' : ''}" data-day="${d}" aria-label="${LONG[i]} ${+d.slice(8)}" aria-current="${d === cur}"><span class="n">${n}</span><span class="d">${+d.slice(8)}</span><span class="p"><i style="width:${d <= t ? Math.round(sm.ratio * 100) : 0}%"></i></span></button>`;
+    }).join('')}<button type="button" class="nav" data-shift="7" aria-label="Sonraki hafta">›</button>`;
+  }
+  function goDay(d, dir = 0) { cur = d; tab = 'today'; window.scrollTo(0, 0); render(dir); }
+
+  function renderDay(dir = 0) {
     const t = today();
     RK.rollDay(state, t); save();
-    const boxes = RK.boxesForDay(state, t), g = RK.growthForDay(state, t), sum = RK.daySummary(state, t), st = RK.streak(state, t);
-    const now = nowBox(boxes);
+    const isToday = cur === t;
+    const boxes = RK.boxesForDay(state, cur), g = RK.growthForDay(state, cur), sum = RK.daySummary(state, cur), st = RK.streak(state, t);
+    const now = isToday ? nowBox(boxes) : null;
     const pct = Math.round(sum.ratio * 100);
-    const [ce, ct] = coachLine();
     const h = new Date().getHours();
     const name = state.profile ? ' ' + state.profile.name : '';
-    const hello = (h < 5 ? 'İyi geceler' : h < 12 ? 'Günaydın' : h < 18 ? 'İyi günler' : 'İyi akşamlar') + name;
-    const date = new Intl.DateTimeFormat('tr-TR', { day: 'numeric', month: 'long', weekday: 'long' }).format(new Date());
+    const rel = isToday ? (h < 5 ? 'İyi geceler' : h < 12 ? 'Günaydın' : h < 18 ? 'İyi günler' : 'İyi akşamlar') + name : cur === RK.addDays(t, 1) ? 'Yarın' : cur === RK.addDays(t, -1) ? 'Dün' : cur > t ? 'Plan' : 'Geçmiş gün';
+    const date = new Intl.DateTimeFormat('tr-TR', { day: 'numeric', month: 'long', weekday: 'long' }).format(RK.parse(cur));
     const en = state.energy && state.energy.date === t ? state.energy.v : null;
     let i = 0;
-    const partsHTML = PARTS.map(([k, label]) => {
+    const partsHTML = PARTS.map(([k, label, em]) => {
       const list = boxes.filter((b) => b.part === k);
       if (!list.length) return '';
       const d = list.filter((b) => E(b.id).s === 'done').length;
-      return `<div class="part"><h3>${label}</h3><span>${d}/${list.length}</span></div><div class="grid">${list.map((b) => tileHTML(b, { now: now && now.id === b.id, i: i++ })).join('')}</div>`;
+      return `<div class="part ${k === 'calisma' ? 'music' : ''}"><h3>${k === 'calisma' ? em + ' ' : ''}${label}</h3><span>${d}/${list.length}</span></div><div class="grid">${list.map((b) => tileHTML(b, { now: now && now.id === b.id, i: i++ })).join('')}</div>`;
     }).join('');
-    $('#view').innerHTML = `
+    const coach = isToday ? coachLine() : null;
+    $('#view').innerHTML = `<div class="pane ${dir > 0 ? 'in-l' : dir < 0 ? 'in-r' : ''}">
       <section class="card hero" style="--i:0">
-        <p class="hello">${esc(hello)} · ${date}</p>
-        <p class="big">${sum.done}<small> / ${sum.total} kutu tamam</small></p>
+        <p class="hello">${esc(rel)} · ${date}</p>
+        <p class="big">${sum.done}<small> / ${sum.total} kutu ${cur > t ? 'planlı' : 'tamam'}</small></p>
         <div class="bar" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><span style="width:${pct}%"></span></div>
-        <div class="coach-line"><b>${ce}</b><span>${esc(ct)}</span></div>
-        ${st.days >= 2 || st.comeback ? `<div class="badges">${st.comeback ? '<span class="badge-pill back">🫶 Geri döndün</span>' : ''}${st.days >= 2 ? `<span class="badge-pill">🔥 ${st.days} günlük seri</span>` : ''}</div>` : ''}
+        ${coach ? `<div class="coach-line"><b>${coach[0]}</b><span>${esc(coach[1])}</span></div>` : ''}
+        ${isToday && (st.days >= 2 || st.comeback) ? `<div class="badges">${st.comeback ? '<span class="badge-pill back">🫶 Geri döndün</span>' : ''}${st.days >= 2 ? `<span class="badge-pill">🔥 ${st.days} günlük seri</span>` : ''}</div>` : ''}
+        <div class="hero-actions">${!isToday ? '<button type="button" class="mini" data-today>↩ Bugüne dön</button>' : ''}${boxes.length ? `<button type="button" class="mini ${editMode ? 'on' : ''}" data-editmode aria-pressed="${editMode}">${editMode ? '✓ Düzenleme bitti' : '✎ Kutuları düzenle'}</button>` : ''}</div>
       </section>
-      ${boxes.length ? `<div class="energy" role="group" aria-label="Bugün enerjin nasıl?" style="--i:1"><span>Enerjin:</span>
+      ${editMode ? '<p class="edit-note">Değiştirmek istediğin kutuya dokun. Yalnızca bu gün ya da her hafta için değiştirebilirsin.</p>' : ''}
+      ${isToday && boxes.length && !editMode ? `<div class="energy" role="group" aria-label="Bugün enerjin nasıl?" style="--i:1"><span>Enerjin:</span>
         ${[['low', '😴 Yorgun'], ['ok', '🙂 İyi'], ['high', '⚡ Dolu']].map(([v, l]) => `<button type="button" class="pill ${en === v ? 'on' : ''}" data-energy="${v}">${l}</button>`).join('')}</div>` : ''}
-      ${g.length ? `<div class="part"><h3>Koçun bugünkü adımı</h3><span>${g.filter((x) => x.done).length}/${g.length}</span></div>` : ''}
-      ${g.map((x, k) => `<button type="button" class="growth ${x.done ? 'done' : ''}" data-growth="${x.path.id}" style="--i:${2 + k}" aria-label="${esc(x.path.title + ': ' + x.text + (x.done ? ', tamamlandı' : ''))}">
+      ${g.length && !editMode ? `<div class="part"><h3>Koçun ${isToday ? 'bugünkü' : 'o günkü'} adımı</h3><span>${g.filter((x) => x.done).length}/${g.length}</span></div>` : ''}
+      ${editMode ? '' : g.map((x, k) => `<button type="button" class="growth ${x.done ? 'done' : ''}" data-growth="${x.path.id}" style="--i:${2 + k}" aria-label="${esc(x.path.title + ': ' + x.text + (x.done ? ', tamamlandı' : ''))}">
           <span class="em">${x.path.em}</span>
           <span class="gx"><span class="gh">${esc(x.path.title)} · ${x.idx + 1}. adım / ${x.path.steps.length}${x.step.topic ? ' · ' + esc(x.step.topic) : ''}</span>
           <p class="gt">${esc(x.text)}</p>${x.small ? '<span class="gs">Küçültülmüş adım. Bu da sayılır.</span>' : ''}</span>
           <span class="gc">✓</span></button>`).join('')}
       ${partsHTML}
-      ${!boxes.length ? `<section class="card empty-day"><div class="em">🧩</div><p><b>Kutuların burada görünecek</b></p><p class="muted small">Alttaki “Görev Ekle” ile ilk kutunu yap ya da hazır bir paket ekle.</p><button type="button" class="btn" data-tabgo="settings">Hazır paketlere bak</button></section>` : '<p class="hint">Dokun: tamam · Basılı tut: ertele, kısa sürüm, bugün olmadı, ⭐, düzenle</p>'}`;
+      ${editMode ? '<div class="grid" style="margin-top:14px"><button type="button" class="tile add" data-addbox><span class="ci">＋</span><span class="nm">Bu güne kutu ekle</span></button></div>' : ''}
+      ${!boxes.length ? `<section class="card empty-day"><div class="em">🧩</div><p><b>${isToday ? 'Kutuların burada görünecek' : 'Bu gün için kutu yok'}</b></p><p class="muted small">Alttaki “Görev Ekle” ile kutu yap ya da hazır bir paket ekle.</p><button type="button" class="btn" data-tabgo="settings">Hazır paketlere bak</button></section>` : `<p class="hint">Sağa sola kaydır: önceki / sonraki gün · Dokun: tamam · Basılı tut: seçenekler</p>`}</div>`;
   }
 
   // ---- Kutuya dokunma ----
   let ticker = null;
   function ensureTicker() {
-    const running = RK.boxesForDay(state, today()).some((b) => b.kind === 'timer' && E(b.id).end && E(b.id).s !== 'done');
+    const t = today(), running = RK.boxesForDay(state, t).some((b) => b.kind === 'timer' && E(b.id, t).end && E(b.id, t).s !== 'done');
     if (running && !ticker) ticker = setInterval(tick, 1000);
     if (!running && ticker) { clearInterval(ticker); ticker = null; }
   }
   function tick() {
     let finished = null;
-    for (const b of RK.boxesForDay(state, today())) {
-      const e = E(b.id);
-      if (b.kind === 'timer' && e.end && e.s !== 'done' && Date.now() >= e.end) { setE(b.id, { s: 'done', end: null }); finished = b; }
+    const t = today();
+    for (const b of RK.boxesForDay(state, t)) {
+      const e = E(b.id, t);
+      if (b.kind === 'timer' && e.end && e.s !== 'done' && Date.now() >= e.end) { setE(b.id, { s: 'done', end: null }, t); finished = b; }
     }
     if (finished) {
       save(); beep([659, 988]); navigator.vibrate?.([80, 60, 80]);
       toast(`${finished.em} ${finished.name}: süre doldu, tamam!`);
       afterDone();
     }
-    if (tab === 'today' && !$('.sheet', layer) && !$('.ob')) renderToday();
+    if (tab === 'today' && cur === today() && !$('.sheet', layer) && !$('.ob')) renderDay();
     ensureTicker();
   }
   function tap(b, el) {
-    const undo = snapshot(), e = E(b.id);
+    if (cur > today()) return toast('Bu gün henüz gelmedi. Düzenlemek için ✎ Kutuları düzenle’ye dokun.');
+    const undo = snapshot(), e = E(b.id), isToday = cur === today();
+    const afterDone = isToday ? afterDoneToday : () => {};
     if (e.s === 'skip') { setE(b.id, { s: null }); save(); render(); return toast(`${b.em} ${b.name} yeniden açıldı`, undo); }
     if (b.kind === 'count') {
       if (e.s === 'done') { setE(b.id, { s: null, n: 0 }); save(); render(); return toast(`${b.em} sayaç sıfırlandı`, undo); }
@@ -251,7 +277,7 @@
       if (n >= goal) { sparkle(el, b.c); beep([659, 988]); render(); toast(`${b.em} ${b.name} hedefi tamam!`, undo); return afterDone(); }
       navigator.vibrate?.(10); render(); return toast(`${b.em} ${b.name} ${n}/${goal}`, undo);
     }
-    if (b.kind === 'timer' && !e.s && !e.end) {
+    if (b.kind === 'timer' && !e.s && !e.end && isToday) {
       setE(b.id, { end: Date.now() + (b.mins || 15) * 60000 });
       save(); render(); ensureTicker();
       return toast(`${b.em} ${b.mins || 15} dakika başladı. Bitirince kutuya dokun.`, undo);
@@ -264,6 +290,7 @@
     afterDone();
   }
   function tapGrowth(pathId, el) {
+    if (cur !== today()) return toast('Koçun adımı yalnızca bugün işaretlenir.');
     const undo = snapshot(), t = today();
     const p = state.paths.find((x) => x.id === pathId);
     if (!p) return;
@@ -295,14 +322,13 @@
 
   function boxMenu(b) {
     openSheet((sh) => {
-      const e = E(b.id), isStar = state.star && state.star.date === today() && state.star.id === b.id;
+      const e = E(b.id), isToday = cur === today(), isStar = isToday && state.star && state.star.date === today() && state.star.id === b.id;
       sh.innerHTML = `${head(`${b.em} ${esc(b.name)}`)}<div class="menu">
-        ${RK.toMin(b.time) !== null ? '<button type="button" data-a="snooze"><span class="ci">⏰</span>10 dk ertele</button>' : ''}
+        <button type="button" data-a="edit"><span class="ci">✏️</span>Değiştir (bu gün ya da her hafta)</button>
+        ${isToday && RK.toMin(b.time) !== null ? '<button type="button" data-a="snooze"><span class="ci">⏰</span>10 dk ertele</button>' : ''}
         ${b.short ? `<button type="button" data-a="short"><span class="ci">✂️</span>${e.short ? 'Tam sürüme dön' : 'Kısa sürüm: ' + esc(b.short)}</button>` : ''}
-        <button type="button" data-a="skip"><span class="ci">🌥️</span>Bugün olmadı</button>
-        <button type="button" data-a="star"><span class="ci">⭐</span>${isStar ? 'Günün 1 numarası değil' : 'Günün 1 numarası yap'}</button>
-        <button type="button" data-a="edit"><span class="ci">✏️</span>Düzenle</button>
-        <button type="button" class="danger" data-a="del"><span class="ci">🗑️</span>Kutuyu sil</button></div>`;
+        ${cur <= today() ? '<button type="button" data-a="skip"><span class="ci">🌥️</span>Bugün olmadı</button>' : ''}
+        ${isToday ? `<button type="button" data-a="star"><span class="ci">⭐</span>${isStar ? 'Günün 1 numarası değil' : 'Günün 1 numarası yap'}</button>` : ''}</div>`;
       bindClose(sh);
       $$('[data-a]', sh).forEach((btn) => (btn.onclick = () => {
         const a = btn.dataset.a, undo = snapshot();
@@ -313,10 +339,9 @@
           setE(b.id, { snooze: hhmm }); state.fired = (state.fired || []).filter((k) => !k.startsWith(`${today()}|${b.id}|`));
           toast(`${b.em} ${hhmm}'de hatırlatacağım`, undo);
         }
-        if (a === 'short') { setE(b.id, { short: !e.short }); toast(e.short ? `${b.em} tam sürüm` : `${b.em} bugün kısa sürüm: ${b.short}`, undo); }
-        if (a === 'skip') { setE(b.id, { s: 'skip', end: null }); toast(`${b.em} tamam, bugün olmadı. Sorun değil.`, undo); }
+        if (a === 'short') { setE(b.id, { short: !e.short }); toast(e.short ? `${b.em} tam sürüm` : `${b.em} kısa sürüm: ${b.short}`, undo); }
+        if (a === 'skip') { setE(b.id, { s: 'skip', end: null }); toast(`${b.em} tamam, olmadı. Sorun değil.`, undo); }
         if (a === 'star') { state.star = isStar ? null : { date: today(), id: b.id }; toast(isStar ? '⭐ kaldırıldı' : `⭐ Günün 1 numarası: ${b.name}`, undo); }
-        if (a === 'del') { state.boxes = state.boxes.filter((x) => x.id !== b.id); toast(`${b.em} ${b.name} silindi`, undo); }
         save(); closeSheet(); render(); afterDone();
       }));
     });
@@ -340,27 +365,44 @@
     });
   }
 
-  function boxForm(box) {
-    const st = box ? JSON.parse(JSON.stringify(box)) : { em: '💧', name: '', part: 'gun', time: '', kind: 'tap', goal: 8, mins: 15, days: [1, 2, 3, 4, 5, 6, 7], c: D.TILE_COLORS[state.boxes.length % D.TILE_COLORS.length], short: '' };
-    let rep = st.once ? 'once' : st.days.length === 7 ? 'all' : st.days.join() === '1,2,3,4,5' ? 'wd' : 'pick';
-    const chips = (name, cur, opts) => `<div class="chips">${opts.map(([v, l]) => `<button type="button" class="chip ${cur === v ? 'on' : ''}" data-set="${name}" data-v="${v}">${l}</button>`).join('')}</div>`;
+  /** Kutu ekleme / değiştirme. box: o günkü hâliyle kutu; opts.date: hangi gün için. */
+  function boxForm(box, opts = {}) {
+    const date = opts.date || cur, wd = RK.weekday(date);
+    const base = box ? state.boxes.find((x) => x.id === box.id) : null;
+    const guess = () => { const h = new Date().getHours(); return h < 9 ? 'sabah' : h < 18 ? 'gun' : 'aksam'; };
+    const st = box
+      ? { em: box.em, name: box.name, part: box.part, time: box.time || '', kind: box.kind, goal: box.goal || 8, mins: box.mins || 15, c: box.c, short: box.short || '', days: [...base.days] }
+      : { em: '💧', name: '', part: opts.part || guess(), time: '', kind: 'tap', goal: 8, mins: 15, days: opts.date ? [wd] : [1, 2, 3, 4, 5, 6, 7], c: D.TILE_COLORS[state.boxes.length % D.TILE_COLORS.length], short: '' };
+    const single = base && (base.once || base.days.length === 1);
+    let scope = base ? opts.scope || (base.once ? 'all' : 'day') : null; // varsayılan: yalnızca bu gün
+    let rep = base && base.once ? 'once' : st.days.length === 7 ? 'all' : st.days.join() === '1,2,3,4,5' ? 'wd' : 'pick';
+    const chips = (name, curv, list) => `<div class="chips">${list.map(([v, l]) => `<button type="button" class="chip ${curv === v ? 'on' : ''}" data-set="${name}" data-v="${v}">${l}</button>`).join('')}</div>`;
+    // Hazır seçenekler: programındaki diğer kutular (aynı bölümdekiler önce)
+    const quick = [];
+    for (const x of [...state.boxes].sort((a, b) => (a.part === st.part ? 0 : 1) - (b.part === st.part ? 0 : 1))) if (!quick.some((q) => q.name === x.name) && (!box || x.name !== box.name)) quick.push(x);
     openSheet((sh) => {
       const draw = () => {
         const scroll = sh.scrollTop;
-        sh.innerHTML = `${head(box ? 'Kutuyu düzenle' : 'Yeni kutu')}
+        sh.innerHTML = `${head(box ? 'Kutuyu değiştir' : 'Yeni kutu')}
+          ${base ? `<p class="muted small" style="margin:0">${LONG[wd - 1]} · ${dayLabel(date)}</p>
+            <div class="seg ${single ? 'two' : ''}">${base.once ? '' : `<button type="button" class="${scope === 'day' ? 'on' : ''}" data-scope="day">Yalnızca bu gün</button>`}
+            ${single ? '' : `<button type="button" class="${scope === 'wd' ? 'on' : ''}" data-scope="wd">Her ${LONG[wd - 1]}</button>`}
+            <button type="button" class="${scope === 'all' ? 'on' : ''}" data-scope="all">${base.once ? 'Bu kutu' : single ? 'Her ' + LONG[base.days[0] - 1] : 'Tüm günleri'}</button></div>` : ''}
           <div class="preview-tile">${tileHTML({ ...st, name: st.name || 'Kutu adı', id: '_' }, { preview: true })}</div>
-          <div class="field"><span>Simge</span><div class="emojis">${D.EMOJIS.map((e) => `<button type="button" class="${st.em === e ? 'on' : ''}" data-em="${e}" aria-label="${e}">${e}</button>`).join('')}</div></div>
+          ${box && quick.length ? `<div class="field"><span>Hazır seçenekler (programından)</span><div class="chips quick">${quick.slice(0, 14).map((q, i) => `<button type="button" class="chip" data-quick="${i}">${q.em} ${esc(q.name)}</button>`).join('')}</div></div>` : ''}
+          <div class="field"><span>Simge</span><div class="emojis">${[...new Set([st.em, ...D.EMOJIS])].slice(0, 24).map((e) => `<button type="button" class="${st.em === e ? 'on' : ''}" data-em="${e}" aria-label="${e}">${e}</button>`).join('')}</div></div>
           <label class="field"><span>Ne yapacaksın?</span><input id="fName" type="text" value="${esc(st.name)}" placeholder="Örneğin: Vitamin al" maxlength="30" autocomplete="off"></label>
-          <div class="field"><span>Günün hangi bölümü?</span>${chips('part', st.part, [['sabah', '🌅 Sabah'], ['gun', '☀️ Gün içi'], ['aksam', '🌙 Akşam']])}</div>
+          <div class="field"><span>Günün hangi bölümü?</span>${chips('part', st.part, PARTS.map(([k, l, e]) => [k, `${e} ${l}`]))}</div>
           <label class="field"><span>Saat (boş bırakılabilir; saat varsa hatırlatırım)</span><input id="fTime" type="time" value="${esc(st.time)}"></label>
           <div class="field"><span>Nasıl bir kutu?</span>${chips('kind', st.kind, [['tap', '👆 Tek dokunuş'], ['count', '🔢 Sayaç'], ['timer', '⏱ Süreli']])}</div>
-          ${st.kind === 'count' ? `<label class="field"><span>Günlük hedef (kaç kez?)</span><input id="fGoal" type="number" inputmode="numeric" min="2" max="30" value="${st.goal || 8}"></label>` : ''}
-          ${st.kind === 'timer' ? `<label class="field"><span>Kaç dakika?</span><input id="fMins" type="number" inputmode="numeric" min="1" max="240" value="${st.mins || 15}"></label>` : ''}
-          <div class="field"><span>Ne sıklıkla?</span>${chips('rep', rep, [['all', 'Her gün'], ['wd', 'Hafta içi'], ['pick', 'Günleri seç'], ['once', 'Yalnızca bugün']])}
-            ${rep === 'pick' ? `<div class="chips" style="margin-top:8px">${DAYS.map((d, i) => `<button type="button" class="chip day ${st.days.includes(i + 1) ? 'on' : ''}" data-day="${i + 1}">${d}</button>`).join('')}</div>` : ''}</div>
-          <label class="field"><span>Kısa sürümü (yorgun günler için, isteğe bağlı)</span><input id="fShort" type="text" value="${esc(st.short || '')}" placeholder="Örneğin: 5 dakika" maxlength="30" autocomplete="off"></label>
-          <div class="field"><span>Renk</span><div class="swatches">${D.TILE_COLORS.map((c) => `<button type="button" class="${st.c === c ? 'on' : ''}" style="background:${c}" data-color="${c}" aria-label="Renk"></button>`).join('')}</div></div>
-          <div style="margin-top:18px"><button type="button" class="btn primary wide big" data-save>${box ? 'Kaydet' : 'Kutuyu ekle'}</button></div>`;
+          ${st.kind === 'count' ? `<label class="field"><span>Günlük hedef (kaç kez?)</span><input id="fGoal" type="number" inputmode="numeric" min="2" max="30" value="${st.goal}"></label>` : ''}
+          ${st.kind === 'timer' ? `<label class="field"><span>Kaç dakika?</span><input id="fMins" type="number" inputmode="numeric" min="1" max="240" value="${st.mins}"></label>` : ''}
+          ${!base || (scope === 'all' && !base.once) ? `<div class="field"><span>Ne sıklıkla?</span>${chips('rep', rep, [['all', 'Her gün'], ['wd', 'Hafta içi'], ['pick', 'Günleri seç'], ...(base ? [] : [['once', `Yalnızca ${dayLabel(date)}`]])])}
+            ${rep === 'pick' ? `<div class="chips" style="margin-top:8px">${DAYS.map((d, i) => `<button type="button" class="chip day ${st.days.includes(i + 1) ? 'on' : ''}" data-day="${i + 1}">${d}</button>`).join('')}</div>` : ''}</div>` : ''}
+          <label class="field"><span>Kısa sürümü (yorgun günler için, isteğe bağlı)</span><input id="fShort" type="text" value="${esc(st.short)}" placeholder="Örneğin: 5 dakika" maxlength="30" autocomplete="off"></label>
+          <div class="field"><span>Renk</span><div class="swatches">${[...new Set([st.c, ...D.TILE_COLORS])].map((c) => `<button type="button" class="${st.c === c ? 'on' : ''}" style="background:${c}" data-color="${c}" aria-label="Renk"></button>`).join('')}</div></div>
+          <div style="margin-top:18px;display:grid;gap:8px"><button type="button" class="btn primary wide big" data-save>${box ? 'Kaydet' : 'Kutuyu ekle'}</button>
+          ${base ? `<button type="button" class="btn danger wide" data-del>🗑️ ${scope === 'day' ? 'Yalnızca bu günden kaldır' : scope === 'wd' ? `Her ${LONG[wd - 1]} gününden kaldır` : single && !base.once ? `Her ${LONG[base.days[0] - 1]} için sil` : 'Kutuyu tamamen sil'}</button>` : ''}</div>`;
         sh.scrollTop = scroll;
         bindClose(sh);
         const read = () => {
@@ -369,6 +411,8 @@
           if ($('#fMins', sh)) st.mins = Math.max(1, Math.min(240, +$('#fMins', sh).value || 15));
         };
         $('#fName', sh).oninput = (e) => { $('.preview-tile .nm', sh).textContent = e.target.value || 'Kutu adı'; };
+        $$('[data-scope]', sh).forEach((b) => (b.onclick = () => { read(); scope = b.dataset.scope; draw(); }));
+        $$('[data-quick]', sh).forEach((b) => (b.onclick = () => { const q = quick[+b.dataset.quick]; Object.assign(st, { em: q.em, name: q.name, c: q.c, kind: q.kind, mins: q.mins || 15, goal: q.goal || 8, short: q.short || '' }); draw(); }));
         $$('[data-em]', sh).forEach((b) => (b.onclick = () => { read(); st.em = b.dataset.em; draw(); }));
         $$('[data-color]', sh).forEach((b) => (b.onclick = () => { read(); st.c = b.dataset.color; draw(); }));
         $$('[data-day]', sh).forEach((b) => (b.onclick = () => { read(); const d = +b.dataset.day; st.days = st.days.includes(d) ? st.days.filter((x) => x !== d) : [...st.days, d].sort(); draw(); }));
@@ -383,12 +427,25 @@
           if (!st.name.trim()) { const n = $('#fName', sh); n.placeholder = 'Önce bir ad yaz'; n.focus(); return; }
           if (rep === 'pick' && !st.days.length) return toast('En az bir gün seç');
           const undo = snapshot();
-          st.name = st.name.trim(); st.short = (st.short || '').trim();
-          if (rep === 'once') st.once = today(); else delete st.once;
-          if (box) state.boxes = state.boxes.map((x) => (x.id === box.id ? st : x));
-          else { st.id = RK.uid(); state.boxes.push(st); }
-          save(); closeSheet(); tab = 'today'; render();
-          toast(`${st.em} ${st.name} ${box ? 'güncellendi' : 'eklendi'}`, undo);
+          st.name = st.name.trim(); st.short = st.short.trim();
+          let msg;
+          if (base) {
+            RK.editBox(state, base.id, scope === 'all' && !base.once ? st : { ...st, days: undefined }, scope, date);
+            msg = `${st.em} ${st.name}: ${scope === 'day' ? `yalnızca ${dayLabel(date)}` : scope === 'wd' ? `her ${LONG[wd - 1]}` : single && !base.once ? `her ${LONG[base.days[0] - 1]}` : 'tüm günlerde güncellendi'}`;
+          } else {
+            const nb = { ...st, id: RK.uid() };
+            if (rep === 'once') { nb.once = date; nb.days = []; }
+            state.boxes.push(nb);
+            msg = `${st.em} ${st.name} eklendi`;
+          }
+          save(); closeSheet(); render(); toast(msg, undo);
+        };
+        const del = $('[data-del]', sh);
+        if (del) del.onclick = () => {
+          const undo = snapshot();
+          RK.removeBox(state, base.id, scope, date);
+          save(); closeSheet(); render();
+          toast(`${box.em} ${box.name} ${scope === 'day' ? 'bu günden kaldırıldı' : scope === 'wd' ? `${LONG[wd - 1]} günlerinden kaldırıldı` : 'silindi'}`, undo);
         };
       };
       draw();
@@ -399,19 +456,25 @@
   function renderWeek() {
     const t = today(), start = RK.addDays(RK.weekStart(t), weekOffset * 7);
     const fmt = (d) => new Intl.DateTimeFormat('tr-TR', { day: 'numeric', month: 'short' }).format(RK.parse(d));
-    const rows = DAYS.map((d, i) => {
-      const date = RK.addDays(start, i), boxes = RK.boxesForDay(state, date), future = date > t;
-      const sq = boxes.map((b) => { const e = RK.entry(state, date, b.id) || {}; return `<i class="${e.s === 'done' ? 'on' : e.s === 'skip' ? 'sk' : ''}" style="--c:${b.c}" title="${esc(b.name)}"></i>`; }).join('')
-        + state.paths.filter((p) => p.doneLog[date] !== undefined).map(() => '<i class="on g" style="--c:#b8860b" title="Koçun adımı"></i>').join('');
-      const sum = RK.daySummary(state, date);
-      return `<span class="d ${date === t ? 'today' : ''}">${d}<br><span class="small muted" style="font-weight:500">${+date.slice(8)}</span></span><span class="sq">${sq || '<span class="small muted">kutu yok</span>'}</span><span class="pc">${future || !sum.total ? '–' : '%' + Math.round(sum.ratio * 100)}</span>`;
+    const cards = DAYS.map((n, i) => {
+      const date = RK.addDays(start, i), boxes = RK.boxesForDay(state, date), sum = RK.daySummary(state, date), open = openWeekDay === date;
+      const dots = boxes.map((b) => { const e = RK.entry(state, date, b.id) || {}; return `<i class="${e.s === 'done' ? 'on' : e.s === 'skip' ? 'sk' : ''}" style="--c:${b.c}"></i>`; }).join('')
+        + state.paths.filter((p) => p.doneLog[date] !== undefined).map(() => '<i class="on g" style="--c:#b8860b"></i>').join('');
+      const work = boxes.filter((b) => b.part === 'calisma');
+      return `<section class="card wday ${date === t ? 'today' : ''}">
+        <button type="button" class="wday-top" data-open="${date}" aria-label="${LONG[i]} ${+date.slice(8)}: ${sum.done}/${sum.total}, günü aç">
+          <span class="wday-date"><span class="n">${n}</span><span class="d">${+date.slice(8)}</span></span>
+          <span class="wday-mid"><span class="dots" aria-hidden="true">${dots || '<span class="small muted">kutu yok</span>'}</span></span>
+          <span class="wday-pc">${sum.done}/${sum.total} ›</span></button>
+        ${!open && work.length ? `<div class="slots">${work.map((b) => `<button type="button" class="slot-btn" style="--c:${b.c}" data-wbox="${date}|${b.id}" aria-label="${esc(b.name)} ${esc(b.time)}, değiştir"><span class="e">${b.em}</span><span class="t"><b>${esc(b.name)}</b><span>${esc(b.time)}${b.dayOnly ? ' · yalnız bu gün' : ''}</span></span><span class="pen">✎</span></button>`).join('')}</div>` : ''}
+        ${open ? PARTS.map(([k, label]) => { const l = boxes.filter((b) => b.part === k); return l.length ? `<div class="wpart">${label}</div><div class="slots">${l.map((b) => `<button type="button" class="slot-btn" style="--c:${b.c}" data-wbox="${date}|${b.id}" aria-label="${esc(b.name)} ${esc(b.time)}, değiştir"><span class="e">${b.em}</span><span class="t"><b>${esc(b.name)}</b><span>${esc(b.time || '')}${b.dayOnly ? ' · yalnız bu gün' : ''}</span></span><span class="pen">✎</span></button>`).join('')}</div>` : ''; }).join('') + `<div class="slots"><button type="button" class="slot-btn empty" data-wadd="${date}"><span class="e">＋</span><span class="t"><b>Kutu ekle</b><span>${LONG[i]}</span></span></button></div>` : ''}
+        <div class="wday-actions"><button type="button" class="link" data-open="${date}">${LONG[i]} gününü aç →</button><button type="button" class="link" data-wtoggle="${date}">${open ? 'Kapat' : '✎ Tüm kutuları düzenle'}</button></div></section>`;
     }).join('');
     const top = state.boxes.map((b) => [b, RK.boxStreak(state, b, t)]).filter(([, n]) => n >= 2).sort((a, b) => b[1] - a[1]).slice(0, 6);
     const st = RK.streak(state, t);
     $('#view').innerHTML = `
-      <div class="month-nav"><button type="button" data-week="-1" aria-label="Önceki hafta">‹</button><b>${fmt(start)} – ${fmt(RK.addDays(start, 6))}</b><button type="button" data-week="1" aria-label="Sonraki hafta" ${weekOffset >= 0 ? 'disabled' : ''}>›</button></div>
-      <section class="card"><div class="week">${rows}</div>
-        <div class="legend"><span><i style="background:#16a34a"></i>Tamam</span><span><i style="background:#b8860b;border-radius:50%"></i>Koçun adımı</span><span><i style="background:transparent;border:1.5px dashed var(--line)"></i>Olmadı</span><span><i></i>Sırada</span></div></section>
+      <div class="month-nav"><button type="button" data-week="-1" aria-label="Önceki hafta">‹</button><b>${fmt(start)} – ${fmt(RK.addDays(start, 6))}${weekOffset === 0 ? ' · bu hafta' : ''}</b><button type="button" data-week="1" aria-label="Sonraki hafta">›</button></div>
+      ${cards}
       <section class="card"><h2>Seriler</h2>
         <ul class="streaks"><li><span>🔥</span><span class="nm">Ritim (en az bir kutu)</span><span class="n">${st.days} gün</span></li>
         ${top.map(([b, n]) => `<li><span>${b.em}</span><span class="nm">${esc(b.name)}</span><span class="n">🔥 ${n}</span></li>`).join('')}</ul>
@@ -567,7 +630,7 @@
       for (const k of ob.dreams) if (!open(k)) RK.addPath(state, RK.buildPath(D.PATHS[k], 'basla'), t);
       for (const n of ob.customDreams) if (!state.paths.some((x) => x.title === n)) RK.addPath(state, RK.genericPath(n, 'basla', D.GENERIC), t);
       for (const k of ob.packs || []) addPack(k, true);
-      delete state.log[t].g; state.lastRoll = null;
+      cur = t; delete state.log[t].g; state.lastRoll = null;
       RK.rollDay(state, t);
       save(); el.remove(); document.body.classList.remove('locked');
       tab = 'today'; render(); enter();
@@ -659,7 +722,7 @@
       <section class="card"><h2>Yedek</h2><p class="small muted">Verilerin yalnızca bu telefonda duruyor. Arada bir yedek al.</p>
         <div class="btn-col"><button type="button" class="btn" data-export>⬇️ Yedeği indir</button><label class="btn file-btn">⬆️ Yedekten geri yükle<input type="file" accept="application/json,.json" data-import></label>
         <button type="button" class="btn danger" data-reset>Her şeyi sil ve baştan başla</button></div></section>
-      <p class="small muted center">Ritim · sürüm 1.0</p>`;
+      <p class="small muted center">Ritim · sürüm 1.1</p>`;
   }
 
   // ---- Hatırlatmalar (uygulama açıkken) ----
@@ -668,7 +731,7 @@
     const t = today(), m = nowMin();
     state.fired = (state.fired || []).filter((k) => k.startsWith(t));
     for (const b of RK.boxesForDay(state, t)) {
-      const e = E(b.id), at = RK.toMin(e.snooze || b.time);
+      const e = E(b.id, t), at = RK.toMin(e.snooze || b.time);
       if (at === null || e.s || e.end) continue;
       const key = `${t}|${b.id}|${at}`;
       if (m < at || m > at + 10 || state.fired.includes(key)) continue;
@@ -690,19 +753,21 @@
       navigator.serviceWorker?.ready.then((r) => r.showNotification('Ritim', { body: text, icon: 'icons/icon-192.png', tag: b.id })).catch(() => {});
     $$('[data-n]', el).forEach((btn) => (btn.onclick = () => {
       const a = btn.dataset.n;
-      if (a === 'go' && b.kind === 'timer') setE(b.id, { end: Date.now() + (b.mins || 15) * 60000 });
-      if (a === 'snooze') { const mm = nowMin() + 10; setE(b.id, { snooze: `${String(Math.floor(mm / 60) % 24).padStart(2, '0')}:${String(mm % 60).padStart(2, '0')}` }); }
-      if (a === 'skip') setE(b.id, { s: 'skip' });
+      const t = today();
+      if (a === 'go' && b.kind === 'timer') setE(b.id, { end: Date.now() + (b.mins || 15) * 60000 }, t);
+      if (a === 'snooze') { const mm = nowMin() + 10; setE(b.id, { snooze: `${String(Math.floor(mm / 60) % 24).padStart(2, '0')}:${String(mm % 60).padStart(2, '0')}` }, t); }
+      if (a === 'skip') setE(b.id, { s: 'skip' }, t);
       save(); el.remove(); render(); ensureTicker();
     }));
   }
 
   // ---- Çizim ve etkileşim ----
-  function render() {
-    $('#title').textContent = { today: 'Bugün', week: 'Hafta', coach: 'Koç', settings: 'Ayarlar' }[tab];
+  function render(dir = 0) {
+    $('#title').textContent = { today: cur === today() ? 'Bugün' : LONG[RK.weekday(cur) - 1], week: 'Hafta', coach: 'Koç', settings: 'Ayarlar' }[tab];
+    renderStrip();
     $$('.tabbar button').forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
     $('#fab').hidden = tab !== 'today';
-    ({ today: renderToday, week: renderWeek, coach: renderCoach, settings: renderSettings })[tab]();
+    ({ today: () => renderDay(dir), week: renderWeek, coach: renderCoach, settings: renderSettings })[tab]();
   }
   function enter() {
     document.body.classList.add('enter');
@@ -717,7 +782,7 @@
     pressTimer = setTimeout(() => {
       longFired = true; el.classList.remove('pressing'); navigator.vibrate?.(15);
       if (el.dataset.growth) growthMenu(el.dataset.growth);
-      else boxMenu(state.boxes.find((b) => b.id === el.dataset.id));
+      else { const bx = RK.boxesForDay(state, cur).find((b) => b.id === el.dataset.id); if (bx) (editMode ? boxForm : boxMenu)(bx); }
     }, 480);
   });
   const cancelPress = () => { clearTimeout(pressTimer); pressed?.classList.remove('pressing'); };
@@ -729,8 +794,16 @@
   $('#view').addEventListener('click', (e) => {
     const q = (sel) => e.target.closest(sel);
     let el;
-    if ((el = q('.tile[data-id]'))) { if (longFired) { longFired = false; return; } const b = state.boxes.find((x) => x.id === el.dataset.id); return b && tap(b, el); }
+    if (swiped) return;
+    if ((el = q('.tile[data-id]'))) { if (longFired) { longFired = false; return; } const b = RK.boxesForDay(state, cur).find((x) => x.id === el.dataset.id); return b && (editMode ? boxForm(b) : tap(b, el)); }
     if ((el = q('.growth'))) { if (longFired) { longFired = false; return; } return tapGrowth(el.dataset.growth, el); }
+    if (q('[data-today]')) return goDay(today(), cur < today() ? 1 : -1);
+    if (q('[data-editmode]')) { editMode = !editMode; return render(); }
+    if (q('[data-addbox]')) return boxForm(null, { date: cur });
+    if ((el = q('[data-open]'))) return goDay(el.dataset.open);
+    if ((el = q('[data-wtoggle]'))) { openWeekDay = openWeekDay === el.dataset.wtoggle ? null : el.dataset.wtoggle; return render(); }
+    if ((el = q('[data-wbox]'))) { const [d, id] = el.dataset.wbox.split('|'); const b = RK.boxesForDay(state, d).find((x) => x.id === id); return b && boxForm(b, { date: d }); }
+    if ((el = q('[data-wadd]'))) return boxForm(null, { date: el.dataset.wadd });
     if ((el = q('[data-energy]'))) {
       const v = el.dataset.energy, t = today(), undo = snapshot();
       state.energy = { date: t, v };
@@ -739,7 +812,7 @@
       return toast(v === 'low' ? '🫶 Hafif gün: kısa sürümler açıldı' : v === 'high' ? '⚡ Dolu enerji, harika!' : '🙂 Not aldım', undo);
     }
     if ((el = q('[data-tabgo]'))) { tab = el.dataset.tabgo; return render(); }
-    if ((el = q('[data-week]'))) { weekOffset = Math.min(0, weekOffset + +el.dataset.week); return render(); }
+    if ((el = q('[data-week]'))) { weekOffset += +el.dataset.week; return render(); }
     if (q('[data-onboard]')) return onboard();
     if (q('[data-fav]')) { state.favQuotes = state.favQuotes.includes(quoteIdx) ? state.favQuotes.filter((i) => i !== quoteIdx) : [...state.favQuotes, quoteIdx]; save(); return render(); }
     if ((el = q('[data-pathmenu]'))) return pathMenu(el.dataset.pathmenu);
@@ -754,7 +827,7 @@
     }
     if (q('[data-checkdone]')) { state.checkins[RK.weekStart(today())] = true; save(); render(); return toast('🧭 Görüşme tamam. Yeni haftan hazır.'); }
     if ((el = q('[data-addpack]'))) return addPack(el.dataset.addpack);
-    if ((el = q('[data-editbox]'))) return boxForm(state.boxes.find((b) => b.id === el.dataset.editbox));
+    if ((el = q('[data-editbox]'))) { const b = state.boxes.find((x) => x.id === el.dataset.editbox); return boxForm(b, { scope: 'all', date: b.once || RK.addDays(RK.weekStart(today()), (b.days[0] || 1) - 1) }); }
     if (q('[data-perm]')) return Notification.requestPermission().then(render);
     if (q('[data-export]')) {
       const a = document.createElement('a');
@@ -781,9 +854,32 @@
       imp.value = '';
     }
   });
-  $$('.tabbar button').forEach((b) => (b.onclick = () => { tab = b.dataset.tab; weekOffset = 0; window.scrollTo(0, 0); render(); }));
-  $('#fab').onclick = () => boxForm(null);
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSheet(); });
+  $$('.tabbar button').forEach((b) => (b.onclick = () => { if (b.dataset.tab === 'today' && tab === 'today') cur = today(); tab = b.dataset.tab; weekOffset = 0; editMode = false; window.scrollTo(0, 0); render(); }));
+  $('#fab').onclick = () => boxForm(null, cur === today() ? {} : { date: cur });
+  $('#strip').addEventListener('click', (e) => {
+    const d = e.target.closest('[data-day]'), sh = e.target.closest('[data-shift]');
+    if (d) return goDay(d.dataset.day, Math.sign(RK.parse(d.dataset.day) - RK.parse(cur)));
+    if (sh) return goDay(RK.addDays(cur, +sh.dataset.shift), +sh.dataset.shift > 0 ? 1 : -1);
+  });
+  // Sağa sola kaydırma: sıradaki / önceki gün
+  let sw = null, swiped = false;
+  const vw = $('#view');
+  vw.addEventListener('touchstart', (e) => { sw = tab === 'today' && e.touches.length === 1 && !$('.sheet', layer) ? [e.touches[0].clientX, e.touches[0].clientY] : null; }, { passive: true });
+  vw.addEventListener('touchmove', (e) => {
+    if (!sw) return;
+    const dx = e.touches[0].clientX - sw[0], dy = e.touches[0].clientY - sw[1];
+    if (Math.abs(dx) > 14 && Math.abs(dx) > Math.abs(dy) * 1.5) { const p = $('.pane'); if (p) p.style.transform = `translateX(${dx * 0.6}px)`; }
+  }, { passive: true });
+  vw.addEventListener('touchend', (e) => {
+    if (!sw) return;
+    const dx = e.changedTouches[0].clientX - sw[0], dy = e.changedTouches[0].clientY - sw[1]; sw = null;
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) { swiped = true; cancelPress(); longFired = false; setTimeout(() => (swiped = false), 350); return goDay(RK.addDays(cur, dx < 0 ? 1 : -1), dx < 0 ? 1 : -1); }
+    const p = $('.pane'); if (p) p.style.transform = '';
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeSheet();
+    if (tab === 'today' && !$('.sheet', layer) && !$('.ob') && !/INPUT|TEXTAREA/.test(document.activeElement.tagName) && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) goDay(RK.addDays(cur, e.key === 'ArrowRight' ? 1 : -1), e.key === 'ArrowRight' ? 1 : -1);
+  });
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { render(); checkReminders(); ensureTicker(); navigator.serviceWorker?.getRegistration().then((r) => r && r.update()).catch(() => {}); } });
 
   // ---- Başlangıç ----
@@ -793,6 +889,6 @@
   scene(() => { if (!state.profile) onboard(); else enter(); });
   ensureTicker();
   setInterval(checkReminders, 20000);
-  setInterval(() => { if (tab === 'today' && !ticker && !$('.sheet', layer) && !$('.ob') && document.visibilityState === 'visible') renderToday(); }, 60000);
+  setInterval(() => { if (tab === 'today' && !ticker && !$('.sheet', layer) && !$('.ob') && document.visibilityState === 'visible') { renderStrip(); renderDay(); } }, 60000);
   window.__ritim = { get state() { return state; } };
 })();

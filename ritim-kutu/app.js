@@ -116,11 +116,18 @@
       <div class="skip">Başlamak için dokun</div>`;
     document.body.classList.add('locked');
     document.body.appendChild(el);
+    // Sahne boyunca telefonun üst şeridi (saat, pil) de sahnenin rengini alır;
+    // yoksa açık renkli şerit ile koyu sahne arasında sert bir çizgi görünür.
+    const metas = $$('meta[name="theme-color"]').map((m) => [m, m.getAttribute('content')]);
+    metas.forEach(([m]) => m.setAttribute('content', '#141a2b'));
+    document.documentElement.classList.add('scene-on');
     let closed = false;
     const close = () => {
       if (closed) return;
       closed = true;
       el.classList.add('out');
+      metas.forEach(([m, c]) => m.setAttribute('content', c));
+      document.documentElement.classList.remove('scene-on');
       document.body.classList.remove('locked');
       done();
       setTimeout(() => el.remove(), 600);
@@ -743,7 +750,7 @@
       <section class="card"><h2>Yedek</h2><p class="small muted">Verilerin yalnızca bu telefonda duruyor. Arada bir yedek al.</p>
         <div class="btn-col"><button type="button" class="btn" data-export>⬇️ Yedeği indir</button><label class="btn file-btn">⬆️ Yedekten geri yükle<input type="file" accept="application/json,.json" data-import></label>
         <button type="button" class="btn danger" data-reset>Her şeyi sil ve baştan başla</button></div></section>
-      <p class="small muted center">Ritim · sürüm 1.2</p>`;
+      <p class="small muted center">Ritim · sürüm 1.3</p>`;
   }
 
   // ---- Hatırlatmalar (uygulama açıkken) ----

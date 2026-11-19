@@ -197,7 +197,28 @@
       return `<button type="button" class="daybtn ${d === cur ? 'on' : ''} ${d === t ? 'today' : ''}" data-day="${d}" aria-label="${LONG[i]} ${+d.slice(8)}" aria-current="${d === cur}"><span class="n">${n}</span><span class="d">${+d.slice(8)}</span><span class="p"><i style="width:${d <= t ? Math.round(sm.ratio * 100) : 0}%"></i></span></button>`;
     }).join('')}<button type="button" class="nav" data-shift="7" aria-label="Sonraki hafta">›</button>`;
   }
-  function goDay(d, dir = 0) { cur = d; tab = 'today'; window.scrollTo(0, 0); render(dir); }
+  /**
+   * Başka güne geçiş. Gün ekranındayken ekranın baktığı bölüm korunur: örneğin
+   * "Akşam çalışması"na bakarken kaydırınca yeni günde de aynı bölüm aynı
+   * yükseklikte durur. O bölüm yeni günde yoksa kaydırma konumu aynen kalır.
+   */
+  function goDay(d, dir = 0, fromTop = false) {
+    const stay = !fromTop && tab === 'today' && window.scrollY > 4;
+    let anchor = null;
+    if (stay) {
+      const top = $('.topbar').getBoundingClientRect().bottom;
+      const heads = $$('#view [data-part]').map((el) => ({ key: el.dataset.part, y: el.getBoundingClientRect().top }));
+      const above = heads.filter((h) => h.y <= top + 8).pop();
+      const below = heads.find((h) => h.y > top + 8 && h.y < window.innerHeight);
+      anchor = below && (!above || below.y - top < 160) ? below : above || below || null;
+    }
+    const y = window.scrollY;
+    cur = d; tab = 'today';
+    render(dir);
+    if (!stay) return window.scrollTo(0, 0);
+    const same = anchor && $('#view [data-part="' + anchor.key + '"]');
+    window.scrollTo(0, same ? Math.max(0, window.scrollY + same.getBoundingClientRect().top - anchor.y) : y);
+  }
 
   function renderDay(dir = 0) {
     const t = today();
@@ -216,7 +237,7 @@
       const list = boxes.filter((b) => b.part === k);
       if (!list.length) return '';
       const d = list.filter((b) => E(b.id).s === 'done').length;
-      return `<div class="part ${k === 'calisma' ? 'music' : ''}"><h3>${k === 'calisma' ? em + ' ' : ''}${label}</h3><span>${d}/${list.length}</span></div><div class="grid">${list.map((b) => tileHTML(b, { now: now && now.id === b.id, i: i++ })).join('')}</div>`;
+      return `<div class="part ${k === 'calisma' ? 'music' : ''}" data-part="${k}"><h3>${k === 'calisma' ? em + ' ' : ''}${label}</h3><span>${d}/${list.length}</span></div><div class="grid">${list.map((b) => tileHTML(b, { now: now && now.id === b.id, i: i++ })).join('')}</div>`;
     }).join('');
     const coach = isToday ? coachLine() : null;
     $('#view').innerHTML = `<div class="pane ${dir > 0 ? 'in-l' : dir < 0 ? 'in-r' : ''}">
@@ -722,7 +743,7 @@
       <section class="card"><h2>Yedek</h2><p class="small muted">Verilerin yalnızca bu telefonda duruyor. Arada bir yedek al.</p>
         <div class="btn-col"><button type="button" class="btn" data-export>⬇️ Yedeği indir</button><label class="btn file-btn">⬆️ Yedekten geri yükle<input type="file" accept="application/json,.json" data-import></label>
         <button type="button" class="btn danger" data-reset>Her şeyi sil ve baştan başla</button></div></section>
-      <p class="small muted center">Ritim · sürüm 1.1</p>`;
+      <p class="small muted center">Ritim · sürüm 1.2</p>`;
   }
 
   // ---- Hatırlatmalar (uygulama açıkken) ----
@@ -800,7 +821,7 @@
     if (q('[data-today]')) return goDay(today(), cur < today() ? 1 : -1);
     if (q('[data-editmode]')) { editMode = !editMode; return render(); }
     if (q('[data-addbox]')) return boxForm(null, { date: cur });
-    if ((el = q('[data-open]'))) return goDay(el.dataset.open);
+    if ((el = q('[data-open]'))) return goDay(el.dataset.open, 0, true);
     if ((el = q('[data-wtoggle]'))) { openWeekDay = openWeekDay === el.dataset.wtoggle ? null : el.dataset.wtoggle; return render(); }
     if ((el = q('[data-wbox]'))) { const [d, id] = el.dataset.wbox.split('|'); const b = RK.boxesForDay(state, d).find((x) => x.id === id); return b && boxForm(b, { date: d }); }
     if ((el = q('[data-wadd]'))) return boxForm(null, { date: el.dataset.wadd });

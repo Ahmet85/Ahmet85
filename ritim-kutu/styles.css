@@ -371,3 +371,7 @@ html.scene-on, html.scene-on body, html.scene-on body::before { background: #141
 .slot-btn .t span { font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; } .slot-btn .pen { font-size: 13px; opacity: .6; }
 .wpart { font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); margin: 12px 2px 0; }
 .wday-actions { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+
+/* Basılı tutunca iPhone'un metin seçmesi ve büyüteç açması engellenir (yazı alanları hariç) */
+html, body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+input, textarea { -webkit-user-select: text; user-select: text; }

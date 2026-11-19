@@ -1,6 +1,6 @@
 // Çevrimdışı çalışma. Yeni sürüm yayınlarken CACHE adını artır.
-const CACHE = 'ritim-kutu-v4';
-const FILES = ['./', 'index.html', 'styles.css?v=4', 'core.js?v=4', 'data.js?v=4', 'app.js?v=4', 'manifest.webmanifest',
+const CACHE = 'ritim-kutu-v5';
+const FILES = ['./', 'index.html', 'styles.css?v=5', 'core.js?v=5', 'data.js?v=5', 'app.js?v=5', 'manifest.webmanifest',
   'fonts/caveat-latin-500-normal.woff2', 'fonts/caveat-latin-ext-500-normal.woff2', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
 self.addEventListener('install', (e) => e.waitUntil(caches.open(CACHE).then((c) => c.addAll(FILES)).then(() => self.skipWaiting())));
 self.addEventListener('activate', (e) => e.waitUntil(

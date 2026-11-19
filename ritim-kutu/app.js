@@ -750,7 +750,7 @@
       <section class="card"><h2>Yedek</h2><p class="small muted">Verilerin yalnızca bu telefonda duruyor. Arada bir yedek al.</p>
         <div class="btn-col"><button type="button" class="btn" data-export>⬇️ Yedeği indir</button><label class="btn file-btn">⬆️ Yedekten geri yükle<input type="file" accept="application/json,.json" data-import></label>
         <button type="button" class="btn danger" data-reset>Her şeyi sil ve baştan başla</button></div></section>
-      <p class="small muted center">Ritim · sürüm 1.3</p>`;
+      <p class="small muted center">Ritim · sürüm 1.4</p>`;
   }
 
   // ---- Hatırlatmalar (uygulama açıkken) ----
@@ -818,6 +818,8 @@
   document.addEventListener('pointerup', cancelPress);
   document.addEventListener('pointercancel', cancelPress);
   document.addEventListener('contextmenu', (e) => { if (e.target.closest('.tile, .growth')) e.preventDefault(); });
+  // Basılı tutunca metin seçilmesin (yazı alanları hariç)
+  document.addEventListener('selectstart', (e) => { if (!(e.target.closest && e.target.closest('input, textarea'))) e.preventDefault(); });
 
   $('#view').addEventListener('click', (e) => {
     const q = (sel) => e.target.closest(sel);

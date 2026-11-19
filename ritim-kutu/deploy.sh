@@ -11,7 +11,7 @@ git -C "$REPO" fetch -q origin "$PAGES_BRANCH"
 git -C "$REPO" worktree add -q "$WT" "origin/$PAGES_BRANCH" --detach
 rm -rf "$WT/ritim-kutu"
 mkdir "$WT/ritim-kutu"
-cp -R "$HERE"/{index.html,styles.css,core.js,data.js,app.js,sw.js,manifest.webmanifest,fonts,icons} "$WT/ritim-kutu/"
+cp -R "$HERE"/{index.html,styles.css,core.js,data.js,app.js,sw.js,manifest.webmanifest,fonts,icons,splash} "$WT/ritim-kutu/"
 git -C "$WT" add ritim-kutu
 if git -C "$WT" diff --cached --quiet; then echo "Yayında değişiklik yok."; else
   git -C "$WT" commit -q -m "Ritim kutucuklar yayını ($SRC)"

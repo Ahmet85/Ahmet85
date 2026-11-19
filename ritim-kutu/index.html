@@ -1,12 +1,13 @@
 <!doctype html>
-<html lang="tr">
+<html lang="tr" class="boot">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Ritim</title>
   <meta name="description" content="Günlük kutucuklar ve seni tanıyan bir yaşam koçu">
-  <meta name="theme-color" content="#f4f5f7" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#0f1115" media="(prefers-color-scheme: dark)">
+  <!-- Açılışta üst şerit açılış ekranının rengindedir; uygulama başlayınca data-c rengine döner -->
+  <meta name="theme-color" content="#141a2b" data-c="#f4f5f7" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#141a2b" data-c="#0f1115" media="(prefers-color-scheme: dark)">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -14,9 +15,32 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192.png" type="image/png">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-  <link rel="stylesheet" href="styles.css?v=5">
+  <!-- iPhone açılış görselleri: ikona basınca, sayfa yüklenmeden önce gösterilir -->
+  <link rel="apple-touch-startup-image" href="splash/440x956@3.png" media="(device-width: 440px) and (device-height: 956px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="splash/430x932@3.png" media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="splash/428x926@3.png" media="(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="splash/414x896@3.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="splash/414x896@2.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="splash/402x874@3.png" media="(device-width: 402px) and (device-height: 874px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="splash/393x852@3.png" media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="splash/390x844@3.png" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="splash/375x812@3.png" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="splash/414x736@3.png" media="(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="splash/375x667@2.png" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="splash/320x568@2.png" media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+  <!-- Açılış ekranı: stil dosyası gelmeden de hemen görünsün diye burada -->
+  <style>
+    html.boot, html.boot body { background: #141a2b !important; }
+    #boot { position: fixed; inset: 0; z-index: 200; display: grid; place-items: center; background: #141a2b; transition: opacity .45s ease; }
+    #boot.out { opacity: 0; pointer-events: none; }
+    #boot img { width: 112px; height: 112px; border-radius: 26px; box-shadow: 0 18px 50px rgba(0,0,0,.45); animation: bootpulse 1.6s ease-in-out infinite; }
+    @keyframes bootpulse { 50% { transform: scale(1.04); } }
+    @media (prefers-reduced-motion: reduce) { #boot img { animation: none; } }
+  </style>
+  <link rel="stylesheet" href="styles.css?v=6">
 </head>
 <body>
+  <div id="boot" aria-hidden="true"><img src="icons/icon-512.png" alt=""></div>
   <header class="topbar"><div class="wrap"><h1 id="title">Bugün</h1><span id="titleSub" class="title-sub"></span></div><div class="wrap"><div class="strip" id="strip"></div></div></header>
   <main class="wrap" id="view" aria-live="polite"></main>
 
@@ -29,8 +53,8 @@
   </nav>
   <div id="layer"></div>
 
-  <script src="core.js?v=5"></script>
-  <script src="data.js?v=5"></script>
-  <script src="app.js?v=5"></script>
+  <script src="core.js?v=6"></script>
+  <script src="data.js?v=6"></script>
+  <script src="app.js?v=6"></script>
 </body>
 </html>

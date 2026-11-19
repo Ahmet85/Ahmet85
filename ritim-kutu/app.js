@@ -98,11 +98,35 @@
     if (pick) { seen.push(pick[0]); save(); setTimeout(() => party(pick[1], pick[2], pick[3]), 600); }
   }
 
+  /** Üst şeridi (saat, pil) uygulamanın kendi rengine döndürür. */
+  function appColors() {
+    $$('meta[name="theme-color"]').forEach((m) => m.setAttribute('content', m.dataset.c || m.getAttribute('content')));
+  }
+
+  /**
+   * Açılış ekranı: ikona basıldığı andan her şey yüklenene kadar ikon görünür
+   * (index.html içindeki #boot). Yüklemeler bitince sahne başlar, ikon solar.
+   */
+  function boot(start) {
+    const el = $('#boot');
+    const fonts = document.fonts && document.fonts.load ? document.fonts.load('500 30px Caveat').catch(() => {}) : Promise.resolve();
+    const loaded = document.readyState === 'complete' ? Promise.resolve() : new Promise((r) => window.addEventListener('load', r, { once: true }));
+    const minShow = new Promise((r) => setTimeout(r, 450)); // ikon bir anlık yanıp sönmesin
+    const giveUp = new Promise((r) => setTimeout(r, 4000)); // yavaş bağlantıda sonsuza dek bekleme
+    Promise.race([Promise.all([fonts, loaded, minShow]), giveUp]).then(() => {
+      start();
+      document.documentElement.classList.remove('boot');
+      if (!el) return;
+      el.classList.add('out');
+      setTimeout(() => el.remove(), 500);
+    });
+  }
+
   // ---- Açılış sahnesi: her açılışta bir özlü söz ----
   function scene(done) {
     quoteIdx = RK.nextQuote(state, D.QUOTES.length);
     save();
-    if (!state.settings.scene) return done();
+    if (!state.settings.scene) { appColors(); return done(); }
     const [q, a] = D.QUOTES[quoteIdx];
     const el = document.createElement('div');
     el.className = 'scene';
@@ -118,15 +142,14 @@
     document.body.appendChild(el);
     // Sahne boyunca telefonun üst şeridi (saat, pil) de sahnenin rengini alır;
     // yoksa açık renkli şerit ile koyu sahne arasında sert bir çizgi görünür.
-    const metas = $$('meta[name="theme-color"]').map((m) => [m, m.getAttribute('content')]);
-    metas.forEach(([m]) => m.setAttribute('content', '#141a2b'));
+    $$('meta[name="theme-color"]').forEach((m) => m.setAttribute('content', '#141a2b'));
     document.documentElement.classList.add('scene-on');
     let closed = false;
     const close = () => {
       if (closed) return;
       closed = true;
       el.classList.add('out');
-      metas.forEach(([m, c]) => m.setAttribute('content', c));
+      appColors();
       document.documentElement.classList.remove('scene-on');
       document.body.classList.remove('locked');
       done();
@@ -750,7 +773,7 @@
       <section class="card"><h2>Yedek</h2><p class="small muted">Verilerin yalnızca bu telefonda duruyor. Arada bir yedek al.</p>
         <div class="btn-col"><button type="button" class="btn" data-export>⬇️ Yedeği indir</button><label class="btn file-btn">⬆️ Yedekten geri yükle<input type="file" accept="application/json,.json" data-import></label>
         <button type="button" class="btn danger" data-reset>Her şeyi sil ve baştan başla</button></div></section>
-      <p class="small muted center">Ritim · sürüm 1.4</p>`;
+      <p class="small muted center">Ritim · sürüm 1.5</p>`;
   }
 
   // ---- Hatırlatmalar (uygulama açıkken) ----
@@ -916,7 +939,7 @@
   if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
   navigator.storage?.persist?.().catch(() => {});
   render();
-  scene(() => { if (!state.profile) onboard(); else enter(); });
+  boot(() => scene(() => { if (!state.profile) onboard(); else enter(); }));
   ensureTicker();
   setInterval(checkReminders, 20000);
   setInterval(() => { if (tab === 'today' && !ticker && !$('.sheet', layer) && !$('.ob') && document.visibilityState === 'visible') { renderStrip(); renderDay(); } }, 60000);

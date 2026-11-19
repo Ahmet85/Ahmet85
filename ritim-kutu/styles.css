@@ -270,6 +270,11 @@ body.enter .card, body.enter .growth, body.enter .tile, body.enter .energy { ani
   transition: opacity .55s ease, transform .55s ease;
 }
 .scene.out { opacity: 0; transform: scale(1.08); pointer-events: none; }
+/* Üst kenar düz tek renk: telefonun üst şeridiyle (tema rengi #141a2b) birleşim yeri görünmez */
+.scene::before { content: ""; position: absolute; inset: 0 0 auto; height: calc(var(--safe-t) + 150px); z-index: 1; pointer-events: none;
+  background: linear-gradient(to bottom, #141a2b 0, #141a2b calc(var(--safe-t) + 6px), transparent 100%); }
+.scene-inner, .scene .skip { z-index: 2; }
+html.scene-on, html.scene-on body, html.scene-on body::before { background: #141a2b; }
 .scene .glow { position: absolute; width: 60vmax; height: 60vmax; border-radius: 50%; filter: blur(70px); opacity: .28; animation: drift 9s ease-in-out infinite alternate; }
 .scene .glow.a { background: #2563eb; top: -25vmax; left: -20vmax; }
 .scene .glow.b { background: #b8860b; bottom: -30vmax; right: -22vmax; animation-delay: -4s; }

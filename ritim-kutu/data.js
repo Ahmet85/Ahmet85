@@ -346,44 +346,75 @@
   const PACKS = {
     namaz: { name: 'Namaz vakitleri', em: '🙏', desc: 'Beş vakit kutusu. Saatleri kendi şehrine göre düzenleyebilirsin.', boxes: [
       B('🙏', 'Sabah namazı', 'sabah', '06:30', COLORS.namaz), B('🙏', 'Öğle namazı', 'gun', '13:00', COLORS.namaz), B('🙏', 'İkindi namazı', 'gun', '15:34', COLORS.namaz),
-      B('🙏', 'Akşam namazı', 'aksam', '19:00', COLORS.namaz), B('🙏', 'Yatsı namazı', 'aksam', '21:45', COLORS.namaz),
+      B('🙏', 'Akşam namazı', 'aksam', '19:00', COLORS.namaz), B('🙏', 'Yatsı namazı', 'gece', '21:45', COLORS.namaz),
     ] },
     sabah: { name: 'Sağlıklı sabah', em: '🌅', desc: 'Su, hareket, plan ve kahvaltı.', boxes: [
       B('💧', 'Su', 'gun', '', COLORS.su, { kind: 'count', goal: 8 }), B('🤸', 'Esneme', 'sabah', '07:00', COLORS.hareket, { kind: 'timer', mins: 5 }),
       B('☕', 'Günü planla', 'sabah', '07:45', COLORS.rutin), B('🍳', 'Kahvaltı', 'sabah', '08:15', COLORS.yemek),
     ] },
     aksamMuzik: { name: 'Müzisyenin akşam programı', em: '🎼', desc: 'Hafta içi her akşam bir odak çalışması, 15 dakika piyano ve ikinci oturum.', boxes: [
-      B('🎹', 'Piyano & teori', 'aksam', '20:00', COLORS.muzik, { days: [1], short: 'Tek bir alt işi bitir' }),
-      B('🎸', 'Gitar repertuar', 'aksam', '20:00', COLORS.muzik, { days: [2], short: 'Tek bir parçayı çal' }),
-      B('🎙️', 'Kayıt işleri', 'aksam', '20:00', COLORS.muzik, { days: [3], short: 'Tek bir kanalı kaydet' }),
-      B('🎬', 'Video projeler', 'aksam', '20:00', COLORS.muzik, { days: [4], short: 'Tek bir sahneyi kes' }),
-      B('🎼', 'Beste', 'aksam', '20:00', COLORS.muzik, { days: [5], short: '10 dakika fikir kaydet' }),
-      B('📱', 'Sosyal medya · içerik', 'aksam', '20:00', COLORS.muzik, { days: [6], short: 'Tek bir gönderi hazırla' }),
-      B('🎹', '15 dk piyano', 'aksam', '21:00', COLORS.muzik, { days: [1, 2, 3, 4, 5, 6], kind: 'timer', mins: 15 }),
-      B('🎛️', 'Arrange', 'aksam', '21:15', COLORS.muzik, { days: [1] }),
-      B('🎚️', 'Teori · mix', 'aksam', '21:15', COLORS.muzik, { days: [2] }),
-      B('💿', 'Mix · render', 'aksam', '21:15', COLORS.muzik, { days: [3] }),
-      B('🎼', 'Beste (devam)', 'aksam', '21:15', COLORS.muzik, { days: [5] }),
+      B('🎹', 'Piyano & teori', 'calisma', '20:00', COLORS.muzik, { days: [1], short: 'Tek bir alt işi bitir' }),
+      B('🎸', 'Gitar repertuar', 'calisma', '20:00', COLORS.muzik, { days: [2], short: 'Tek bir parçayı çal' }),
+      B('🎙️', 'Kayıt işleri', 'calisma', '20:00', COLORS.muzik, { days: [3], short: 'Tek bir kanalı kaydet' }),
+      B('🎬', 'Video projeler', 'calisma', '20:00', COLORS.muzik, { days: [4], short: 'Tek bir sahneyi kes' }),
+      B('🎼', 'Beste', 'calisma', '20:00', COLORS.muzik, { days: [5], short: '10 dakika fikir kaydet' }),
+      B('📱', 'Sosyal medya · içerik', 'calisma', '20:00', COLORS.muzik, { days: [6], short: 'Tek bir gönderi hazırla' }),
+      B('🎹', '15 dk piyano', 'calisma', '21:00', COLORS.muzik, { days: [1, 2, 3, 4, 5, 6], kind: 'timer', mins: 15 }),
+      B('🎛️', 'Arrange', 'calisma', '21:15', COLORS.muzik, { days: [1] }),
+      B('🎚️', 'Teori · mix', 'calisma', '21:15', COLORS.muzik, { days: [2] }),
+      B('💿', 'Mix · render', 'calisma', '21:15', COLORS.muzik, { days: [3] }),
+      B('🎼', 'Beste (devam)', 'calisma', '21:15', COLORS.muzik, { days: [5] }),
     ] },
     gun: { name: 'Çalışan günü', em: '💼', desc: 'Hafta içi mesai, öğle yemeği, mola yürüyüşü.', boxes: [
       B('💼', 'Mesai', 'gun', '09:00', COLORS.mesai, { days: WD }), B('🍽️', 'Öğle yemeği', 'gun', '12:30', COLORS.yemek, { days: WD }),
       B('🚶', 'Mola · yürüyüş', 'gun', '17:00', COLORS.hareket, { days: WD, short: '10 dk yürüyüş' }),
     ] },
     aksam: { name: 'Sakin akşam', em: '🌙', desc: 'Akşam yemeği, ekransız okuma ve düzenli uyku.', boxes: [
-      B('🍽️', 'Akşam yemeği', 'aksam', '19:00', COLORS.yemek), B('📖', 'Okuma', 'aksam', '22:00', COLORS.dinlen, { short: '5 sayfa' }),
-      B('🌙', 'Uyku', 'aksam', '23:00', COLORS.dinlen),
+      B('🍽️', 'Akşam yemeği', 'aksam', '19:00', COLORS.yemek), B('📖', 'Okuma', 'gece', '22:00', COLORS.dinlen, { short: '5 sayfa' }),
+      B('🌙', 'Uyku', 'gece', '23:00', COLORS.dinlen),
     ] },
     ev: { name: 'Ev işleri', em: '🧹', desc: 'Haftaya yayılmış küçük işler.', boxes: [
       B('🧺', 'Çamaşır', 'gun', '', COLORS.rutin, { days: [6] }), B('🧹', 'Toparlanma', 'aksam', '', COLORS.rutin, { days: [1, 4] }), B('🛒', 'Alışveriş', 'gun', '', COLORS.rutin, { days: [6] }),
     ] },
   };
 
+  // Dengeli hafta: "Haftalık Program – Son Hali" tablosunun tamamı
+  const MOVE = { short: '15 dk yürüyüş' };
+  PACKS.hafta = { name: 'Dengeli hafta programı', em: '🗓️', desc: 'Sabah rutini, mesai, namaz vakitleri, akşam müzik çalışmaları, okuma ve uyku: haftanın 7 günü.', boxes: [
+    B('🙏', 'Uyanış · S N', 'sabah', '06:30', COLORS.namaz),
+    B('💪', 'Güç antrenmanı', 'sabah', '07:00', COLORS.hareket, { days: [1, 3, 5], ...MOVE }),
+    B('🚶', 'Yürüyüş', 'sabah', '07:00', COLORS.hareket, { days: [2], short: '5 dk esneme' }),
+    B('🤸', 'Esneme · mobilite', 'sabah', '07:00', COLORS.hareket, { days: [4], short: '5 dk esneme' }),
+    B('🥾', 'Uzun yürüyüş', 'sabah', '07:00', COLORS.hareket, { days: [6], ...MOVE }),
+    B('🛋️', 'Dinlenme', 'sabah', '07:00', COLORS.dinlen, { days: [7] }),
+    B('☕', 'Planlama & kahve', 'sabah', '07:45', COLORS.rutin),
+    B('🍳', 'Kahvaltı', 'sabah', '08:15', COLORS.yemek),
+    B('💼', 'Mesai', 'gun', '09:00', COLORS.mesai, { days: WD }),
+    B('👨‍👩‍👧', 'Aile', 'gun', '09:00', COLORS.dinlen, { days: [6, 7] }),
+    B('🍽️', 'Yemek · Ö N', 'gun', '12:30', COLORS.yemek, { days: WD }),
+    B('🍽️', 'Aile yemeği · Ö N', 'gun', '12:30', COLORS.yemek, { days: [6, 7] }),
+    B('💼', 'Mesai (öğleden sonra)', 'gun', '13:30', COLORS.mesai, { days: WD }),
+    B('🛋️', 'Serbest', 'gun', '13:30', COLORS.dinlen, { days: [6, 7] }),
+    B('🙏', 'İkindi', 'gun', '15:34', COLORS.namaz),
+    B('🚶', 'Mola · yürüyüş', 'gun', '17:00', COLORS.hareket, { days: WD, short: '10 dk yürüyüş' }),
+    B('🛋️', 'Serbest', 'gun', '18:00', COLORS.dinlen, { days: WD }),
+    B('🤝', 'Arkadaşlar', 'gun', '18:00', COLORS.dinlen, { days: [6] }),
+    B('🍽️', 'Akşam yemeği · A N', 'aksam', '19:00', COLORS.yemek),
+    ...PACKS.aksamMuzik.boxes,
+    B('🛋️', 'Serbest', 'calisma', '21:15', COLORS.dinlen, { days: [4, 6] }),
+    B('📊', 'Karne & haftalık plan', 'calisma', '20:00', COLORS.rutin, { days: [7] }),
+    B('🙏', 'Y N · ekran kapanır', 'gece', '21:45', COLORS.namaz),
+    B('📖', 'Okuma', 'gece', '22:00', COLORS.dinlen, { short: '5 sayfa' }),
+    B('🌙', 'Uyku', 'gece', '23:00', COLORS.dinlen),
+  ] };
+
+  const PARTS = [['sabah', 'Sabah', '🌅'], ['gun', 'Gün içi', '☀️'], ['aksam', 'Akşam', '🌆'], ['calisma', 'Akşam çalışması', '🎼'], ['gece', 'Gece', '🌙']];
   const BLOCKERS = [['vakit', '⏳ Vaktim yok'], ['nereden', '🧭 Nereden başlayacağımı bilmiyorum'], ['para', '💰 Pahalı geliyor'], ['cesaret', '🫣 Çekiniyorum'], ['erteliyorum', '🛋️ Hep erteliyorum']];
   const LEVELS = [['yeni', 'Yeni başladım'], ['yillar', 'Yıllardır yapıyorum'], ['meslek', 'Mesleğim']];
   const EMOJIS = ['💧', '💊', '📖', '🏃', '🧘', '🎸', '🎹', '🧹', '📞', '🛒', '✍️', '🌱', '🙏', '🍎', '💤', '⭐', '💼', '🍽️', '🚶', '🎾', '🤺', '🎣', '🎨', '📷'];
   const TILE_COLORS = ['#2563eb', '#16a34a', '#e11d48', '#d97706', '#7c3aed', '#0d9488', '#0284c7', '#475569'];
 
-  const api = { QUOTES, COLORS, PATHS, GENERIC, SUGGEST, PACKS, BLOCKERS, LEVELS, EMOJIS, TILE_COLORS };
+  const api = { QUOTES, COLORS, PATHS, GENERIC, SUGGEST, PACKS, PARTS, BLOCKERS, LEVELS, EMOJIS, TILE_COLORS };
   root.RKData = api;
   if (typeof module !== 'undefined') module.exports = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
